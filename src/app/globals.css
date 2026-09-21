@@ -1,0 +1,207 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/marcellus-webfont/Marcellus-Regular.woff") format("woff");
+}
+
+:root {
+  --background: #f5f3ee;
+  --foreground: #54524d;
+  --card: #e8e3d8;
+  --card-foreground: #54524d;
+  --popover: #f5f3ee;
+  --popover-foreground: #54524d;
+  --primary: #7c8472;
+  --primary-foreground: #f5f3ee;
+  --secondary: #e8e3d8;
+  --secondary-foreground: #54524d;
+  --muted: #ddd8cc;
+  --muted-foreground: #8d8a82;
+  --accent: #7c8472;
+  --accent-foreground: #f5f3ee;
+  --destructive: #c55a5a;
+  --destructive-foreground: #f5f3ee;
+  --border: rgba(84, 82, 77, 0.12);
+  --input: rgba(84, 82, 77, 0.12);
+  --ring: #7c8472;
+  --radius: 0.625rem;
+  --chart-1: #7c8472;
+  --chart-2: #d4a853;
+  --chart-3: #9aa391;
+  --chart-4: #5f6558;
+  --chart-5: #8d8a82;
+  --sidebar: #e8e3d8;
+  --sidebar-foreground: #54524d;
+  --sidebar-primary: #7c8472;
+  --sidebar-primary-foreground: #f5f3ee;
+  --sidebar-accent: #ddd8cc;
+  --sidebar-accent-foreground: #54524d;
+  --sidebar-border: rgba(84, 82, 77, 0.12);
+  --sidebar-ring: #7c8472;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  --color-surface: #e8e3d8;
+  --color-surface-secondary: #ddd8cc;
+  --color-accent-light: #9aa391;
+  --color-accent-dark: #5f6558;
+  --color-gold: #d4a853;
+  --color-text-primary: #54524d;
+  --color-text-secondary: #8d8a82;
+  --color-glass: rgba(245, 243, 238, 0.85);
+  --color-glass-border: rgba(84, 82, 77, 0.08);
+
+  --font-heading: "Marcellus", var(--font-cormorant);
+  --font-body: var(--font-inter);
+  --font-elegant: var(--font-playfair);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.texture-noise {
+  position: relative;
+}
+
+.texture-noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+.film-sprocket {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 18px,
+    #1a1a1a 18px 28px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.dark {
+  --background: #1a1918;
+  --foreground: #f5f3ee;
+  --card: #242320;
+  --card-foreground: #f5f3ee;
+  --popover: #242320;
+  --popover-foreground: #f5f3ee;
+  --primary: #9aa391;
+  --primary-foreground: #1a1918;
+  --secondary: #2e2d29;
+  --secondary-foreground: #f5f3ee;
+  --muted: #2e2d29;
+  --muted-foreground: #8d8a82;
+  --accent: #7c8472;
+  --accent-foreground: #f5f3ee;
+  --destructive: #e57373;
+  --destructive-foreground: #1a1918;
+  --border: rgba(245, 243, 238, 0.12);
+  --input: rgba(245, 243, 238, 0.12);
+  --ring: #9aa391;
+  --chart-1: #9aa391;
+  --chart-2: #d4a853;
+  --chart-3: #7c8472;
+  --chart-4: #5f6558;
+  --chart-5: #8d8a82;
+  --sidebar: #1a1918;
+  --sidebar-foreground: #f5f3ee;
+  --sidebar-primary: #9aa391;
+  --sidebar-primary-foreground: #1a1918;
+  --sidebar-accent: #2e2d29;
+  --sidebar-accent-foreground: #f5f3ee;
+  --sidebar-border: rgba(245, 243, 238, 0.12);
+  --sidebar-ring: #9aa391;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
