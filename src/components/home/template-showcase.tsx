@@ -112,11 +112,11 @@ export function TemplateShowcase() {
 
             {/* right: mockup preview */}
             <div className="flex justify-center">
-              <div className="relative w-[min(280px,70vw)] overflow-hidden rounded-[2.5rem] border-[6px] border-black/15 bg-black/5 shadow-[0_30px_80px_rgba(84,82,77,0.15)] sm:w-[min(320px,45vw)]">
+              <div className="relative w-[min(280px,70vw)] overflow-hidden rounded-2xl border-[6px] border-black/15 bg-black/5 shadow-[0_30px_80px_rgba(84,82,77,0.15)] sm:w-[min(320px,45vw)]">
                 {/* notch */}
                 <span className="absolute left-1/2 top-2 z-10 h-1.5 w-20 -translate-x-1/2 rounded-full bg-black/20" />
                 {/* iframe preview */}
-                <div className="aspect-[9/19.5] w-full overflow-hidden rounded-t-[2rem] bg-background">
+                <div className="aspect-[9/19.5] w-full overflow-hidden rounded-t-xl bg-background">
                   <iframe
                     src={`/preview/${item.id}`}
                     title={`Preview template ${item.name}`}

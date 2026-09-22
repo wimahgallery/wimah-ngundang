@@ -8,7 +8,7 @@ import { Reveal, TextReveal } from "@/components/motion/reveal";
 export function HomeFinalCta() {
   return (
     <section className="px-5 pb-20 pt-4 sm:px-8 lg:pb-28">
-      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[36px] border border-white/10 bg-[#141512] px-6 py-16 text-center text-[#F5F3EE] sm:px-12 lg:py-20">
+      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#141512] px-6 py-16 text-center text-[#F5F3EE] sm:px-12 lg:py-20">
         <div aria-hidden className="pointer-events-none absolute inset-0">
           <div className="absolute -left-16 top-0 h-56 w-56 rounded-full bg-gold/15 blur-3xl" />
           <div className="absolute -right-10 bottom-0 h-64 w-64 rounded-full bg-accent/25 blur-3xl" />

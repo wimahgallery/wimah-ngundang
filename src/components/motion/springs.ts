@@ -1,22 +1,47 @@
 import { easings, type SpringConfig } from "@react-spring/web";
 
-/** Halus dan tenang — dipakai untuk hero dan section besar. */
-export const springGentle: SpringConfig = { tension: 90, friction: 22, clamp: true };
+/** Premium feel — buttery smooth with gentle deceleration. */
+export const springGentle: SpringConfig = {
+  tension: 120,
+  friction: 26,
+  clamp: true,
+  precision: 0.01,
+};
 
-/** Standar untuk reveal section: cepat masuk, tanpa overshoot. */
-export const springSmooth: SpringConfig = { tension: 130, friction: 26, clamp: true };
+/** Standard reveal — fast entry, no overshoot, crisp stop. */
+export const springSmooth: SpringConfig = {
+  tension: 180,
+  friction: 26,
+  clamp: true,
+  precision: 0.01,
+};
 
-/** Untuk elemen kecil seperti kartu dan chip. */
-export const springSnappy: SpringConfig = { tension: 240, friction: 28, clamp: true };
+/** Snappy micro-interaction — cards, chips, buttons. */
+export const springSnappy: SpringConfig = {
+  tension: 300,
+  friction: 30,
+  clamp: true,
+  precision: 0.01,
+};
 
-/** Durasi tetap untuk animasi yang butuh tempo presisi (dalam ms). */
+/** Sheet/drawer — weighted, physical, satisfying. */
+export const springSheet: SpringConfig = {
+  tension: 260,
+  friction: 30,
+  clamp: true,
+  precision: 0.01,
+};
+
+/** Duration-based ease for precise timing (ms). */
 export const durationEase = (duration: number): SpringConfig => ({
   duration,
   easing: easings.easeOutCubic,
+  precision: 0.01,
 });
 
-/** Durasi untuk gerak sinematik yang lambat (dalam ms). */
+/** Cinematic slow ease-in-out (ms). */
 export const durationCinematic = (duration: number): SpringConfig => ({
   duration,
   easing: easings.easeInOutCubic,
+  precision: 0.01,
 });

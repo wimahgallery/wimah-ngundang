@@ -36,7 +36,6 @@ export const navigationLinks = [
 
 export const heroTrustItems = [
   "10 template premium",
-  "Custom domain ready",
   "Mobile first",
   "Gratis konsultasi",
 ] as const;

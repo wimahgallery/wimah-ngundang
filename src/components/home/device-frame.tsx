@@ -17,15 +17,15 @@ export function DeviceFrame({
   size?: "sm" | "md" | "lg";
 }) {
   const frameStyles = {
-    sm: "rounded-[34px] border-[7px] p-[3px]",
-    md: "rounded-[44px] border-[9px] p-[3px]",
-    lg: "rounded-[52px] border-[10px] p-1",
+    sm: "rounded-[20px] border-[7px] p-[3px]",
+    md: "rounded-[26px] border-[9px] p-[3px]",
+    lg: "rounded-[32px] border-[10px] p-1",
   }[size];
 
   const screenRadius = {
-    sm: "rounded-[26px]",
-    md: "rounded-[35px]",
-    lg: "rounded-[42px]",
+    sm: "rounded-[14px]",
+    md: "rounded-[18px]",
+    lg: "rounded-[22px]",
   }[size];
 
   return (

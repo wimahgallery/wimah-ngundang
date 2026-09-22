@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import { showcaseFaqs } from "@/lib/homepage-content";
 import { siteConfig } from "@/lib/site-config";
 import { HomeHeader } from "@/components/home/home-header";
-import { HomeHero } from "@/components/home/hero";
+import { GlyphPortalSection } from "@/components/home/glyph-portal-section";
 import { TemplateShowcase } from "@/components/home/template-showcase";
 import { HomeFeatures } from "@/components/home/home-features";
+import { HomePricing } from "@/components/home/home-pricing";
+import { HomeGallery } from "@/components/home/home-gallery";
 import { HomeHowItWorks } from "@/components/home/home-how-it-works";
 import { HomeInvitationPreview } from "@/components/home/home-invitation-preview";
 import { HomeFaq } from "@/components/home/home-faq";
 import { HomeFinalCta } from "@/components/home/home-final-cta";
 import { SiteFooter } from "@/components/home/site-footer";
+import { PageBackground } from "@/components/home/page-background";
 
 const title = "Undangan Digital Premium untuk Pernikahan & Acara Spesial";
 const ogImageUrl = `${siteConfig.siteUrl}/wimah.png`;
@@ -73,11 +76,14 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify([faqJsonLd, serviceJsonLd]) }}
       />
+      <PageBackground />
       <HomeHeader />
       <main>
-        <HomeHero />
+        <GlyphPortalSection />
         <TemplateShowcase />
         <HomeFeatures />
+        <HomePricing />
+        <HomeGallery />
         <HomeHowItWorks />
         <HomeInvitationPreview />
         <HomeFaq />

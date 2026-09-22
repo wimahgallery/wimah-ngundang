@@ -29,8 +29,8 @@ export function HomeFeatures() {
                 distance={22}
                 className="h-full"
               >
-                <article className="group flex h-full flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-4 transition-colors duration-500 hover:border-gold/30 hover:bg-white/[0.06] sm:p-5">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-gold/25 bg-gold/10 text-gold transition-transform duration-500 group-hover:scale-[1.04]">
+                <article className="group flex h-full flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors duration-500 hover:border-gold/30 hover:bg-white/[0.06] sm:p-5">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gold/25 bg-gold/10 text-gold transition-transform duration-500 group-hover:scale-[1.04]">
                     <Icon className="h-4 w-4" />
                   </span>
                   <h3 className="mt-5 font-heading text-lg leading-snug">{feature.title}</h3>

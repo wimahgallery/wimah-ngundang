@@ -16,7 +16,7 @@ export function TabletFrame({
   return (
     <div
       className={cn(
-        "relative rounded-[22px] border-[8px] border-[#23241f] bg-[#23241f] p-[3px] shadow-[0_40px_110px_rgba(46,46,40,0.32)]",
+        "relative rounded-[14px] border-[8px] border-[#23241f] bg-[#23241f] p-[3px] shadow-[0_40px_110px_rgba(46,46,40,0.32)]",
         className,
       )}
     >
@@ -26,7 +26,7 @@ export function TabletFrame({
       />
       <div
         className={cn(
-          "relative aspect-[3/4] w-full overflow-hidden rounded-[14px] bg-background",
+          "relative aspect-[3/4] w-full overflow-hidden rounded-[8px] bg-background",
           screenClassName,
         )}
       >

@@ -164,7 +164,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
             <InvitationPhoto
               src={invitation.bride_photo}
               alt={invitation.bride_name || "Mempelai wanita"}
-              className="aspect-[3/4] w-full max-w-[260px] rounded-[2rem] shadow-[0_20px_60px_rgba(84,82,77,0.12)]"
+              className="aspect-[3/4] w-full max-w-[260px] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.12)]"
               positionX={couple.imagePositionX}
               positionY={couple.imagePositionY}
               sizes="(max-width: 768px) 100vw, 35vw"
@@ -199,7 +199,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
             <InvitationPhoto
               src={invitation.groom_photo}
               alt={invitation.groom_name || "Mempelai pria"}
-              className="aspect-[3/4] w-full max-w-[260px] rounded-[2rem] shadow-[0_20px_60px_rgba(84,82,77,0.12)]"
+              className="aspect-[3/4] w-full max-w-[260px] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.12)]"
               positionX={invitation.groom_image_position_x}
               positionY={invitation.groom_image_position_y}
               zoom={invitation.groom_image_zoom}
@@ -268,7 +268,7 @@ function StoryTimeline({ invitation }: { invitation: Invitation }) {
                       <InvitationPhoto
                         src={m.image}
                         alt={m.title}
-                        className="aspect-[4/3] w-full rounded-2xl shadow-[0_12px_40px_rgba(84,82,77,0.08)]"
+                        className="aspect-[4/3] w-full rounded-lg shadow-[0_12px_40px_rgba(84,82,77,0.08)]"
                         sizes="(max-width: 768px) 100vw, 50vw"
                       />
                     </div>
@@ -336,7 +336,7 @@ function ScheduleSection({ invitation }: { invitation: Invitation }) {
         </SectionHeading>
 
         <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
+          <div className="rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.2em] text-accent">Akad Nikah</p>
             {invitation.event_date && (
               <p className="mt-3 font-heading text-lg text-text-primary">{formatDate(invitation.event_date)}</p>
@@ -345,7 +345,7 @@ function ScheduleSection({ invitation }: { invitation: Invitation }) {
               <p className="mt-1 text-sm text-text-secondary">{invitation.event_time}</p>
             )}
           </div>
-          <div className="rounded-2xl border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
+          <div className="rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.2em] text-accent">Resepsi</p>
             {invitation.event_date && (
               <p className="mt-3 font-heading text-lg text-text-primary">{formatDate(invitation.event_date)}</p>
@@ -379,7 +379,7 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
         )}
 
         {invitation.google_maps_url && (
-          <div className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-border shadow-[0_8px_30px_rgba(84,82,77,0.06)]">
+          <div className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-lg border border-border shadow-[0_8px_30px_rgba(84,82,77,0.06)]">
             <iframe
               title="Lokasi Acara"
               src={`https://www.google.com/maps/embed?pb=${encodeURIComponent(
@@ -549,7 +549,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
               alt="QRIS"
               width={300}
               height={300}
-              className="w-full rounded-2xl border border-border shadow-[0_8px_30px_rgba(84,82,77,0.06)]"
+              className="w-full rounded-lg border border-border shadow-[0_8px_30px_rgba(84,82,77,0.06)]"
             />
             <p className="mt-2 text-xs text-text-secondary">Scan QRIS untuk transfer</p>
           </div>
@@ -724,7 +724,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
           {invitation.fun_facts.map((fact, i) => (
             <div
               key={i}
-              className="flex flex-col items-center rounded-2xl border border-border bg-background/80 px-4 py-5 text-center shadow-[0_4px_20px_rgba(84,82,77,0.04)] backdrop-blur-sm"
+              className="flex flex-col items-center rounded-lg border border-border bg-background/80 px-4 py-5 text-center shadow-[0_4px_20px_rgba(84,82,77,0.04)] backdrop-blur-sm"
             >
               <Icon name={fact.icon} className="text-2xl" />
               <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-text-secondary">
@@ -752,7 +752,7 @@ function ClosingSection({ invitation }: { invitation: Invitation }) {
           <InvitationPhoto
             src={invitation.closing_image}
             alt="Terima kasih"
-            className="mx-auto aspect-[3/2] w-full max-w-sm rounded-[2rem] shadow-[0_20px_60px_rgba(84,82,77,0.1)]"
+            className="mx-auto aspect-[3/2] w-full max-w-sm rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.1)]"
             sizes="(max-width: 640px) 100vw, 400px"
           />
         )}

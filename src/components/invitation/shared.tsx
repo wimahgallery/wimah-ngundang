@@ -140,7 +140,7 @@ export function GiftList({ invitation }: { invitation: Invitation }) {
   return (
     <div className="grid w-full gap-3 sm:grid-cols-2">
       {invitation.gift_accounts.map((gift) => (
-        <article key={gift.id} className="rounded-3xl border border-border bg-surface/80 p-5 text-left">
+        <article key={gift.id} className="rounded-xl border border-border bg-surface/80 p-5 text-left">
           <p className="text-xs uppercase tracking-[0.16em] text-accent">{gift.bank}</p>
           <p className="mt-2 font-heading text-xl">{gift.accountNumber}</p>
           <p className="mt-1 text-sm text-text-secondary">{gift.accountName}</p>
@@ -223,7 +223,7 @@ export function CountdownTimer({ eventDate }: { eventDate?: string | null }) {
       {units.map((u) => (
         <div
           key={u.label}
-          className="flex flex-col items-center rounded-2xl border border-border bg-background/60 px-3 py-4 backdrop-blur-sm sm:px-5 sm:py-6"
+          className="flex flex-col items-center rounded-lg border border-border bg-background/60 px-3 py-4 backdrop-blur-sm sm:px-5 sm:py-6"
         >
           <span className="font-heading text-3xl tabular-nums text-text-primary sm:text-4xl">
             {String(u.value).padStart(2, "0")}
@@ -248,7 +248,7 @@ export function VideoPlayer({
 }) {
   if (!url) return null;
   return (
-    <div className={cn("overflow-hidden rounded-2xl border border-border bg-black", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-black", className)}>
       <video
         controls
         preload="none"
@@ -319,7 +319,7 @@ export function GuestWishesList({ wishes }: { wishes: Array<{ name: string; mess
       {wishes.map((wish, i) => (
         <article
           key={i}
-          className="rounded-2xl border border-border bg-surface/60 p-4 text-left backdrop-blur-sm"
+          className="rounded-lg border border-border bg-surface/60 p-4 text-left backdrop-blur-sm"
         >
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-xs font-medium text-accent">

@@ -50,7 +50,7 @@ function DeviceShowcase({
           ref={ref}
           onClick={onOpen}
           aria-label={`Lihat contoh undangan ${meta?.name}`}
-          className="group relative rounded-[44px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="group relative rounded-[26px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <DeviceFrame
             size="md"
@@ -84,7 +84,7 @@ function DeviceShowcase({
           ref={inView ? undefined : ref}
           onClick={onOpen}
           aria-label={`Lihat contoh undangan ${meta?.name}`}
-          className="group relative rounded-[22px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="group relative rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           <TabletFrame className="w-[min(380px,55vw)]" screenClassName="h-[500px]">
             <div
