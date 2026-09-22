@@ -4,25 +4,25 @@ import { Reveal } from "@/components/motion/reveal";
 import { SectionIntro } from "./section-intro";
 
 const ROW_1 = [
-  { src: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&h=400&fit=crop", alt: "Wedding couple" },
-  { src: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&h=400&fit=crop", alt: "Wedding ceremony" },
-  { src: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=600&h=400&fit=crop", alt: "Outdoor venue" },
-  { src: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&h=400&fit=crop", alt: "Wedding rings" },
-  { src: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=600&h=400&fit=crop", alt: "Flowers" },
-  { src: "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&h=400&fit=crop", alt: "Reception" },
-  { src: "https://images.unsplash.com/photo-1550005809-91ad75fb315f?w=600&h=400&fit=crop", alt: "Couple portrait" },
-  { src: "https://images.unsplash.com/photo-1460978812857-470ed1c77af0?w=600&h=400&fit=crop", alt: "Garden party" },
+  { src: "/example/couple-image.webp", alt: "Couple portrait" },
+  { src: "/example/couple-image-hug.webp", alt: "Couple hug" },
+  { src: "/example/couple-image-sit.webp", alt: "Couple sitting" },
+  { src: "/example/couple-image-looking.webp", alt: "Couple looking" },
+  { src: "/example/couple-image.webp", alt: "Couple portrait" },
+  { src: "/example/couple-image-hug.webp", alt: "Couple hug" },
+  { src: "/example/couple-image-sit.webp", alt: "Couple sitting" },
+  { src: "/example/couple-image-looking.webp", alt: "Couple looking" },
 ];
 
 const ROW_2 = [
-  { src: "https://images.unsplash.com/photo-1529636798458-92182e662485?w=600&h=400&fit=crop", alt: "Dance" },
-  { src: "https://images.unsplash.com/photo-1546032996-6dfacbacbf3f?w=600&h=400&fit=crop", alt: "Cake" },
-  { src: "https://images.unsplash.com/photo-1521316730702-829a8e30dfd0?w=600&h=400&fit=crop", alt: "Bouquet toss" },
-  { src: "https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=600&h=400&fit=crop", alt: "Table setting" },
-  { src: "https://images.unsplash.com/photo-1507504031003-b417219a0fde?w=600&h=400&fit=crop", alt: "Candles" },
-  { src: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=600&h=400&fit=crop", alt: "Venue decor" },
-  { src: "https://images.unsplash.com/photo-1478146059778-26028b07395a?w=600&h=400&fit=crop", alt: "Guests" },
-  { src: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=600&h=400&fit=crop", alt: "First dance" },
+  { src: "/example/couple-image-looking.webp", alt: "Couple looking" },
+  { src: "/example/couple-image-sit.webp", alt: "Couple sitting" },
+  { src: "/example/couple-image-hug.webp", alt: "Couple hug" },
+  { src: "/example/couple-image.webp", alt: "Couple portrait" },
+  { src: "/example/couple-image-looking.webp", alt: "Couple looking" },
+  { src: "/example/couple-image-sit.webp", alt: "Couple sitting" },
+  { src: "/example/couple-image-hug.webp", alt: "Couple hug" },
+  { src: "/example/couple-image.webp", alt: "Couple portrait" },
 ];
 
 function CarouselRow({

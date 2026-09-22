@@ -12,16 +12,16 @@ import {
 import type { TemplateId } from "@/components/invitation/template-registry";
 
 export const previewImages = {
-  cover: "/template-preview/cover.jpg",
-  couple1: "/template-preview/couple-1.jpg",
-  couple2: "/template-preview/couple-2.jpg",
-  venue: "/template-preview/venue.jpg",
+  cover: "/example/couple-image-hug.webp",
+  couple1: "/example/couple-image.webp",
+  couple2: "/example/couple-image-looking.webp",
+  venue: "/example/couple-image-sit.webp",
   gallery: [
-    "/template-preview/gallery-1.jpg",
-    "/template-preview/gallery-2.jpg",
-    "/template-preview/gallery-3.jpg",
-    "/template-preview/gallery-4.jpg",
-    "/template-preview/gallery-5.jpg",
+    "/example/couple-image.webp",
+    "/example/couple-image-hug.webp",
+    "/example/couple-image-sit.webp",
+    "/example/couple-image-looking.webp",
+    "/example/couple-image.webp",
   ],
 } as const;
 

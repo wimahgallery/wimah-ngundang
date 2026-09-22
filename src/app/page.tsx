@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { showcaseFaqs } from "@/lib/homepage-content";
 import { siteConfig } from "@/lib/site-config";
 import { HomeHeader } from "@/components/home/home-header";
-import { GlyphPortalSection } from "@/components/home/glyph-portal-section";
+import { HomeHero } from "@/components/home/hero";
 import { TemplateShowcase } from "@/components/home/template-showcase";
 import { HomeFeatures } from "@/components/home/home-features";
 import { HomePricing } from "@/components/home/home-pricing";
@@ -79,7 +79,7 @@ export default function HomePage() {
       <PageBackground />
       <HomeHeader />
       <main>
-        <GlyphPortalSection />
+        <HomeHero />
         <TemplateShowcase />
         <HomeFeatures />
         <HomePricing />
