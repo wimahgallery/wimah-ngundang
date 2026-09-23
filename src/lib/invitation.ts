@@ -32,6 +32,7 @@ export interface SectionSettings {
 }
 
 export type SectionKey =
+  | "info"
   | "hero"
   | "greeting"
   | "couple"
@@ -160,6 +161,7 @@ export function defaultSection(overrides: Partial<SectionSettings> = {}): Sectio
 
 export function defaultCustomSettings(): CustomSettings {
   return {
+    info: defaultSection(),
     hero: defaultSection({ headingSize: "xl", imagePositionY: 40 }),
     greeting: defaultSection(),
     couple: defaultSection(),
@@ -190,6 +192,7 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
 
   return {
     ...(row as unknown as Invitation),
+    slug: typeof row.slug === "string" ? row.slug : "",
     user_id: (row.user_id as string) ?? null,
     gallery_images: gallery as GalleryImage[],
     gift_accounts: gifts as GiftAccount[],
@@ -225,37 +228,37 @@ export function coupleLabel(invitation: Invitation) {
 export function headingClass(size: SizeToken) {
   switch (size) {
     case "sm":
-      return "text-2xl sm:text-3xl";
+      return "text-[clamp(1.5rem,1.25rem+1vw,1.875rem)]";
     case "md":
-      return "text-3xl sm:text-4xl";
+      return "text-[clamp(1.875rem,1.5rem+1.5vw,2.5rem)]";
     case "lg":
-      return "text-4xl sm:text-5xl lg:text-6xl";
+      return "text-[clamp(2.25rem,1.5rem+3vw,3.75rem)]";
     case "xl":
-      return "text-5xl sm:text-6xl lg:text-7xl";
+      return "text-[clamp(2.75rem,1.75rem+4vw,4.5rem)]";
   }
 }
 
 export function paragraphClass(size: SizeToken) {
   switch (size) {
     case "sm":
-      return "text-sm";
+      return "text-[0.9375rem] leading-[1.7]";
     case "md":
-      return "text-base";
+      return "text-base leading-[1.7]";
     case "lg":
-      return "text-lg";
+      return "text-[clamp(1.0625rem,1rem+0.3vw,1.25rem)] leading-[1.7]";
     case "xl":
-      return "text-xl";
+      return "text-[clamp(1.125rem,1rem+0.5vw,1.375rem)] leading-[1.7]";
   }
 }
 
 export function spacingClass(size: Exclude<SizeToken, "xl">) {
   switch (size) {
     case "sm":
-      return "py-10 sm:py-14";
+      return "py-[clamp(2.5rem,5vw,3.5rem)]";
     case "md":
-      return "py-16 sm:py-24";
+      return "py-[clamp(3.5rem,7vw,6rem)]";
     case "lg":
-      return "py-24 sm:py-36";
+      return "py-[clamp(5rem,10vw,9rem)]";
   }
 }
 

@@ -45,7 +45,7 @@ export function SectionIntro({
 
       <h2
         className={cn(
-          "w-full max-w-3xl font-heading text-[28px] leading-[1.08] sm:text-[36px] md:text-[42px] lg:text-[50px]",
+          "w-full max-w-3xl font-heading text-[clamp(1.75rem,1.1rem+2.6vw,3.125rem)] leading-[1.08] text-balance",
           tone === "dark" ? "text-[#F5F3EE]" : "text-text-primary",
         )}
       >

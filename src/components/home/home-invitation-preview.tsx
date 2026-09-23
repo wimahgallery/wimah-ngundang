@@ -55,7 +55,7 @@ function DeviceShowcase({
           <DeviceFrame
             size="md"
             className="w-[min(260px,72vw)]"
-            screenClassName="aspect-auto h-[460px]"
+            screenClassName="aspect-auto h-[clamp(400px,58svh,500px)]"
           >
             <div
               aria-hidden
@@ -86,7 +86,7 @@ function DeviceShowcase({
           aria-label={`Lihat contoh undangan ${meta?.name}`}
           className="group relative rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <TabletFrame className="w-[min(380px,55vw)]" screenClassName="h-[500px]">
+          <TabletFrame className="w-[min(380px,55vw)]" screenClassName="h-[clamp(460px,65svh,540px)]">
             <div
               aria-hidden
               className="absolute inset-x-0 top-0"
@@ -141,7 +141,7 @@ function DeviceShowcase({
       <div className="mt-6 max-w-[280px] text-center">
         <p className="font-heading text-lg text-text-primary">{meta?.name}</p>
         <p className="mt-1 text-xs leading-relaxed text-text-secondary">{sample.caption}</p>
-        <p className="mt-2 text-[10px] uppercase tracking-[0.18em] text-accent">
+        <p className="mt-2 text-xs uppercase tracking-[0.16em] text-accent">
           {sample.date} · {sample.venue}
         </p>
       </div>
@@ -179,7 +179,7 @@ export function HomeInvitationPreview() {
   }, []);
 
   return (
-    <section id="contoh" className="scroll-mt-24 bg-surface/50 px-5 py-20 sm:px-8 lg:py-28">
+    <section id="contoh" className="scroll-mt-8 bg-surface/50 px-5 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-6xl">
         <SectionIntro
           kicker="Preview Undangan"
@@ -196,7 +196,7 @@ export function HomeInvitationPreview() {
             <button
               type="button"
               onClick={handleOpen}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition-transform duration-300 hover:scale-[1.02]"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition-transform duration-300 hover:scale-[1.02]"
             >
               Buka preview penuh
               <ArrowUpRight className="h-4 w-4" />

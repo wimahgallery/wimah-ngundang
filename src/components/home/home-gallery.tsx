@@ -34,8 +34,25 @@ function CarouselRow({
   direction: "left" | "right";
   duration: number;
 }) {
-  const doubled = [...images, ...images];
   const animationName = direction === "left" ? "scroll-left" : "scroll-right";
+  const copy = (
+    <div className="flex shrink-0 gap-4 pr-4">
+      {images.map((img, i) => (
+        <div
+          key={`${img.src}-${i}`}
+          className="group relative h-48 w-64 shrink-0 overflow-hidden rounded-xl sm:h-56 sm:w-72 md:h-64 md:w-80"
+        >
+          <img
+            src={img.src}
+            alt={img.alt}
+            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="relative overflow-hidden">
@@ -44,26 +61,14 @@ function CarouselRow({
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#f5f3ee] to-transparent sm:w-24" />
 
       <div
-        className="flex gap-4"
+        className="flex"
         style={{
           animation: `${animationName} ${duration}s linear infinite`,
           width: "max-content",
         }}
       >
-        {doubled.map((img, i) => (
-          <div
-            key={`${img.src}-${i}`}
-            className="group relative h-48 w-64 shrink-0 overflow-hidden rounded-xl sm:h-56 sm:w-72 md:h-64 md:w-80"
-          >
-            <img
-              src={img.src}
-              alt={img.alt}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          </div>
-        ))}
+        {copy}
+        <div aria-hidden="true">{copy}</div>
       </div>
     </div>
   );
@@ -73,7 +78,7 @@ export function HomeGallery() {
   return (
     <section
       id="galeri"
-      className="scroll-mt-24 bg-[#f5f3ee] px-5 py-20 sm:px-8 lg:py-28"
+      className="scroll-mt-8 bg-[#f5f3ee] px-5 py-20 sm:px-8 lg:py-28"
     >
       <style>{`
         @keyframes scroll-left {

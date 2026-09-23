@@ -41,7 +41,15 @@ export default function RootLayout({ children }: PropsWithChildren) {
       lang="id"
       className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, "font-sans", geist.variable)}
     >
-      <body className="min-h-full bg-background text-text-primary font-body">{children}</body>
+      <body className="min-h-full bg-background text-text-primary font-body">
+        <a
+          href="#main"
+          className="sr-only rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100]"
+        >
+          Lewati ke konten
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

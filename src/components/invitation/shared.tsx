@@ -78,7 +78,9 @@ export function SectionShell({
 
 export function SectionKicker({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-accent">{children}</p>
+    <p className="text-[11px] font-medium uppercase tracking-[clamp(0.1em,0.06rem+0.3vw,0.2em)] text-accent-dark">
+      {children}
+    </p>
   );
 }
 
@@ -182,8 +184,11 @@ export function StoryParagraphs({ content }: { content?: string | null }) {
 
 export function MusicDock({ url }: { url: string }) {
   return (
-    <div className="fixed bottom-4 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2 rounded-full border border-border bg-glass/95 px-4 py-2 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur">
-      <audio controls src={url} className="w-full h-8" preload="none" aria-label="Musik undangan" />
+    <div
+      className="fixed left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2 rounded-full border border-border bg-glass/95 px-4 py-2 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur"
+      style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+    >
+      <audio controls src={url} className="h-9 w-full" preload="none" aria-label="Musik undangan" />
     </div>
   );
 }
@@ -219,16 +224,16 @@ export function CountdownTimer({ eventDate }: { eventDate?: string | null }) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-4 gap-2 sm:gap-4">
       {units.map((u) => (
         <div
           key={u.label}
-          className="flex flex-col items-center rounded-lg border border-border bg-background/60 px-3 py-4 backdrop-blur-sm sm:px-5 sm:py-6"
+          className="flex min-w-0 flex-col items-center rounded-lg border border-border bg-background/60 px-2 py-4 backdrop-blur-sm sm:px-5 sm:py-6"
         >
-          <span className="font-heading text-3xl tabular-nums text-text-primary sm:text-4xl">
+          <span className="font-heading text-[clamp(1.375rem,5vw,2.25rem)] tabular-nums text-text-primary sm:text-4xl">
             {String(u.value).padStart(2, "0")}
           </span>
-          <span className="mt-1 text-[10px] uppercase tracking-[0.16em] text-text-secondary sm:text-xs">
+          <span className="mt-1 text-[10px] uppercase tracking-[0.12em] text-text-secondary sm:text-xs">
             {u.label}
           </span>
         </div>

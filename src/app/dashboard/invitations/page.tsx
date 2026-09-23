@@ -1,5 +1,5 @@
-import InvitationList from "@/components/features/invitations/InvitationList";
+import InvitationDashboard from "@/components/features/invitations/InvitationDashboard";
 
 export default function InvitationsPage() {
-  return <InvitationList />;
+  return <InvitationDashboard />;
 }

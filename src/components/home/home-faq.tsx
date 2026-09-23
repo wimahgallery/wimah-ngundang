@@ -13,12 +13,14 @@ import { cn } from "@/lib/utils";
 function FaqItem({
   question,
   answer,
+  steps,
   index,
   open,
   onToggle,
 }: {
   question: string;
   answer: string;
+  steps?: string[];
   index: number;
   open: boolean;
   onToggle: () => void;
@@ -72,7 +74,7 @@ function FaqItem({
         >
           <span
             className={cn(
-              "font-heading text-lg leading-snug transition-colors duration-300",
+              "min-w-0 font-heading text-lg leading-snug transition-colors duration-300",
               open ? "text-accent" : "text-text-primary",
             )}
           >
@@ -97,8 +99,15 @@ function FaqItem({
         aria-labelledby={`faq-trigger-${index}`}
         className="overflow-hidden"
       >
-        <div ref={bodyRef} className="pb-6 pr-10 text-sm leading-relaxed text-text-secondary">
-          {answer}
+        <div ref={bodyRef} className="pb-6 pr-[clamp(1rem,6vw,4rem)] text-sm leading-relaxed text-text-secondary">
+          <p>{answer}</p>
+          {steps?.length ? (
+            <ol className="mt-3 list-decimal space-y-1.5 pl-5 marker:text-accent marker:font-medium">
+              {steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          ) : null}
         </div>
       </animated.div>
     </animated.li>
@@ -109,7 +118,7 @@ export function HomeFaq() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="scroll-mt-24 px-5 py-20 sm:px-8 lg:py-28">
+    <section id="faq" className="scroll-mt-8 px-5 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-3xl">
         <SectionIntro
           kicker="FAQ"
@@ -124,6 +133,7 @@ export function HomeFaq() {
                 key={faq.question}
                 question={faq.question}
                 answer={faq.answer}
+                steps={faq.steps}
                 index={index}
                 open={openIndex === index}
                 onToggle={() => setOpenIndex(openIndex === index ? null : index)}

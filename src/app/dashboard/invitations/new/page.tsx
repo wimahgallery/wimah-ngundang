@@ -1,5 +1,5 @@
-import InvitationCreateForm from "@/components/features/invitations/InvitationCreateForm";
+import { redirect } from "next/navigation";
 
 export default function NewInvitationPage() {
-  return <InvitationCreateForm />;
+  redirect("/dashboard/invitations");
 }

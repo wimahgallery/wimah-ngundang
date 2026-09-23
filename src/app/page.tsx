@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { showcaseFaqs } from "@/lib/homepage-content";
 import { siteConfig } from "@/lib/site-config";
-import { HomeHeader } from "@/components/home/home-header";
 import { HomeHero } from "@/components/home/hero";
 import { TemplateShowcase } from "@/components/home/template-showcase";
 import { HomeFeatures } from "@/components/home/home-features";
@@ -52,7 +51,12 @@ export default function HomePage() {
     mainEntity: showcaseFaqs.map((faq) => ({
       "@type": "Question",
       name: faq.question,
-      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.steps?.length
+          ? `${faq.answer} ${faq.steps.map((step, i) => `${i + 1}. ${step}`).join(" ")}`
+          : faq.answer,
+      },
     })),
   };
 
@@ -77,8 +81,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify([faqJsonLd, serviceJsonLd]) }}
       />
       <PageBackground />
-      <HomeHeader />
-      <main>
+      <main id="main">
         <HomeHero />
         <TemplateShowcase />
         <HomeFeatures />

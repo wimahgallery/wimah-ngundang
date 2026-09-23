@@ -14,8 +14,8 @@ export default function SectionSettingsPanel({
   onChange: (next: SectionSettings) => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-2xl bg-background p-4 sm:grid-cols-2">
-      <label className="flex items-center gap-2 text-sm text-foreground">
+    <div className="grid gap-2 rounded-xl bg-background p-3 sm:grid-cols-2">
+      <label className="flex min-h-10 items-center gap-2 text-xs text-foreground">
         <input
           type="checkbox"
           checked={value.visible}
@@ -28,7 +28,7 @@ export default function SectionSettingsPanel({
         <select
           value={value.align}
           onChange={(e) => onChange({ ...value, align: e.target.value as Align })}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
         >
           {aligns.map((a) => (
             <option key={a} value={a}>
@@ -42,7 +42,7 @@ export default function SectionSettingsPanel({
         <select
           value={value.headingSize}
           onChange={(e) => onChange({ ...value, headingSize: e.target.value as SizeToken })}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
         >
           {sizes.map((s) => (
             <option key={s} value={s}>
@@ -56,7 +56,7 @@ export default function SectionSettingsPanel({
         <select
           value={value.paragraphSize}
           onChange={(e) => onChange({ ...value, paragraphSize: e.target.value as SizeToken })}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
         >
           {sizes.map((s) => (
             <option key={s} value={s}>
@@ -70,7 +70,7 @@ export default function SectionSettingsPanel({
         <select
           value={value.sectionSpacing}
           onChange={(e) => onChange({ ...value, sectionSpacing: e.target.value as SectionSettings["sectionSpacing"] })}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-1.5 text-sm"
+          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
         >
           {spacings.map((s) => (
             <option key={s} value={s}>

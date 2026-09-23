@@ -37,16 +37,23 @@ function SortableItem({
           alt={image.alt || ""}
           className="h-full w-full object-cover"
           style={{ objectPosition: `${image.positionX}% ${image.positionY}%` }}
+          loading="lazy"
         />
         <button
           type="button"
-          className="absolute left-2 top-2 rounded-md bg-white/90 p-1"
+          aria-label="Geser urutan foto"
+          className="absolute left-2 top-2 grid h-9 w-9 place-items-center rounded-md bg-white/90"
           {...attributes}
           {...listeners}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>
-        <button type="button" onClick={onRemove} className="absolute right-2 top-2 rounded-md bg-white/90 p-1 text-red-500">
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Hapus foto"
+          className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-md bg-white/90 text-red-500"
+        >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
@@ -55,26 +62,29 @@ function SortableItem({
           value={image.alt || ""}
           onChange={(e) => onMeta({ alt: e.target.value })}
           placeholder="Keterangan"
-          className="w-full rounded-lg border border-border px-2 py-1.5 text-xs"
+          aria-label="Keterangan foto"
+          className="w-full rounded-lg border border-border px-2 py-2 text-base md:py-1.5 md:text-sm"
         />
-        <label className="block text-[11px] text-muted-foreground">
+        <label className="block text-xs text-muted-foreground">
           Focal X {image.positionX}
           <input
             type="range"
             min={0}
             max={100}
             value={image.positionX}
+            aria-label="Posisi fokus horizontal"
             onChange={(e) => onMeta({ positionX: Number(e.target.value) })}
             className="w-full"
           />
         </label>
-        <label className="block text-[11px] text-muted-foreground">
+        <label className="block text-xs text-muted-foreground">
           Focal Y {image.positionY}
           <input
             type="range"
             min={0}
             max={100}
             value={image.positionY}
+            aria-label="Posisi fokus vertikal"
             onChange={(e) => onMeta({ positionY: Number(e.target.value) })}
             className="w-full"
           />

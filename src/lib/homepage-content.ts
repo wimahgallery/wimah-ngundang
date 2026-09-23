@@ -46,7 +46,7 @@ export const templateShowcase: TemplateShowcaseItem[] = [
   {
     id: "elegant-classic",
     name: "Elegant Classic",
-    tagline: "Hero fullscreen dengan tipografi klasik yang tenang dan simetris.",
+    tagline: "Klasik mewah dengan noise texture lembut dan aksen emas.",
     motion: "Fade up · soft parallax",
     bestFor: "Pernikahan formal",
     features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
@@ -54,10 +54,65 @@ export const templateShowcase: TemplateShowcaseItem[] = [
     isPopular: true,
     palette: { screen: "#F5F3EE", ink: "#54524D", soft: "#E8E3D8", accent: "#7C8472" },
   },
+  {
+    id: "neo-brutalism",
+    name: "Neo Brutalism",
+    tagline: "Editorial berani dengan border tebal, bayangan keras, dan tekstur kertas.",
+    motion: "Marquee · offset reveal · hard-shadow micro",
+    bestFor: "Pernikahan modern & berani",
+    features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
+    sectionCount: 14,
+    palette: { screen: "#F4EFE6", ink: "#101010", soft: "#FFFFFF", accent: "#FF4D2E" },
+  },
+  {
+    id: "modern-minimal",
+    name: "Modern Minimal",
+    tagline: "Bersih, kontemporer dengan garis halus dan desain minimalis.",
+    motion: "Fade · clean reveal",
+    bestFor: "Pernikahan modern",
+    features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
+    sectionCount: 14,
+    palette: { screen: "#FFFFFF", ink: "#2D2D2D", soft: "#F5F5F5", accent: "#2D2D2D" },
+  },
+  {
+    id: "dark-premium",
+    name: "Dark Premium",
+    tagline: "Gelap mewah dengan tekstur halus dan aksen emas royal.",
+    motion: "Gold glow · dramatic reveal",
+    bestFor: "Pernikahan mewah",
+    features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
+    sectionCount: 14,
+    palette: { screen: "#0F0F0F", ink: "#F5F3EE", soft: "#1A1A1A", accent: "#D4A853" },
+  },
+  {
+    id: "garden-party",
+    name: "Garden Party",
+    tagline: "Cerah, lembut dengan tekstur natural dan warna pastel hijau.",
+    motion: "Soft float · garden drift",
+    bestFor: "Pernikahan outdoor",
+    features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
+    sectionCount: 14,
+    palette: { screen: "#FDF8F0", ink: "#4A5D4A", soft: "#F8F4EC", accent: "#A8C5A0" },
+  },
+  {
+    id: "timeline-journey",
+    name: "Timeline Journey",
+    tagline: "Naratif hangat dengan tekstur lembut dan visual timeline personal.",
+    motion: "Timeline scroll · story reveal",
+    bestFor: "Pernikahan personal",
+    features: ["Gallery", "Music", "RSVP", "Countdown", "Gift"],
+    sectionCount: 14,
+    palette: { screen: "#F0EDE6", ink: "#3D3228", soft: "#EDE8E0", accent: "#8B6F5E" },
+  },
 ];
 
 export const heroFeaturedTemplates: TemplateId[] = [
   "elegant-classic",
+  "neo-brutalism",
+  "modern-minimal",
+  "dark-premium",
+  "garden-party",
+  "timeline-journey",
 ];
 
 
@@ -118,9 +173,9 @@ export interface WorkflowStep {
 
 export const workflowSteps: WorkflowStep[] = [
   {
-    title: "Pilih template",
-    description: "Tentukan desain dari 10 template premium sesuai karakter acaramu.",
-    detail: "Setiap template punya gerak dan nuansa yang berbeda.",
+title: "Pilih template",
+  description: "Tentukan desain dari 6 template premium dengan tekstur dan gaya unik.",
+  detail: "Setiap template punya pola, tekstur, dan nuansa yang berbeda.",
   },
   {
     title: "Isi data acara",
@@ -142,43 +197,58 @@ export const workflowSteps: WorkflowStep[] = [
 export interface ShowcaseFaq {
   question: string;
   answer: string;
+  steps?: string[];
 }
 
 export const showcaseFaqs: ShowcaseFaq[] = [
   {
-    question: "Bagaimana cara memesan undangan digital Wimah Ngundang?",
+    question: "Bagaimana cara melakukan pemesanan?",
     answer:
-      "Pilih template favoritmu, lalu hubungi kami lewat WhatsApp. Tim kami akan menyiapkan undangan dan membantu proses pengisian data acara sampai undangan siap dibagikan.",
+      "Proses pemesanan sangat mudah. Setelah menentukan tema yang sesuai, ikuti langkah berikut:",
+    steps: [
+      "Pilih paket “Premium” pada katalog.",
+      "Lengkapi data akun yang diperlukan.",
+      "Lakukan pembayaran sesuai paket yang dipilih.",
+      "Invoice akan dikirim secara otomatis ke email. Pastikan menggunakan alamat email yang masih aktif.",
+      "Tentukan tema undangan yang ingin digunakan.",
+      "Lengkapi formulir dan data acara yang dibutuhkan.",
+      "Setelah data lengkap, undangan siap digunakan dan dibagikan kepada tamu.",
+    ],
   },
   {
-    question: "Apakah saya perlu keahlian teknis untuk mengisinya?",
+    question: "Apakah undangan bisa digabung dengan acara Metatah?",
     answer:
-      "Tidak sama sekali. Semua dibuat sesederhana mengisi formulir: nama mempelai, jadwal, lokasi, cerita, galeri foto, dan rekening angpao digital. Kalau bingung, tim kami siap membantu.",
+      "Tentu bisa. Undangan pernikahan dan acara Metatah dapat dibuat dalam satu link undangan, selama kedua acara masih berada dalam satu rangkaian atau waktu pelaksanaan yang berkaitan.",
   },
   {
-    question: "Bisakah undangan memakai domain sendiri?",
+    question: "Apakah undangan digital memiliki masa berlaku?",
     answer:
-      "Bisa. Undangan mendukung custom domain, jadi link bisa memakai nama pasangan atau domain pribadi agar terasa lebih personal dan profesional.",
+      "Ya. Undangan digital aktif hingga 1 tahun setelah tanggal pelaksanaan acara (hari-H).",
   },
   {
-    question: "Fitur apa saja yang sudah termasuk di dalam undangan?",
+    question: "Apakah bisa menggunakan lokasi dan waktu acara yang berbeda?",
     answer:
-      "Hero pembuka dengan nama pasangan, profil kedua mempelai, jadwal acara, peta lokasi lewat Google Maps, cerita perjalanan, galeri foto, angpao digital, dan musik latar yang bisa diputar tamu.",
+      "Bisa. Jika memiliki beberapa rangkaian acara dengan lokasi maupun waktu yang berbeda, detail masing-masing acara dapat dicantumkan secara terpisah di dalam satu undangan.",
   },
   {
-    question: "Apakah data undangan masih bisa diubah setelah dipublish?",
+    question: "Apakah ada batasan jumlah nama tamu?",
     answer:
-      "Tentu. Data acara masih bisa diperbarui setelah undangan aktif, termasuk mengganti foto atau menambah informasi baru. Kami bantu sampai semuanya pas.",
+      "Tidak ada. Kamu dapat menambahkan dan membagikan undangan kepada sebanyak mungkin tamu tanpa biaya tambahan.",
   },
   {
-    question: "Bisa dipakai untuk acara selain pernikahan?",
+    question: "Berapa banyak foto yang sebaiknya disiapkan?",
     answer:
-      "Bisa. Selain pernikahan, undangan Wimah Ngundang juga cocok untuk lamaran, aqiqah, ulang tahun, sampai acara korporat — cukup pilih template dan sesuaikan datanya.",
+      "Kami menyarankan sekitar 10-20 foto agar tampilan undangan tetap menarik sekaligus nyaman saat dibuka. Jumlah foto yang terlalu banyak dapat membuat ukuran undangan menjadi lebih besar sehingga waktu loading bisa lebih lama.",
   },
   {
-    question: "Berapa lama proses pembuatan undangannya?",
+    question: "Apakah sudah termasuk edit foto prewedding?",
     answer:
-      "Setelah data lengkap diterima, penyiapan undangan berjalan cepat. Jadwal pasti dan estimasi tercepat akan dikonfirmasi tim kami langsung melalui WhatsApp sesuai antrean saat itu.",
+      "Belum. Foto yang digunakan pada undangan diharapkan sudah dalam kondisi final/edit dari fotografer.",
+  },
+  {
+    question: "Bagaimana jika foto prewedding belum selesai diedit?",
+    answer:
+      "Tidak masalah. Kamu tetap dapat melakukan booking dan menyelesaikan proses pemesanan terlebih dahulu. Foto dapat ditambahkan atau diperbarui setelah hasil edit dari fotografer sudah selesai.",
   },
 ];
 
@@ -197,5 +267,40 @@ export const sampleInvitations: SampleInvitation[] = [
     caption: "Pembuka fullscreen dengan entrance yang tenang dan elegan.",
     date: "15 Agustus 2026",
     venue: "Nusa Dua, Bali",
+  },
+  {
+    id: "neo-brutalism",
+    name: "Neo Brutalism",
+    caption: "Editorial berani dengan border tebal dan bayangan keras.",
+    date: "20 Agustus 2026",
+    venue: "Ubud, Bali",
+  },
+  {
+    id: "modern-minimal",
+    name: "Modern Minimal",
+    caption: "Bersih, luas, dan fokus pada foto dengan desain kontemporer.",
+    date: "25 Agustus 2026",
+    venue: "Seminyak, Bali",
+  },
+  {
+    id: "dark-premium",
+    name: "Dark Premium",
+    caption: "Gelap mewah dengan aksen emas yang megah.",
+    date: "1 September 2026",
+    venue: "Nusa Dua, Bali",
+  },
+  {
+    id: "garden-party",
+    name: "Garden Party",
+    caption: "Cerah, lembut, dan penuh warna alam.",
+    date: "5 September 2026",
+    venue: "Uluwatu, Bali",
+  },
+  {
+    id: "timeline-journey",
+    name: "Timeline Journey",
+    caption: "Cerita perjalanan cinta interaktif dengan timeline.",
+    date: "10 September 2026",
+    venue: "Canggu, Bali",
   },
 ];

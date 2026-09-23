@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
@@ -48,7 +48,7 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
   const hero = invitation.custom_settings.hero;
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden">
       <InvitationPhoto
         src={invitation.cover_image}
         alt={invitation.event_title || "Cover"}
@@ -62,22 +62,22 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-background" />
 
       {/* floating ornaments */}
-      <div className="pointer-events-none absolute left-4 top-8 text-accent/20 sm:left-8 sm:top-12">
+      <div aria-hidden="true" className="pointer-events-none absolute left-4 top-8 text-accent/20 sm:left-8 sm:top-12">
         <svg className="h-16 w-16 sm:h-24 sm:w-24" viewBox="0 0 100 100" fill="currentColor" opacity="0.3">
           <path d="M50 0 C60 20 80 30 100 50 C80 70 60 80 50 100 C40 80 20 70 0 50 C20 30 40 20 50 0Z" />
         </svg>
       </div>
-      <div className="pointer-events-none absolute right-4 bottom-32 text-accent/15 sm:right-8 sm:bottom-40">
+      <div aria-hidden="true" className="pointer-events-none absolute right-4 bottom-32 text-accent/15 sm:right-8 sm:bottom-40">
         <svg className="h-20 w-20 sm:h-28 sm:w-28" viewBox="0 0 100 100" fill="currentColor" opacity="0.25">
           <path d="M50 0 C60 20 80 30 100 50 C80 70 60 80 50 100 C40 80 20 70 0 50 C20 30 40 20 50 0Z" />
         </svg>
       </div>
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <p className="text-[10px] uppercase tracking-[0.32em] text-background/70 sm:text-xs">
+      <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-[clamp(1.5rem,5vw,2rem)] text-center">
+        <p className="text-[10px] uppercase tracking-[clamp(0.1em,0.06rem+0.4vw,0.28em)] text-background/75 sm:text-xs">
           {invitation.hero_title || "The Wedding of"}
         </p>
-        <h1 className="mt-4 font-heading text-4xl text-background sm:text-6xl lg:text-7xl">
+        <h1 className="mt-4 font-heading text-[clamp(2.25rem,1.5rem+4vw,4.5rem)] text-balance text-background">
           <CoupleNames invitation={invitation} className="drop-shadow-[0_4px_20px_rgba(0,0,0,0.3)]" />
         </h1>
         {invitation.event_date && (
@@ -114,7 +114,7 @@ function GreetingSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.greeting;
   if (!settings.visible) return null;
   return (
-    <section id="greeting" className="px-6 py-20 sm:py-28">
+    <section id="greeting" className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-2xl text-center">
         <DecorativeDivider className="mb-8" />
         <p className="text-xs uppercase tracking-[0.28em] text-text-secondary">
@@ -151,7 +151,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
     ) : null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-5xl">
         <SectionKicker>Mempelai</SectionKicker>
         <SectionHeading settings={couple} className="mt-3">
@@ -236,7 +236,7 @@ function StoryTimeline({ invitation }: { invitation: Invitation }) {
   const hasTimeline = milestones && milestones.length > 0;
 
   return (
-    <section className="bg-surface/40 px-6 py-20 sm:py-28">
+    <section className="bg-surface/40 texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-5xl">
         <SectionKicker>Cerita</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -308,7 +308,7 @@ function CountdownSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible || !invitation.event_date) return null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-3xl text-center">
         <SectionKicker>Hitung Mundur</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -328,15 +328,15 @@ function ScheduleSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible) return null;
 
   return (
-    <section className="bg-surface/40 px-6 py-20 sm:py-28">
+    <section className="bg-surface/40 texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-5xl text-center">
         <SectionKicker>Jadwal</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Save the Date
         </SectionHeading>
 
-        <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
+        <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
+          <div className="min-w-0 rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.2em] text-accent">Akad Nikah</p>
             {invitation.event_date && (
               <p className="mt-3 font-heading text-lg text-text-primary">{formatDate(invitation.event_date)}</p>
@@ -345,7 +345,7 @@ function ScheduleSection({ invitation }: { invitation: Invitation }) {
               <p className="mt-1 text-sm text-text-secondary">{invitation.event_time}</p>
             )}
           </div>
-          <div className="rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
+          <div className="min-w-0 rounded-lg border border-border bg-background/80 p-6 text-center shadow-[0_8px_30px_rgba(84,82,77,0.05)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.2em] text-accent">Resepsi</p>
             {invitation.event_date && (
               <p className="mt-3 font-heading text-lg text-text-primary">{formatDate(invitation.event_date)}</p>
@@ -366,7 +366,7 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible) return null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-5xl text-center">
         <SectionKicker>Lokasi</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -406,10 +406,19 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.gallery;
   const [lightbox, setLightbox] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (lightbox === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
+
   if (!settings.visible || !invitation.gallery_images.length) return null;
 
   return (
-    <section className="bg-surface/40 px-6 py-20 sm:py-28">
+    <section className="bg-surface/40 texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <SectionKicker>Galeri</SectionKicker>
@@ -446,13 +455,16 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
         {/* lightbox */}
         {lightbox !== null && (
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Galeri foto"
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             onClick={() => setLightbox(null)}
           >
             <button
               type="button"
               onClick={() => setLightbox(null)}
-              className="absolute right-4 top-4 text-white/70 transition-colors hover:text-white"
+              className="absolute right-4 top-4 grid h-11 w-11 place-items-center text-white/70 transition-colors hover:text-white"
               aria-label="Tutup"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -465,7 +477,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
                 e.stopPropagation();
                 setLightbox((prev) => (prev === 0 ? invitation.gallery_images.length - 1 : prev! - 1));
               }}
-              className="absolute left-2 text-white/70 transition-colors hover:text-white sm:left-4"
+              className="absolute left-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:left-4"
               aria-label="Sebelumnya"
             >
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -478,7 +490,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
                 e.stopPropagation();
                 setLightbox((prev) => (prev === invitation.gallery_images.length - 1 ? 0 : prev! + 1));
               }}
-              className="absolute right-2 text-white/70 transition-colors hover:text-white sm:right-4"
+              className="absolute right-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:right-4"
               aria-label="Berikutnya"
             >
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -496,6 +508,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
                 height={1000}
                 className="max-h-[80vh] w-auto rounded-lg object-contain"
                 sizes="90vw"
+                loading="lazy"
               />
             </div>
           </div>
@@ -511,7 +524,7 @@ function VideoSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible || !invitation.video_url) return null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-3xl text-center">
         <SectionKicker>Video</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -531,7 +544,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible) return null;
 
   return (
-    <section className="bg-surface/40 px-6 py-20 sm:py-28">
+    <section className="bg-surface/40 texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-3xl text-center">
         <SectionKicker>Tanda Kasih</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -550,6 +563,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
               width={300}
               height={300}
               className="w-full rounded-lg border border-border shadow-[0_8px_30px_rgba(84,82,77,0.06)]"
+              loading="lazy"
             />
             <p className="mt-2 text-xs text-text-secondary">Scan QRIS untuk transfer</p>
           </div>
@@ -578,7 +592,7 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
 
   if (submitted) {
     return (
-      <section className="px-6 py-20 sm:py-28">
+      <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
         <div className="mx-auto max-w-lg text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-accent">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -595,7 +609,7 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
   }
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-lg text-center">
         <SectionKicker>Konfirmasi</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -622,15 +636,17 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-medium text-text-primary">Kehadiran</label>
-            <div className="flex gap-3">
+            <p className="mb-2 block text-xs font-medium text-text-primary">Kehadiran</p>
+            <div role="radiogroup" aria-label="Kehadiran" className="flex gap-3">
               {["Hadir", "Tidak Hadir", "Masih Ragu"].map((opt) => (
                 <button
                   key={opt}
                   type="button"
+                  role="radio"
+                  aria-checked={form.attending === opt}
                   onClick={() => setForm((f) => ({ ...f, attending: opt }))}
                   className={cn(
-                    "flex-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all",
+                    "min-h-11 flex-1 rounded-xl border px-3 py-2.5 text-xs font-medium transition-all",
                     form.attending === opt
                       ? "border-accent bg-accent/10 text-accent"
                       : "border-border text-text-secondary hover:border-accent/40",
@@ -694,7 +710,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible) return null;
 
   return (
-    <section className="bg-surface/40 px-6 py-20 sm:py-28">
+    <section className="bg-surface/40 texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-2xl text-center">
         <SectionKicker>Ucapan</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -714,7 +730,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible || !invitation.fun_facts?.length) return null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-3xl text-center">
         <SectionKicker>Fun Facts</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
@@ -745,7 +761,7 @@ function ClosingSection({ invitation }: { invitation: Invitation }) {
   if (!settings.visible) return null;
 
   return (
-    <section className="px-6 py-20 sm:py-28">
+    <section className="texture-noise px-[clamp(1.5rem,4vw,3rem)] py-[clamp(3.5rem,7vw,7rem)]">
       <div className="mx-auto max-w-2xl text-center">
         <DecorativeDivider className="mb-8" />
         {invitation.closing_image && (
@@ -756,7 +772,7 @@ function ClosingSection({ invitation }: { invitation: Invitation }) {
             sizes="(max-width: 640px) 100vw, 400px"
           />
         )}
-        <h2 className="mt-8 font-heading text-2xl text-text-primary sm:text-3xl">
+        <h2 className="mt-8 font-heading text-[clamp(1.5rem,1.25rem+1.2vw,2rem)] text-text-primary">
           Terima Kasih
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-text-secondary sm:text-base">
@@ -775,21 +791,43 @@ function ClosingSection({ invitation }: { invitation: Invitation }) {
 /* ─── Main Template ─── */
 export default function ElegantClassic({ invitation }: { invitation: Invitation }) {
   return (
-    <div className="bg-background text-text-primary">
+    <div className="relative bg-blob-1 text-text-primary">
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 20% 30%, rgba(212,168,83,0.04) 0%, transparent 40%), radial-gradient(circle at 80% 70%, rgba(124,132,114,0.04) 0%, transparent 40%)" }} />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
       <HeroCover invitation={invitation} />
-      <GreetingSection invitation={invitation} />
-      <CoupleSection invitation={invitation} />
-      <StoryTimeline invitation={invitation} />
-      <CountdownSection invitation={invitation} />
-      <ScheduleSection invitation={invitation} />
-      <VenueSection invitation={invitation} />
-      <GallerySection invitation={invitation} />
-      <VideoSection invitation={invitation} />
-      <GiftSection invitation={invitation} />
-      <RsvpSection invitation={invitation} />
-      <WishesSection invitation={invitation} />
-      <FunFactsSection invitation={invitation} />
-      <ClosingSection invitation={invitation} />
+      <div className="mx-auto max-w-5xl">
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <GreetingSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <CoupleSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <StoryTimeline invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <CountdownSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <ScheduleSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <VenueSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <GallerySection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <VideoSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <GiftSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <RsvpSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <WishesSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <FunFactsSection invitation={invitation} />
+        <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+        <ClosingSection invitation={invitation} />
+        <div className="mt-16 text-center">
+          <DecorativeDivider />
+          <p className="mt-4 text-xs uppercase tracking-[0.2em] text-text-secondary">Dengan cinta</p>
+        </div>
+      </div>
     </div>
   );
 }

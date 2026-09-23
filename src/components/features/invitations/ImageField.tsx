@@ -112,6 +112,7 @@ export default function ImageField({
                 objectPosition: `${positionX}% ${positionY}%`,
                 transform: `scale(${zoom / 100}) rotate(${rotate}deg)`,
               }}
+              loading="lazy"
             />
             <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary shadow" style={{ left: `${positionX}%`, top: `${positionY}%` }} />
           </button>
@@ -137,7 +138,7 @@ export default function ImageField({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground"
+          className="min-h-10 rounded-lg border border-border px-3 py-2 text-xs text-foreground"
         >
           Ganti
         </button>
@@ -151,24 +152,24 @@ export default function ImageField({
                 setCropRotate(rotate);
                 setCropOpen(true);
               }}
-              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground"
+              className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground"
             >
               <Scan className="h-3.5 w-3.5" /> Crop / Zoom
             </button>
             <button
               type="button"
               onClick={() => onRotateChange?.((rotate + 90) % 360)}
-              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs text-foreground"
+              className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground"
             >
               <RotateCw className="h-3.5 w-3.5" /> Rotate
             </button>
-            <button type="button" onClick={() => onChange(null)} className="rounded-lg px-3 py-1.5 text-xs text-red-500">
+            <button type="button" onClick={() => onChange(null)} className="min-h-10 rounded-lg px-3 py-2 text-xs text-red-500">
               Hapus
             </button>
           </>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
         <label className="text-xs text-muted-foreground">
           Position X {positionX}
           <input
@@ -208,15 +209,27 @@ export default function ImageField({
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       {cropOpen && cropSrc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Crop gambar"
+          onClick={(e) => { if (e.target === e.currentTarget) setCropOpen(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setCropOpen(false); }}
+        >
+          <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-4 py-3">
               <p className="text-sm font-medium">Crop gambar</p>
-              <button type="button" onClick={() => setCropOpen(false)}>
+              <button
+                type="button"
+                onClick={() => setCropOpen(false)}
+                aria-label="Tutup crop"
+                className="grid h-11 w-11 place-items-center rounded-md text-muted-foreground hover:bg-background"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="relative h-80 bg-black">
+            <div className="relative h-[clamp(12rem,40dvh,20rem)] bg-black">
               <Cropper
                 image={cropSrc}
                 crop={crop}
@@ -257,7 +270,7 @@ export default function ImageField({
                 type="button"
                 disabled={busy}
                 onClick={() => void applyCrop()}
-                className="w-full rounded-lg bg-primary py-2 text-sm text-primary-foreground disabled:opacity-50"
+                className="min-h-11 w-full rounded-lg bg-primary py-3 text-sm text-primary-foreground disabled:opacity-50"
               >
                 {busy ? "Menyimpan..." : "Terapkan crop"}
               </button>

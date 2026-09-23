@@ -236,14 +236,14 @@ function PreviewModalShell({
         {/* header */}
         <header className="relative flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-[0.28em] text-gold sm:text-[10px]">Preview live template</p>
+            <p className="text-[10px] uppercase tracking-[0.28em] text-gold">Preview live template</p>
             <h3
               id="preview-modal-title"
               className="mt-0.5 truncate font-heading text-base sm:text-xl lg:text-2xl"
             >
               {data.name}
             </h3>
-            <p className="mt-0.5 line-clamp-1 text-[11px] text-[#F5F3EE]/60 sm:text-xs">{data.tagline}</p>
+            <p className="mt-0.5 line-clamp-1 text-xs text-[#F5F3EE]/70">{data.tagline}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div
@@ -274,7 +274,7 @@ function PreviewModalShell({
               type="button"
               onClick={handleClose}
               aria-label="Tutup preview"
-              className="rounded-full border border-white/15 p-1.5 text-[#F5F3EE]/80 transition-colors hover:border-white/40 hover:text-white sm:p-2"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/15 text-[#F5F3EE]/80 transition-colors hover:border-white/40 hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -296,13 +296,13 @@ function PreviewModalShell({
               <span className="inline-flex w-fit rounded-full border border-gold/40 px-2.5 py-0.5 text-[9px] uppercase tracking-[0.2em] text-gold sm:text-[10px]">
                 {data.motion}
               </span>
-              <p className="text-[12px] leading-relaxed text-[#F5F3EE]/75 sm:text-sm">
+              <p className="text-sm leading-relaxed text-[#F5F3EE]/75">
                 Cocok untuk {data.bestFor.toLowerCase()}. Semua bagian undangan bisa dicustom: nama
                 pasangan, jadwal acara, lokasi dengan Google Maps, cerita, galeri foto, angpao digital,
                 dan musik latar.
               </p>
 
-              <ul className="hidden gap-2 text-[12px] text-[#F5F3EE]/70 sm:grid sm:text-[13px]">
+              <ul className="hidden gap-2 text-[13px] text-[#F5F3EE]/75 sm:grid">
                 {[
                   "Galeri foto + musik latar",
                   "Angpao digital & Google Maps",
@@ -320,18 +320,18 @@ function PreviewModalShell({
                   href={whatsappLink(waMessages.template(data.name))}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2.5 text-[13px] font-semibold text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-sm"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] sm:px-5 sm:py-2.5"
                 >
-                  <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <MessageCircle className="h-4 w-4" />
                   Saya mau template ini
                 </a>
                 <a
                   href={`/preview/${data.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-[13px] text-[#F5F3EE] transition-colors hover:border-white/50 sm:px-5 sm:py-2.5 sm:text-sm"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-3 text-sm text-[#F5F3EE] transition-colors hover:border-white/50 sm:px-5 sm:py-2.5"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <ExternalLink className="h-4 w-4" />
                   Buka di tab baru
                 </a>
               </div>
@@ -340,7 +340,7 @@ function PreviewModalShell({
         </div>
 
         {/* viewport tabs — mobile bottom bar */}
-        <div className="relative shrink-0 border-t border-white/10 bg-[#141512]/90 px-3 py-2.5 sm:hidden">
+        <div className="relative shrink-0 border-t border-white/10 bg-[#141512]/90 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:hidden">
           <div
             role="tablist"
             aria-label="Pilih tampilan preview"
@@ -480,8 +480,8 @@ function ViewportTab({
       onClick={onSelect}
       style={spring}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors duration-200 sm:gap-1.5 sm:px-3 sm:text-[11px]",
-        selected ? "bg-white text-[#1a1b17]" : "text-white/60 hover:text-white",
+        "inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-medium transition-colors duration-200 sm:min-h-8 sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]",
+        selected ? "bg-white text-[#1a1b17]" : "text-white/70 hover:text-white",
         className,
       )}
     >
