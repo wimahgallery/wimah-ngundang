@@ -69,10 +69,21 @@ export interface GiftAccount {
 }
 
 export interface StoryMilestone {
+  id?: string;
   title: string;
   date: string;
   description: string;
   image?: string | null;
+}
+
+export interface AgendaEvent {
+  id: string;
+  name: string;
+  date: string;
+  time?: string | null;
+  location?: string | null;
+  address?: string | null;
+  mapsUrl?: string | null;
 }
 
 export interface FunFact {
@@ -135,6 +146,7 @@ export interface Invitation {
   groom_social?: SocialLinks | null;
   bride_social?: SocialLinks | null;
   story_milestones?: StoryMilestone[] | null;
+  events?: AgendaEvent[] | null;
   video_url?: string | null;
   video_poster?: string | null;
   rsvp_enabled?: boolean | null;
@@ -189,6 +201,12 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
   };
   const milestones = Array.isArray(row.story_milestones) ? row.story_milestones : [];
   const facts = Array.isArray(row.fun_facts) ? row.fun_facts : [];
+  const events = Array.isArray(row.events)
+    ? (row.events as AgendaEvent[]).map((event, index) => ({
+        ...event,
+        id: event.id || `event-${index}`,
+      }))
+    : [];
 
   return {
     ...(row as unknown as Invitation),
@@ -208,9 +226,10 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
     groom_social: (row.groom_social as SocialLinks) ?? null,
     bride_social: (row.bride_social as SocialLinks) ?? null,
     story_milestones: milestones as StoryMilestone[],
+    events,
     video_url: (row.video_url as string) ?? null,
     video_poster: (row.video_poster as string) ?? null,
-    rsvp_enabled: row.rsvp_enabled === true,
+    rsvp_enabled: row.rsvp_enabled === true || row.rsvp_enabled === "true",
     fun_facts: facts as FunFact[],
     closing_message: (row.closing_message as string) ?? null,
     closing_image: (row.closing_image as string) ?? null,
@@ -223,6 +242,89 @@ export function coupleLabel(invitation: Invitation) {
   const groom = invitation.groom_name?.trim();
   if (bride && groom) return `${bride} & ${groom}`;
   return invitation.event_title || invitation.slug;
+}
+
+/** Daftar agenda acara. Kalau `events` kosong, fallback ke tanggal/venue utama. */
+export function agendaEvents(invitation: Invitation): AgendaEvent[] {
+  const custom = (invitation.events ?? []).filter((event) => event.name || event.date);
+  if (custom.length) return custom;
+
+  if (!invitation.event_date && !invitation.event_time) return [];
+
+  return [
+    {
+      id: "main-event",
+      name: invitation.event_title || "Acara",
+      date: invitation.event_date ?? "",
+      time: invitation.event_time,
+      location: invitation.venue_name,
+      address: invitation.venue_address,
+      mapsUrl: invitation.google_maps_url,
+    },
+  ];
+}
+
+function parseTimes(input?: string | null): Array<{ hours: number; minutes: number }> {
+  if (!input) return [];
+  const matches = input.matchAll(/(\d{1,2})[:.](\d{2})/g);
+  const result: Array<{ hours: number; minutes: number }> = [];
+  for (const match of matches) {
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (hours <= 23 && minutes <= 59) result.push({ hours, minutes });
+    if (result.length === 2) break;
+  }
+  return result;
+}
+
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/**
+ * Link "Tambahkan ke Google Calendar".
+ * `time` didukung format bebas seperti "15.00 WITA – Selesai".
+ */
+export function googleCalendarLink({
+  title,
+  date,
+  time,
+  location,
+  details,
+}: {
+  title: string;
+  date?: string | null;
+  time?: string | null;
+  location?: string | null;
+  details?: string | null;
+}): string {
+  if (!date) return "";
+
+  const params = new URLSearchParams();
+  params.set("text", title);
+
+  const [start, end] = parseTimes(time);
+  if (start) {
+    const finish = end ?? {
+      hours: (start.hours + 3) % 24,
+      minutes: start.minutes,
+    };
+    params.set(
+      "dates",
+      `${date}T${pad(start.hours)}${pad(start.minutes)}00/${date}T${pad(finish.hours)}${pad(finish.minutes)}00`,
+    );
+    params.set("ctz", "Asia/Makassar");
+  } else {
+    const next = new Date(`${date}T00:00:00`);
+    next.setDate(next.getDate() + 1);
+    const nextDay = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+    params.set("dates", `${date}/${nextDay}`);
+  }
+
+  if (location) params.set("location", location);
+  if (details) params.set("details", details);
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export function headingClass(size: SizeToken) {

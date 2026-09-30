@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { PropsWithChildren } from "react";
-import { Cormorant_Garamond, Inter, Playfair_Display, Geist } from "next/font/google";
+import { Cormorant_Garamond, Inter, Playfair_Display, Geist, Sora } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,12 @@ const playfair = Playfair_Display({
   style: ["normal", "italic"],
 });
 
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
@@ -39,7 +45,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <html
       lang="id"
-      className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, "font-sans", geist.variable)}
+      className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, sora.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full bg-background text-text-primary font-body">
         <a

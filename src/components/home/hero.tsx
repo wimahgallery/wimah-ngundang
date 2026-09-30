@@ -164,7 +164,7 @@ export function HomeHero() {
             screenClassName="aspect-auto h-[clamp(420px,55svh,540px)]"
           >
             <iframe
-              src="/preview/elegant-classic"
+              src="/preview/lume"
               title="Preview undangan digital"
               className="h-full w-full border-0"
             />

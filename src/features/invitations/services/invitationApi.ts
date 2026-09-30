@@ -42,6 +42,7 @@ export type InvitationRow = {
   groom_social?: Record<string, string | null> | null;
   bride_social?: Record<string, string | null> | null;
   story_milestones?: unknown[] | null;
+  events?: unknown[] | null;
   video_url?: string | null;
   video_poster?: string | null;
   rsvp_enabled?: boolean | null;

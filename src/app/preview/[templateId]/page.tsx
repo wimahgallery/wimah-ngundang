@@ -18,11 +18,21 @@ export async function generateMetadata({
 
 export default async function TemplatePreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ templateId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { templateId } = await params;
   if (!isTemplateId(templateId)) notFound();
+  const sp = await searchParams;
+  const embed = sp.embed === "1";
   const Template = await loadTemplate(templateId);
-  return <Template invitation={{ ...dummyInvitation, template_id: templateId }} />;
+  return (
+    <Template
+      invitation={{ ...dummyInvitation, template_id: templateId }}
+      embed={embed}
+      frameSrc={`/preview/${templateId}?embed=1`}
+    />
+  );
 }

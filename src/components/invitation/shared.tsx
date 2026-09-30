@@ -242,6 +242,15 @@ export function CountdownTimer({ eventDate }: { eventDate?: string | null }) {
   );
 }
 
+/** Deteksi YouTube / Vimeo supaya link video bisa langsung di-embed. */
+export function videoEmbedUrl(url: string): string | null {
+  const youtube = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  if (youtube) return `https://www.youtube.com/embed/${youtube[1]}?rel=0`;
+  const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  return null;
+}
+
 export function VideoPlayer({
   url,
   poster,
@@ -252,15 +261,29 @@ export function VideoPlayer({
   className?: string;
 }) {
   if (!url) return null;
+
+  const embed = videoEmbedUrl(url);
+
   return (
     <div className={cn("overflow-hidden rounded-lg border border-border bg-black", className)}>
-      <video
-        controls
-        preload="none"
-        poster={poster ?? undefined}
-        src={url}
-        className="aspect-video w-full object-cover"
-      />
+      {embed ? (
+        <iframe
+          src={embed}
+          title="Video undangan"
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="aspect-video w-full border-0"
+        />
+      ) : (
+        <video
+          controls
+          preload="none"
+          poster={poster ?? undefined}
+          src={url}
+          className="aspect-video w-full object-cover"
+        />
+      )}
     </div>
   );
 }

@@ -63,6 +63,21 @@ export async function PATCH(request: Request, context: RouteContext) {
     "groom_image_position_y",
     "groom_image_zoom",
     "groom_image_rotate",
+    "greeting_text",
+    "recipient_name",
+    "groom_parents",
+    "bride_parents",
+    "groom_social",
+    "bride_social",
+    "story_milestones",
+    "events",
+    "video_url",
+    "video_poster",
+    "rsvp_enabled",
+    "fun_facts",
+    "closing_message",
+    "closing_image",
+    "qris_image",
   ] as const;
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -82,6 +97,20 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (patch.event_date === "") patch.event_date = null;
+
+  if (typeof patch.rsvp_enabled === "string") {
+    patch.rsvp_enabled = patch.rsvp_enabled === "true";
+  }
+
+  for (const key of ["story_milestones", "events", "fun_facts"] as const) {
+    if (key in patch && !Array.isArray(patch[key])) patch[key] = [];
+  }
+
+  for (const key of ["groom_social", "bride_social"] as const) {
+    if (key in patch && (typeof patch[key] !== "object" || patch[key] === null)) {
+      patch[key] = null;
+    }
+  }
 
   if (patch.custom_settings && typeof patch.custom_settings === "object") {
     patch.custom_settings = {

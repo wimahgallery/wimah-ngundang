@@ -115,7 +115,7 @@ function FaqItem({
 }
 
 export function HomeFaq() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section id="faq" className="scroll-mt-8 px-5 py-20 sm:px-8 lg:py-28">

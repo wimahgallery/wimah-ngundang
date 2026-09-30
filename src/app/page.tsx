@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
 import { showcaseFaqs } from "@/lib/homepage-content";
 import { siteConfig } from "@/lib/site-config";
-import { HomeHero } from "@/components/home/hero";
+import { OpeningAnimation } from "@/components/home/opening-animation";
+import { OurBestCreation } from "@/components/home/our-best-creation";
 import { TemplateShowcase } from "@/components/home/template-showcase";
 import { HomeFeatures } from "@/components/home/home-features";
-import { HomePricing } from "@/components/home/home-pricing";
-import { HomeGallery } from "@/components/home/home-gallery";
-import { HomeHowItWorks } from "@/components/home/home-how-it-works";
-import { HomeInvitationPreview } from "@/components/home/home-invitation-preview";
 import { HomeFaq } from "@/components/home/home-faq";
 import { HomeFinalCta } from "@/components/home/home-final-cta";
 import { SiteFooter } from "@/components/home/site-footer";
@@ -81,14 +78,14 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify([faqJsonLd, serviceJsonLd]) }}
       />
       <PageBackground />
+      <OpeningAnimation />
       <main id="main">
-        <HomeHero />
+        <h1 className="sr-only">
+          {siteConfig.name} — undangan digital premium untuk pernikahan &amp; acara spesial
+        </h1>
+        <OurBestCreation />
         <TemplateShowcase />
         <HomeFeatures />
-        <HomePricing />
-        <HomeGallery />
-        <HomeHowItWorks />
-        <HomeInvitationPreview />
         <HomeFaq />
         <HomeFinalCta />
       </main>

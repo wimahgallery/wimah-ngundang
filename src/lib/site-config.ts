@@ -1,4 +1,4 @@
-const rawWhatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6281234567890";
+const rawWhatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6287740812765";
 
 export const siteConfig = {
   name: "Wimah Ngundang",
@@ -6,7 +6,7 @@ export const siteConfig = {
   tagline: "Undangan digital premium yang siap dibagikan dalam hitungan menit.",
   description:
     "Wimah Ngundang membuat undangan digital pernikahan yang elegan, cepat diakses, dan mudah dibagikan lewat WhatsApp — lengkap dengan galeri foto, musik, Google Maps, dan angpao digital.",
-  email: "halo@wimah.id",
+  email: "wimahgallery@gmail.com",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
 } as const;
 
@@ -27,15 +27,14 @@ export const waMessages = {
 } as const;
 
 export const navigationLinks = [
+  { href: "#creation", label: "Best Creation" },
   { href: "#template", label: "Template" },
   { href: "#fitur", label: "Fitur" },
-  { href: "#cara-kerja", label: "Cara Kerja" },
-  { href: "#contoh", label: "Contoh" },
   { href: "#faq", label: "FAQ" },
 ] as const;
 
 export const heroTrustItems = [
-  "6 template premium",
+  "9 template premium",
   "Mobile first",
   "Gratis konsultasi",
 ] as const;

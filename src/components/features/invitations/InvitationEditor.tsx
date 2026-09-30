@@ -35,6 +35,8 @@ import SectionSettingsPanel from "./SectionSettingsPanel";
 const inputClass =
   "w-full max-w-[65ch] rounded-md border border-border bg-white px-3 py-2 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:py-1.5 md:text-sm";
 
+type FieldChange = (field: string, value: string | number | boolean) => void;
+
 const STEPS: { key: SectionKey; label: string; icon: React.ElementType }[] = [
   { key: "info", label: "Info", icon: FileText },
   { key: "couple", label: "Mempelai", icon: Users },
@@ -99,8 +101,9 @@ const [activeStep, setActiveStep] = useState(0);
     router.push("/dashboard/invitations");
   };
 
-  const onChangeField = useCallback((field: string, value: string) => {
-    patch({ [field]: value } as Partial<Invitation>);
+  const onChangeField = useCallback((field: string, value: string | number | boolean) => {
+    const next = field === "rsvp_enabled" && typeof value === "string" ? value === "true" : value;
+    patch({ [field]: next } as Partial<Invitation>);
   }, [patch]);
 
   const onChangeGifts = useCallback((gifts: Invitation["gift_accounts"]) => {
@@ -115,6 +118,14 @@ const [activeStep, setActiveStep] = useState(0);
     patch({ gallery_images });
   }, [patch]);
 
+  const onChangeMilestones = useCallback((story_milestones: NonNullable<Invitation["story_milestones"]>) => {
+    patch({ story_milestones });
+  }, [patch]);
+
+  const onChangeEvents = useCallback((events: NonNullable<Invitation["events"]>) => {
+    patch({ events });
+  }, [patch]);
+
   const ActiveIcon = STEPS[activeStep].icon;
   const stepTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -123,16 +134,16 @@ const [activeStep, setActiveStep] = useState(0);
     if (!s) return null;
     switch (STEPS[activeStep].key) {
       case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} />;
-      case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} />;
+      case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "greeting": return <StepGreeting invitation={invitation!} onChange={onChangeField} />;
-      case "story": return <StepStory invitation={invitation!} settings={s.story} onChangeSettings={patchSettings} onChange={onChangeField} />;
-      case "schedule": return <StepSchedule invitation={invitation!} settings={s.schedule} onChangeSettings={patchSettings} onChange={onChangeField} />;
+      case "story": return <StepStory invitation={invitation!} settings={s.story} onChangeSettings={patchSettings} onChange={onChangeField} onChangeMilestones={onChangeMilestones} />;
+      case "schedule": return <StepSchedule invitation={invitation!} settings={s.schedule} onChangeSettings={patchSettings} onChange={onChangeField} onChangeEvents={onChangeEvents} />;
       case "venue": return <StepVenue invitation={invitation!} settings={s.venue} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "gallery": return <StepGallery invitation={invitation!} settings={s.gallery} onChangeSettings={patchSettings} onChangeGallery={onChangeGallery} />;
       case "video": return <StepVideo invitation={invitation!} onChange={onChangeField} />;
       case "gift": return <StepGift invitation={invitation!} settings={s.gift} onChangeSettings={patchSettings} onChangeGifts={onChangeGifts} />;
-      case "music": return <StepMusic invitation={invitation!} settings={s.music} onChangeSettings={patchSettings} />;
+      case "music": return <StepMusic invitation={invitation!} settings={s.music} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "countdown": return <StepCountdown settings={s.countdown} onChangeSettings={patchSettings} />;
       case "rsvp": return <StepRsvp invitation={invitation!} onChange={onChangeField} />;
       case "wishes": return <StepWishes invitation={invitation!} onChange={onChangeField} />;
@@ -140,7 +151,7 @@ const [activeStep, setActiveStep] = useState(0);
       case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} />;
       default: return null;
     }
-  }, [activeStep, invitation, patchSettings, onChangeField, onChangeGifts, onChangeFunFacts, onChangeGallery]);
+  }, [activeStep, invitation, patchSettings, onChangeField, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
 
   const selectStep = useCallback((i: number) => {
     setActiveStep(i);
@@ -198,8 +209,8 @@ const [activeStep, setActiveStep] = useState(0);
       <div className="flex flex-wrap items-center gap-3">
         <Label className="text-xs text-muted-foreground">Template:</Label>
         <Select
-          value={invitation.template_id || "elegant-classic"}
-          onValueChange={(v) => onChangeField("template_id", v ?? "elegant-classic")}
+          value={invitation.template_id || "lume"}
+          onValueChange={(v) => onChangeField("template_id", v ?? "lume")}
         >
           <SelectTrigger className="w-full min-w-0 max-w-[180px]">
             <SelectValue />
@@ -266,7 +277,7 @@ const [activeStep, setActiveStep] = useState(0);
   );
 }
 
-function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: (field: string, value: string) => void }) {
+function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <Field label="Slug"><input className={inputClass} value={invitation.slug || ""} onChange={(e) => onChange("slug", e.target.value)} /></Field>
@@ -286,23 +297,23 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
   );
 }
 
-function StepCouple({ invitation, settings, onChangeSettings }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"]) => void }) {
+function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("couple", next)} />
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Foto mempelai wanita">
-          <ImageField label="Foto mempelai wanita" value={invitation.bride_photo} onChange={(url) => patchField(invitation, "bride_photo", url)} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("couple", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("couple", { ...settings, rotate: r })} />
+          <ImageField label="Foto mempelai wanita" value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("couple", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("couple", { ...settings, rotate: r })} />
         </Field>
         <Field label="Foto mempelai pria">
-          <ImageField label="Foto mempelai pria" value={invitation.groom_photo} onChange={(url) => patchField(invitation, "groom_photo", url)} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => patchField(invitation, "groom_image_position_x", x)} onZoomChange={(z) => patchField(invitation, "groom_image_zoom", z)} onRotateChange={(r) => patchField(invitation, "groom_image_rotate", r)} />
+          <ImageField label="Foto mempelai pria" value={invitation.groom_photo} onChange={(url) => onChange("groom_photo", url ?? "")} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => { onChange("groom_image_position_x", x); onChange("groom_image_position_y", y); }} onZoomChange={(z) => onChange("groom_image_zoom", z)} onRotateChange={(r) => onChange("groom_image_rotate", r)} />
         </Field>
       </div>
     </>
   );
 }
 
-function StepHero({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"]) => void; onChange: (field: string, value: string) => void }) {
+function StepHero({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("hero", next)} />
@@ -310,14 +321,14 @@ function StepHero({ invitation, settings, onChangeSettings, onChange }: { invita
         <Field label="Hero title"><input className={inputClass} value={invitation.hero_title || ""} onChange={(e) => onChange("hero_title", e.target.value)} /></Field>
         <Field label="Hero subtitle"><Textarea className={inputClass} rows={2} value={invitation.hero_subtitle || ""} onChange={(e) => onChange("hero_subtitle", e.target.value)} /></Field>
         <Field label="Cover image">
-          <ImageField label="Cover image" value={invitation.cover_image} onChange={(url) => patchField(invitation, "cover_image", url)} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("hero", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("hero", { ...settings, rotate: r })} />
+          <ImageField label="Cover image" value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("hero", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("hero", { ...settings, rotate: r })} />
         </Field>
       </div>
     </>
   );
 }
 
-function StepGreeting({ invitation, onChange }: { invitation: Invitation; onChange: (field: string, value: string) => void }) {
+function StepGreeting({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
   return (
     <div className="grid gap-3">
       <Field label="Teks sapaan"><Textarea className={inputClass} rows={3} value={invitation.greeting_text || ""} onChange={(e) => onChange("greeting_text", e.target.value)} /></Field>
@@ -326,7 +337,13 @@ function StepGreeting({ invitation, onChange }: { invitation: Invitation; onChan
   );
 }
 
-function StepStory({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["story"]; onChangeSettings: (key: SectionKey, next: CustomSettings["story"]) => void; onChange: (field: string, value: string) => void }) {
+function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeMilestones }: { invitation: Invitation; settings: CustomSettings["story"]; onChangeSettings: (key: SectionKey, next: CustomSettings["story"]) => void; onChange: FieldChange; onChangeMilestones: (milestones: NonNullable<Invitation["story_milestones"]>) => void }) {
+  const milestones = invitation.story_milestones ?? [];
+
+  const updateMilestone = (index: number, partial: Partial<(typeof milestones)[number]>) => {
+    onChangeMilestones(milestones.map((item, i) => (i === index ? { ...item, ...partial } : item)));
+  };
+
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("story", next)} />
@@ -334,23 +351,87 @@ function StepStory({ invitation, settings, onChangeSettings, onChange }: { invit
         <Field label="Judul cerita"><input className={inputClass} value={invitation.story_title || ""} onChange={(e) => onChange("story_title", e.target.value)} /></Field>
         <Field label="Isi cerita"><Textarea className={inputClass} rows={5} value={invitation.story_content || ""} onChange={(e) => onChange("story_content", e.target.value)} /></Field>
       </div>
-    </>
-  );
-}
 
-function StepSchedule({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["schedule"]; onChangeSettings: (key: SectionKey, next: CustomSettings["schedule"]) => void; onChange: (field: string, value: string) => void }) {
-  return (
-    <>
-      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("schedule", next)} />
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Field label="Tanggal"><Input type="date" className={inputClass} value={invitation.event_date || ""} onChange={(e) => onChange("event_date", e.target.value)} /></Field>
-        <Field label="Waktu"><input className={inputClass} value={invitation.event_time || ""} onChange={(e) => onChange("event_time", e.target.value)} /></Field>
+      <div className="mt-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-foreground">Bagaimana kami bertemu &amp; jatuh cinta</p>
+            <p className="text-xs text-muted-foreground">Ditampilkan sebagai babak cerita. Kosongkan untuk memakai “Isi cerita” di atas.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onChangeMilestones([...milestones, { id: uuid(), title: "", date: "", description: "", image: null }])}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Tambah babak
+          </Button>
+        </div>
+
+        {milestones.map((item, index) => (
+          <div key={item.title || index} className="grid gap-2 rounded-lg border border-border p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input className={inputClass} placeholder="Judul babak (mis. Pertemuan yang Tak Terduga)" value={item.title} onChange={(e) => updateMilestone(index, { title: e.target.value })} />
+              <input type="date" className={inputClass} value={item.date || ""} onChange={(e) => updateMilestone(index, { date: e.target.value })} />
+            </div>
+            <Textarea className={inputClass} rows={4} placeholder="Ceritakan babak ini..." value={item.description} onChange={(e) => updateMilestone(index, { description: e.target.value })} />
+            <ImageUrlField label="Foto babak (opsional)" value={item.image} onChange={(url) => updateMilestone(index, { image: url || null })} />
+            <div>
+              <button type="button" className="min-h-10 rounded-lg px-2 text-xs text-red-500" onClick={() => onChangeMilestones(milestones.filter((_, i) => i !== index))}>
+                Hapus babak
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );
 }
 
-function StepVenue({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["venue"]; onChangeSettings: (key: SectionKey, next: CustomSettings["venue"]) => void; onChange: (field: string, value: string) => void }) {
+function StepSchedule({ invitation, settings, onChangeSettings, onChange, onChangeEvents }: { invitation: Invitation; settings: CustomSettings["schedule"]; onChangeSettings: (key: SectionKey, next: CustomSettings["schedule"]) => void; onChange: FieldChange; onChangeEvents: (events: NonNullable<Invitation["events"]>) => void }) {
+  const events = invitation.events ?? [];
+
+  const updateEvent = (index: number, partial: Partial<(typeof events)[number]>) => {
+    onChangeEvents(events.map((event, i) => (i === index ? { ...event, ...partial } : event)));
+  };
+
+  return (
+    <>
+      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("schedule", next)} />
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Tanggal"><Input type="date" className={inputClass} value={invitation.event_date || ""} onChange={(e) => onChange("event_date", e.target.value)} /></Field>
+        <Field label="Waktu"><input className={inputClass} placeholder="15.00 WITA – Selesai" value={invitation.event_time || ""} onChange={(e) => onChange("event_time", e.target.value)} /></Field>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-foreground">Agenda acara</p>
+            <p className="text-xs text-muted-foreground">Nama acara, tanggal, dan lokasi per sesi (mis. Resepsi, Memadik). Kosongkan untuk memakai tanggal &amp; venue utama di atas.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onChangeEvents([...events, { id: uuid(), name: "", date: invitation.event_date || "", time: "", location: "", address: "", mapsUrl: "" }])}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Tambah agenda
+          </Button>
+        </div>
+
+        {events.map((event, index) => (
+          <div key={event.id || index} className="grid gap-2 rounded-lg border border-border p-3">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input className={inputClass} placeholder="Nama agenda (mis. Resepsi)" value={event.name} onChange={(e) => updateEvent(index, { name: e.target.value })} />
+              <input type="date" className={inputClass} value={event.date || ""} onChange={(e) => updateEvent(index, { date: e.target.value })} />
+              <input className={inputClass} placeholder="Waktu (mis. 15.00 WITA – Selesai)" value={event.time || ""} onChange={(e) => updateEvent(index, { time: e.target.value })} />
+              <input className={inputClass} placeholder="Nama lokasi" value={event.location || ""} onChange={(e) => updateEvent(index, { location: e.target.value })} />
+            </div>
+            <Textarea className={inputClass} rows={2} placeholder="Alamat lengkap" value={event.address || ""} onChange={(e) => updateEvent(index, { address: e.target.value })} />
+            <input className={inputClass} placeholder="Google Maps URL" value={event.mapsUrl || ""} onChange={(e) => updateEvent(index, { mapsUrl: e.target.value })} />
+            <div>
+              <button type="button" className="min-h-10 rounded-lg px-2 text-xs text-red-500" onClick={() => onChangeEvents(events.filter((_, i) => i !== index))}>
+                Hapus agenda
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function StepVenue({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["venue"]; onChangeSettings: (key: SectionKey, next: CustomSettings["venue"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("venue", next)} />
@@ -372,7 +453,7 @@ function StepGallery({ invitation, settings, onChangeSettings, onChangeGallery }
   );
 }
 
-function StepVideo({ invitation, onChange }: { invitation: Invitation; onChange: (field: string, value: string) => void }) {
+function StepVideo({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
   return (
     <div className="grid gap-3">
       <Field label="Video URL (YouTube/Vimeo)"><input className={inputClass} value={invitation.video_url || ""} onChange={(e) => onChange("video_url", e.target.value)} /></Field>
@@ -401,12 +482,12 @@ function StepGift({ invitation, settings, onChangeSettings, onChangeGifts }: { i
   );
 }
 
-function StepMusic({ invitation, settings, onChangeSettings }: { invitation: Invitation; settings: CustomSettings["music"]; onChangeSettings: (key: SectionKey, next: CustomSettings["music"]) => void }) {
+function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["music"]; onChangeSettings: (key: SectionKey, next: CustomSettings["music"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("music", next)} />
       <div className="mt-3 space-y-2">
-        <input type="file" accept="audio/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const url = await uploadFile(file); patchField(invitation, "music_url", url); } catch { /* ignore */ } }} className="text-xs" />
+        <input type="file" accept="audio/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const url = await uploadFile(file); onChange("music_url", url); } catch { /* ignore */ } }} className="text-xs" />
         {invitation.music_url && <audio controls src={invitation.music_url} className="w-full text-xs" aria-label="Musik undangan" />}
       </div>
     </>
@@ -422,7 +503,7 @@ function StepCountdown({ settings, onChangeSettings }: { settings: CustomSetting
   );
 }
 
-function StepRsvp({ invitation, onChange }: { invitation: Invitation; onChange: (field: string, value: string) => void }) {
+function StepRsvp({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
   return (
     <div className="grid gap-3">
       <Field label="RSVP aktif">
@@ -435,7 +516,7 @@ function StepRsvp({ invitation, onChange }: { invitation: Invitation; onChange: 
   );
 }
 
-function StepWishes({ invitation, onChange }: { invitation: Invitation; onChange: (field: string, value: string) => void }) {
+function StepWishes({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
   return (
     <div className="grid gap-3">
       <Field label="Pesan doa & harapan"><Textarea className={inputClass} rows={4} value={invitation.closing_message || ""} onChange={(e) => onChange("closing_message", e.target.value)} /></Field>
@@ -454,16 +535,59 @@ function StepFunFacts({ invitation, onChangeFacts }: { invitation: Invitation; o
   );
 }
 
-function StepClosing({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["closing"]; onChangeSettings: (key: SectionKey, next: CustomSettings["closing"]) => void; onChange: (field: string, value: string) => void }) {
+function StepClosing({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["closing"]; onChangeSettings: (key: SectionKey, next: CustomSettings["closing"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("closing", next)} />
       <div className="mt-3 grid gap-3">
         <Field label="Pesan penutup"><Textarea className={inputClass} rows={4} value={invitation.closing_message || ""} onChange={(e) => onChange("closing_message", e.target.value)} /></Field>
-        <Field label="Gambar penutup"><ImageField label="Closing image" value={invitation.closing_image || null} onChange={(url) => patchField(invitation, "closing_image", url)} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
-        <Field label="QRIS image"><ImageField label="QRIS" value={invitation.qris_image || null} onChange={(url) => patchField(invitation, "qris_image", url)} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
+        <Field label="Gambar penutup"><ImageField label="Closing image" value={invitation.closing_image || null} onChange={(url) => onChange("closing_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
+        <Field label="QRIS image"><ImageField label="QRIS" value={invitation.qris_image || null} onChange={(url) => onChange("qris_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
       </div>
     </>
+  );
+}
+
+function ImageUrlField({ label, value, onChange }: { label: string; value?: string | null; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleFile = async (file?: File) => {
+    if (!file) return;
+    setError("");
+    setBusy(true);
+    try {
+      onChange(await uploadFile(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload gagal");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt={label} className="h-20 w-20 rounded-md border border-border object-cover" loading="lazy" />
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="min-h-10 rounded-lg border border-border px-3 py-2 text-xs text-foreground" onClick={() => inputRef.current?.click()}>
+            {busy ? "Mengunggah..." : value ? "Ganti" : "Unggah gambar"}
+          </button>
+          {value ? (
+            <button type="button" className="min-h-10 rounded-lg px-3 py-2 text-xs text-red-500" onClick={() => onChange("")}>
+              Hapus
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleFile(e.target.files?.[0])} />
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+    </div>
   );
 }
 
@@ -476,6 +600,3 @@ function Field({ label, children, className }: { label: string; children: React.
   );
 }
 
-function patchField(invitation: Invitation, field: string, value: unknown) {
-  // Handled by parent patch() via queryClient.setQueryData
-}

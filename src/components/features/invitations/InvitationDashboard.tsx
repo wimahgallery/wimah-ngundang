@@ -48,7 +48,7 @@ export default function InvitationDashboard() {
       slug: "",
       event_title: "",
       event_type: "Wedding",
-      template_id: "elegant-classic",
+      template_id: "lume",
       bride_name: "",
       groom_name: "",
     },
@@ -179,7 +179,7 @@ export default function InvitationDashboard() {
                 <div className="min-w-0">
                   <Label className="text-xs">Template</Label>
                   <Select
-                    value={templateId ?? "elegant-classic"}
+                    value={templateId ?? "lume"}
                     onValueChange={(v) => { if (v) setValue("template_id", v); }}
                   >
                     <SelectTrigger className="w-full min-w-0">

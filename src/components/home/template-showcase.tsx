@@ -1,21 +1,33 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
-import { templateShowcase, type TemplateShowcaseItem } from "@/lib/homepage-content";
+import { MessageCircle } from "lucide-react";
+import {
+  templateShowcase,
+  type TemplateShowcaseItem,
+} from "@/lib/homepage-content";
+import { waMessages, whatsappLink } from "@/lib/site-config";
 import { PreviewModal, type PreviewModalData } from "./preview-modal";
 import { SectionIntro } from "./section-intro";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function TemplateShowcase() {
   const [selected, setSelected] = useState<TemplateShowcaseItem | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const item = templateShowcase[activeIndex];
 
-  const handlePreview = useCallback(() => setSelected(item), [item]);
+  const handlePreview = useCallback(
+    (item: TemplateShowcaseItem) => setSelected(item),
+    [],
+  );
   const handleClose = useCallback(() => setSelected(null), []);
-  const goNext = useCallback(() => setActiveIndex((i) => (i + 1) % templateShowcase.length), []);
-  const goPrev = useCallback(() => setActiveIndex((i) => (i - 1 + templateShowcase.length) % templateShowcase.length), []);
+
+  const attachScreen = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const update = () =>
+      node.style.setProperty("--k", String(node.clientWidth / 390));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const modalData: PreviewModalData | null = useMemo(
     () =>
@@ -31,132 +43,108 @@ export function TemplateShowcase() {
     [selected],
   );
 
-  if (!item) return null;
-
   return (
-    <section id="template" className="scroll-mt-8 px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
-      <div className="mx-auto max-w-5xl">
+    <section
+      id="template"
+      className="scroll-mt-8 px-5 py-16 sm:px-8 sm:py-20 lg:py-24"
+    >
+      <div className="mx-auto max-w-6xl">
         <SectionIntro
-          kicker="Template Premium"
-          title="Pilih Gaya Undanganmu"
-          description="Setiap template punya gerak dan nuansa yang berbeda — dari formal elegan hingga cerita perjalanan cinta."
+          kicker="Our Template"
+          title="Semua template kami dalam satu katalog"
+          description="Pilih gaya yang paling terasa seperti kalian. Semua bagian undangan tetap bisa dicustom — nama, jadwal, galeri, musik, sampai angpao digital."
         />
 
-        <div className="mt-10 grid min-w-0 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12">
-          {/* left: info */}
-          <div className="flex min-w-0 flex-col gap-6 text-center lg:text-left">
-            <div className="min-w-0">
-              <h3 className="font-heading text-[clamp(1.5rem,1.2rem+1.4vw,1.875rem)] text-text-primary">
-                {item.name}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-text-secondary sm:text-base">
-                {item.tagline}
-              </p>
-            </div>
+        <ul className="mt-11 grid grid-cols-2 gap-4 sm:mt-14 md:grid-cols-3 md:gap-5 lg:gap-6">
+          {templateShowcase.map((item, index) => (
+            <li key={item.id} className="min-w-0">
+              <article className="group flex h-full min-w-0 flex-col rounded-2xl border border-border bg-surface/50 p-3 transition-colors duration-300 hover:border-accent/40 sm:p-4">
+                <div className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(130%_100%_at_50%_0%,#f2f1ee_0%,#e7e4dd_70%,#dcd8d0_100%)] p-4 transition-transform duration-500 ease-out group-hover:-translate-y-1 [perspective:1200px] sm:p-6 lg:p-7">
+                  <span
+                    aria-hidden
+                    className="absolute bottom-[11%] left-1/2 h-5 w-[58%] -translate-x-1/2 rounded-[50%] bg-black/25 blur-xl sm:h-6"
+                  />
 
-            {/* features */}
-            <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-              {item.features.map((f) => (
-                <span
-                  key={f}
-                  className="rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-text-secondary"
-                >
-                  {f}
-                </span>
-              ))}
-              <span className="rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-text-secondary">
-                {item.sectionCount} section
-              </span>
-            </div>
+                  <div className="relative aspect-[200/416] h-[90%] transition-transform duration-500 ease-out [transform:rotateY(16deg)_rotateX(4deg)] group-hover:[transform:rotateY(0deg)_rotateX(0deg)]">
+                    <span
+                      aria-hidden
+                      className="absolute -left-[3px] top-[16%] h-[7%] w-[3px] rounded-l-sm bg-[#3c3c41]"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute -left-[3px] top-[26%] h-[7%] w-[3px] rounded-l-sm bg-[#3c3c41]"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute -right-[3px] top-[21%] h-[11%] w-[3px] rounded-r-sm bg-[#3c3c41]"
+                    />
 
-            {/* motion */}
-            <p className="text-xs text-text-secondary">
-              Animasi: <span className="font-medium text-accent">{item.motion}</span>
-            </p>
+                    <div className="relative h-full w-full rounded-[1.3rem] bg-gradient-to-b from-[#2b2b31] via-[#16161a] to-[#0e0e12] p-[5px] shadow-[0_35px_70px_rgba(10,10,14,0.4),0_10px_24px_rgba(10,10,14,0.28)] ring-1 ring-white/10 sm:p-[7px]">
+                      <div
+                        ref={attachScreen}
+                        className="relative h-full w-full overflow-hidden rounded-[1rem] bg-black"
+                      >
+                        <iframe
+                          src={`/preview/${item.id}`}
+                          title={`Preview template ${item.name}`}
+                          loading="lazy"
+                          tabIndex={-1}
+                          style={{
+                            height: "calc(100% / var(--k, 1))",
+                            transform: "scale(var(--k, 1))",
+                          }}
+                          className="pointer-events-none absolute left-0 top-0 w-[390px] origin-top-left select-none border-0"
+                        />
+                        <span
+                          aria-hidden
+                          className="absolute left-1/2 top-[5px] z-10 h-1.5 w-[30%] max-w-14 -translate-x-1/2 rounded-full bg-black"
+                        />
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/15"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* CTA */}
-            <div className="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-              <button
-                type="button"
-                onClick={handlePreview}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-7 py-3 text-sm font-medium text-background shadow-[0_12px_30px_rgba(124,132,114,0.25)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_16px_40px_rgba(124,132,114,0.3)] active:scale-[0.98]"
-              >
-                Preview Live
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                </svg>
-              </button>
-              <Link
-                href="/dashboard/invitations/new"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-6 py-3 text-sm text-text-primary transition-colors duration-300 hover:border-accent/40 hover:text-accent"
-              >
-                Gunakan Template Ini
-              </Link>
-            </div>
-          </div>
+                <div className="mt-3 flex flex-1 flex-col sm:mt-4">
+                  <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-accent sm:text-[10px] sm:tracking-[0.24em]">
+                    Tema {index + 1}
+                  </span>
+                  <h3 className="mt-1.5 font-heading text-base leading-snug text-text-primary sm:text-lg lg:text-xl">
+                    {item.name}
+                  </h3>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-text-secondary sm:text-sm">
+                    {item.tagline}
+                  </p>
 
-          {/* right: mockup preview */}
-          <div className="flex min-w-0 justify-center">
-            <div className="relative w-[clamp(240px,65vw,320px)] overflow-hidden rounded-2xl border-[6px] border-black/15 bg-black/5 shadow-[0_30px_80px_rgba(84,82,77,0.15)]">
-              {/* notch */}
-              <span className="absolute left-1/2 top-2 z-10 h-1.5 w-20 -translate-x-1/2 rounded-full bg-black/20" />
-              {/* iframe preview */}
-              <div className="aspect-[9/19.5] w-full overflow-hidden rounded-t-xl bg-background">
-                <iframe
-                  src={`/preview/${item.id}`}
-                  title={`Preview template ${item.name}`}
-                  loading="lazy"
-                  className="h-full w-full border-0"
-                />
-              </div>
-              {/* navigation dots */}
-              <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1">
-                <button
-                  type="button"
-                  onClick={goPrev}
-                  className="grid h-11 w-11 place-items-center rounded-full bg-black/30 text-white/80 transition hover:bg-black/50 hover:text-white"
-                  aria-label="Template sebelumnya"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-[10px] text-white/70" aria-live="polite">
-                  {activeIndex + 1}/{templateShowcase.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={goNext}
-                  className="grid h-11 w-11 place-items-center rounded-full bg-black/30 text-white/80 transition hover:bg-black/50 hover:text-white"
-                  aria-label="Template berikutnya"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Template thumbnails */}
-        <div className="mt-8 flex flex-wrap justify-center gap-2">
-          {templateShowcase.map((t, i) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveIndex(i)}
-              className={`h-12 w-12 rounded-lg border-2 transition-all duration-200 ${
-                i === activeIndex ? "border-accent scale-110" : "border-black/10 hover:scale-105"
-              }`}
-              style={{ backgroundColor: t.palette.screen }}
-              aria-label={`View ${t.name} template`}
-            >
-              <span className="sr-only">{t.name}</span>
-            </button>
+                  <div className="mt-3 flex flex-col gap-2 pt-1 sm:mt-4 sm:flex-row sm:flex-wrap sm:items-center">
+                    <button
+                      type="button"
+                      onClick={() => handlePreview(item)}
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-accent px-4 py-3 text-[13px] font-medium text-background shadow-[0_12px_30px_rgba(124,132,114,0.25)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] sm:flex-1 sm:text-sm"
+                    >
+                      Preview Live
+                    </button>
+                    <a
+                      href={whatsappLink(waMessages.template(item.name))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border px-4 py-3 text-[13px] text-text-primary transition-colors duration-300 hover:border-accent/40 hover:text-accent sm:flex-1 sm:text-sm"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Pesan
+                    </a>
+                  </div>
+                </div>
+              </article>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       <PreviewModal data={modalData} onClose={handleClose} />
     </section>
   );
 }
-
-

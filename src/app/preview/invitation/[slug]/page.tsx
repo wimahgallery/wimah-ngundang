@@ -5,8 +5,10 @@ import { getInvitationBySlug } from "@/lib/invitations-query";
 
 export default async function InvitationPreviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = await createClient();
   const {
@@ -15,8 +17,15 @@ export default async function InvitationPreviewPage({
   if (!user) redirect("/admin/login");
 
   const { slug } = await params;
+  const sp = await searchParams;
   const invitation = await getInvitationBySlug(slug);
   if (!invitation) notFound();
 
-  return <InvitationView invitation={invitation} />;
+  return (
+    <InvitationView
+      invitation={invitation}
+      embed={sp.embed === "1"}
+      frameSrc={`/preview/invitation/${slug}?embed=1`}
+    />
+  );
 }
