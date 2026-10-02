@@ -1,10 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 import Image from "next/image";
-import { CalendarPlus, MapPin } from "lucide-react";
+import {
+  Calendar,
+  CalendarPlus,
+  Camera,
+  Coffee,
+  Gift,
+  Gem,
+  Heart,
+  Home,
+  MapPin,
+  Music,
+  Plane,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { agendaEvents, coupleLabel, googleCalendarLink, type Invitation } from "@/lib/invitation";
+import {
+  fetchWishes,
+  submitGuestWish,
+  updateGuestWish,
+  type WishRow,
+} from "@/features/invitations/services/invitationApi";
+import { invitationFontsHref, resolveFontVars, type FontSettingsLike } from "@/lib/wedding-fonts";
 import type { TemplateProps } from "../template-registry";
 import {
   LumeThemeProvider,
@@ -18,6 +39,7 @@ import {
   CoupleNames,
   CountdownTimer,
   DecorativeDivider,
+  GuestWishesList,
   InvitationPhoto,
   SectionCopy,
   SectionHeading,
@@ -140,11 +162,28 @@ function LoadingScreen({ invitation, onDone }: { invitation: Invitation; onDone:
    tablet  : [ nama + tanggal + tamu ] [ foto tinggi  ]
    desktop : nama besar kiri-atas · foto melayang kanan · tanggal & tamu kiri-bawah
 */
+function subscribeSearch(callback: () => void) {
+  window.addEventListener("popstate", callback);
+  return () => window.removeEventListener("popstate", callback);
+}
+
+function useGuestName(): string | null {
+  const search = useSyncExternalStore(
+    subscribeSearch,
+    () => window.location.search,
+    () => "",
+  );
+  if (!search) return null;
+  const value = new URLSearchParams(search).get("to");
+  return value ? value.trim().slice(0, 80) : null;
+}
+
 function HeroCover({ invitation }: { invitation: Invitation }) {
   const hero = invitation.custom_settings.hero;
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
   const photoLeft = useLumeTheme().layout.heroPhoto === "left";
+  const guestName = useGuestName();
 
   return (
     <section className="relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-hero py-[clamp(4.5rem,10vw,7rem)] text-hero-ink">
@@ -223,10 +262,7 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
               {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
             </p>
             <p className="mt-2 font-heading text-xl italic md:text-2xl desk:text-[1.75rem]">
-              {invitation.recipient_name || "Tamu Undangan"}
-            </p>
-            <p className="mt-2 text-[11px] leading-relaxed text-hero-ink/55 md:text-xs">
-              Mohon maaf apabila ada kesalahan penulisan nama dan gelar.
+              {guestName || "Tamu Undangan"}
             </p>
           </div>
 
@@ -818,6 +854,483 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
   );
 }
 
+/* ─── 10b. Lokasi acara (venue_name / venue_address / google_maps_url) ─── */
+function VenueSection({ invitation }: { invitation: Invitation }) {
+  const settings = invitation.custom_settings.venue;
+  const { venue_name: venueName, venue_address: venueAddress, google_maps_url: mapsUrl } = invitation;
+  const hasContent = Boolean(venueName || venueAddress || mapsUrl);
+
+  if (!settings.visible || !hasContent) return null;
+
+  const mapQuery = venueAddress || venueName || "";
+  const embedUrl = mapQuery
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15&output=embed`
+    : null;
+  const openUrl =
+    mapsUrl ||
+    (mapQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}` : null);
+
+  return (
+    <Band visible>
+      <div className="grid gap-8 md:gap-10 desk:grid-cols-12 desk:items-center desk:gap-16">
+        <header
+          className={cn(
+            "text-center md:mx-auto md:max-w-2xl desk:col-span-4 desk:mx-0 desk:max-w-none desk:text-left",
+            !embedUrl && "desk:col-span-12 desk:mx-auto desk:max-w-2xl desk:text-center",
+          )}
+        >
+          <SectionKicker>Lokasi</SectionKicker>
+          <SectionHeading settings={settings} className="mt-3">
+            Lokasi Acara
+          </SectionHeading>
+
+          {venueName && <p className="mt-5 font-heading text-xl text-text-primary md:text-2xl">{venueName}</p>}
+          {venueAddress && (
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-text-secondary md:text-[0.95rem]">
+              {venueAddress}
+            </p>
+          )}
+
+          {openUrl && (
+            <a
+              href={openUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-background transition hover:bg-accent-dark"
+            >
+              <MapPin className="h-4 w-4" aria-hidden="true" />
+              Buka Google Maps
+            </a>
+          )}
+        </header>
+
+        {embedUrl && (
+          <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-[0_14px_44px_rgba(84,82,77,0.07)] desk:col-span-8">
+            <iframe
+              src={embedUrl}
+              title="Peta lokasi acara"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-64 w-full border-0 md:h-80 desk:h-[26rem]"
+            />
+          </div>
+        )}
+      </div>
+    </Band>
+  );
+}
+
+/* ─── 10c. Fun facts / trivia (fun_facts[]) ─── */
+const funFactIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  calendar: Calendar,
+  camera: Camera,
+  coffee: Coffee,
+  gift: Gift,
+  gem: Gem,
+  heart: Heart,
+  home: Home,
+  map: MapPin,
+  music: Music,
+  plane: Plane,
+  ring: Gem,
+  star: Star,
+  sparkles: Sparkles,
+};
+
+function FunFactsSection({ invitation }: { invitation: Invitation }) {
+  const settings = invitation.custom_settings.funfacts;
+  const facts = (invitation.fun_facts ?? []).filter((f) => f.label || f.value);
+
+  if (!settings.visible || facts.length === 0) return null;
+
+  return (
+    <Band visible>
+      <div className="mx-auto max-w-3xl text-center">
+        <SectionKicker>Fun Facts</SectionKicker>
+        <SectionHeading settings={settings} className="mt-3">
+          Sedikit Tentang Kami
+        </SectionHeading>
+      </div>
+
+      <div
+        className={cn(
+          "mt-10 grid grid-cols-2 gap-3 md:mt-12 md:grid-cols-3 md:gap-4",
+          facts.length > 4 ? "desk:grid-cols-6" : "desk:grid-cols-3",
+        )}
+      >
+        {facts.map((fact, index) => {
+          const Icon = funFactIcons[(fact.icon || "").toLowerCase()] ?? Sparkles;
+          return (
+            <article
+              key={`${fact.label}-${index}`}
+              className="flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 px-3 py-5 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:px-4 md:py-6"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-accent/10 text-accent" aria-hidden="true">
+                <Icon className="h-5 w-5" />
+              </span>
+              <p className="mt-3.5 w-full truncate text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-[11px]">
+                {fact.label}
+              </p>
+              <p className="mt-1.5 w-full break-words font-heading text-base text-text-primary md:text-lg">
+                {fact.value}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    </Band>
+  );
+}
+
+/* ─── bentuk bersama untuk RSVP & ucapan tamu ─── */
+const guestFieldClass =
+  "h-12 w-full rounded-full border border-border bg-white/80 px-5 text-sm text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent";
+const guestButtonClass =
+  "min-h-12 w-full rounded-full bg-accent px-6 text-sm font-medium text-background transition hover:bg-accent-dark disabled:opacity-50";
+const guestLabelClass = "text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-[11px]";
+
+function applyOwnRow(
+  row: WishRow,
+  setName: (value: string) => void,
+  setAttendance: (value: "hadir" | "ragu" | "tidak" | "") => void,
+  setGuestCount: (value: number) => void,
+) {
+  setName(row.name);
+  if (row.attendance === "hadir" || row.attendance === "ragu" || row.attendance === "tidak") {
+    setAttendance(row.attendance);
+  }
+  if (row.guest_count) setGuestCount(row.guest_count);
+}
+
+/* ─── 10d. RSVP (rsvp_enabled + custom_settings.rsvp) ─── */
+function RsvpSection({ invitation }: { invitation: Invitation }) {
+  const settings = invitation.custom_settings.rsvp;
+  const [name, setName] = useState("");
+  const [attendance, setAttendance] = useState<"hadir" | "ragu" | "tidak" | "">("");
+  const [guestCount, setGuestCount] = useState(1);
+  const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
+  const [error, setError] = useState("");
+  const [mine, setMine] = useState<WishRow | null>(null);
+
+  const enabled = settings.visible && invitation.rsvp_enabled;
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    fetchWishes(invitation.slug)
+      .then((rows) => {
+        if (cancelled) return;
+        const own = rows.find((row) => row.mine) ?? null;
+        if (own) applyOwnRow(own, setName, setAttendance, setGuestCount);
+        setMine(own);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, invitation.slug]);
+
+  if (!enabled) return null;
+
+  const options = [
+    { value: "hadir", label: "Hadir" },
+    { value: "ragu", label: "Masih Ragu" },
+    { value: "tidak", label: "Tidak Hadir" },
+  ] as const;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim() || !attendance || status === "sending") return;
+    setStatus("sending");
+    setError("");
+    const payload = {
+      name: name.trim(),
+      attendance,
+      guest_count: attendance === "hadir" ? guestCount : null,
+    };
+    try {
+      if (mine) {
+        const updated = await updateGuestWish(invitation.slug, payload);
+        if (updated.status === "updated" && updated.row) {
+          setMine(updated.row);
+        } else {
+          const created = await submitGuestWish(invitation.slug, payload);
+          setMine(created.row);
+        }
+      } else {
+        const created = await submitGuestWish(invitation.slug, payload);
+        if (created.status === "exists") {
+          applyOwnRow(created.row, setName, setAttendance, setGuestCount);
+          setMine(created.row);
+          setStatus("idle");
+          setError("Kamu sudah mengirim konfirmasi dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.");
+          return;
+        }
+        setMine(created.row);
+      }
+      setStatus("done");
+    } catch (err) {
+      setStatus("idle");
+      setError(err instanceof Error ? err.message : "Gagal mengirim");
+    }
+  };
+
+  return (
+    <Band tone="soft" visible>
+      <div className="mx-auto max-w-xl text-center">
+        <SectionKicker>RSVP</SectionKicker>
+        <SectionHeading settings={settings} className="mt-3">
+          Konfirmasi Kehadiran
+        </SectionHeading>
+        <SectionCopy settings={settings} className="mt-4">
+          Mohon konfirmasi kehadiranmu agar kami dapat mempersiapkan hari bahagia dengan baik.
+        </SectionCopy>
+
+        {status === "done" ? (
+          <div className="mt-8 rounded-2xl border border-accent/40 bg-background/85 p-6">
+            <p className="font-heading text-lg text-text-primary md:text-xl">Terima kasih, {name.trim()}!</p>
+            <p className="mt-2 text-sm text-text-secondary">
+              Konfirmasi kehadiranmu sudah kami terima. Sampai jumpa di hari bahagia kami.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus("idle");
+                setError("");
+              }}
+              className="mt-4 min-h-11 rounded-full border border-border bg-background/70 px-6 py-2.5 text-sm text-text-secondary transition hover:border-accent/50"
+            >
+              Ubah Konfirmasi
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5 text-left">
+            {mine && (
+              <p className="rounded-full border border-accent/30 bg-background/70 px-4 py-2.5 text-center text-xs text-text-secondary">
+                Konfirmasi dari perangkat ini sudah tersimpan dan masih boleh diubah.
+              </p>
+            )}
+            <div>
+              <p className={guestLabelClass}>Nama</p>
+              <input
+                className={`${guestFieldClass} mt-2`}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nama kamu"
+                maxLength={80}
+                required
+              />
+            </div>
+
+            <div>
+              <p className={guestLabelClass}>Kehadiran</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {options.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAttendance(attendance === option.value ? "" : option.value)}
+                    aria-pressed={attendance === option.value}
+                    className={cn(
+                      "min-h-11 flex-1 rounded-full border px-4 py-2.5 text-sm transition",
+                      attendance === option.value
+                        ? "border-accent bg-accent text-background"
+                        : "border-border bg-background/70 text-text-secondary hover:border-accent/50",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {attendance === "hadir" && (
+              <div>
+                <p className={guestLabelClass}>Jumlah tamu</p>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  className={`${guestFieldClass} mt-2`}
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                />
+              </div>
+            )}
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <button
+              type="submit"
+              className={guestButtonClass}
+              disabled={status === "sending" || !name.trim() || !attendance}
+            >
+              {status === "sending" ? "Menyimpan..." : mine ? "Simpan Perubahan" : "Kirim Konfirmasi"}
+            </button>
+          </form>
+        )}
+      </div>
+    </Band>
+  );
+}
+
+/* ─── 10e. Doa & harapan tamu (guest_wishes) ─── */
+function WishesSection({ invitation }: { invitation: Invitation }) {
+  const settings = invitation.custom_settings.wishes;
+  const [wishes, setWishes] = useState<WishRow[] | null>(null);
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
+  const [error, setError] = useState("");
+  const [mine, setMine] = useState<WishRow | null>(null);
+
+  const visible = settings.visible;
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    fetchWishes(invitation.slug)
+      .then((rows) => {
+        if (cancelled) return;
+        setWishes(rows);
+        const own = rows.find((row) => row.mine) ?? null;
+        if (own) {
+          setMine(own);
+          setName(own.name);
+          setMessage(own.message ?? "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setWishes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invitation.slug, visible]);
+
+  if (!visible) return null;
+
+  const rendered = (wishes ?? []).filter((wish) => wish.message);
+  const list = rendered.map((wish) => ({
+    name: wish.name,
+    message: wish.message || "",
+    created_at: wish.created_at,
+  }));
+
+  const applyExisting = (row: WishRow) => {
+    setMine(row);
+    setName(row.name);
+    setMessage(row.message ?? "");
+    setStatus("idle");
+    setError("Kamu sudah mengirim ucapan dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.");
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim() || !message.trim() || status === "sending") return;
+    setStatus("sending");
+    setError("");
+    const payload = { name: name.trim(), message: message.trim() };
+    try {
+      if (mine) {
+        const updated = await updateGuestWish(invitation.slug, payload);
+        if (updated.status === "updated" && updated.row) {
+          const row = updated.row;
+          setMine(row);
+          setWishes((prev) => (prev ?? []).map((wish) => (wish.id === row.id ? row : wish)));
+        } else {
+          const created = await submitGuestWish(invitation.slug, payload);
+          if (created.status === "exists") {
+            applyExisting(created.row);
+            return;
+          }
+          setMine(created.row);
+          setWishes((prev) => [...(prev ?? []), created.row]);
+        }
+      } else {
+        const created = await submitGuestWish(invitation.slug, payload);
+        if (created.status === "exists") {
+          applyExisting(created.row);
+          return;
+        }
+        setMine(created.row);
+        setWishes((prev) => [...(prev ?? []), created.row]);
+      }
+      setStatus("done");
+    } catch (err) {
+      setStatus("idle");
+      setError(err instanceof Error ? err.message : "Gagal mengirim");
+    }
+  };
+
+  return (
+    <Band visible>
+      <div className="mx-auto max-w-2xl text-center">
+        <SectionKicker>Wishes</SectionKicker>
+        <SectionHeading settings={settings} className="mt-3">
+          Doa &amp; Harapan
+        </SectionHeading>
+        <SectionCopy settings={settings} className="mt-4">
+          Kirimkan doa dan harapan terbaikmu untuk hari bahagia kami.
+        </SectionCopy>
+
+        <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5 text-left">
+          {mine && (
+            <p className="rounded-full border border-accent/30 bg-background/70 px-4 py-2.5 text-center text-xs text-text-secondary">
+              Ucapan dari perangkat ini sudah tersimpan dan masih boleh diubah.
+            </p>
+          )}
+          <div>
+            <p className={guestLabelClass}>Nama</p>
+            <input
+              className={`${guestFieldClass} mt-2`}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nama kamu"
+              maxLength={80}
+              required
+            />
+          </div>
+          <div>
+            <p className={guestLabelClass}>Ucapan &amp; doa</p>
+            <textarea
+              className="mt-2 min-h-32 w-full rounded-2xl border border-border bg-white/80 px-5 py-4 text-sm leading-relaxed text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Tulis doa dan harapanmu di sini..."
+              maxLength={1000}
+              required
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {status === "done" && !error && (
+            <p className="text-sm text-accent">Terima kasih! Ucapanmu sudah tersimpan dan masih bisa diubah.</p>
+          )}
+
+          <button
+            type="submit"
+            className={guestButtonClass}
+            disabled={status === "sending" || !name.trim() || !message.trim()}
+          >
+            {status === "sending" ? "Menyimpan..." : mine ? "Simpan Perubahan" : "Kirim Ucapan"}
+          </button>
+        </form>
+
+        <div className="mt-10 text-left">
+          {wishes === null ? null : list.length > 0 ? (
+            <GuestWishesList wishes={list} />
+          ) : (
+            <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-text-secondary">
+              Belum ada ucapan. Jadilah yang pertama mengirim doa!
+            </p>
+          )}
+        </div>
+      </div>
+    </Band>
+  );
+}
+
 /* ─── 11. Terima kasih ───
    mobile  : foto → teks
    desktop : foto kiri · teks kanan
@@ -946,6 +1459,22 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
 }
 
 /* ─── Main template ─── */
+function GoogleFontLink({ font }: { font: FontSettingsLike }) {
+  const href = invitationFontsHref(font);
+  useEffect(() => {
+    if (!href) return;
+    let link = document.getElementById("invitation-google-fonts") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.id = "invitation-google-fonts";
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
+  }, [href]);
+  return null;
+}
+
 function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
   const { css, pageGradient } = useLumeTheme();
   const [ready, setReady] = useState(embed);
@@ -976,8 +1505,13 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
         !pageGradient && "bg-blob-1",
         stage && "lume-stage",
       )}
-      style={{ ...css, background: pageGradient } as CSSProperties}
+      style={{
+        ...css,
+        ...resolveFontVars(invitation.custom_settings.font),
+        background: pageGradient,
+      } as CSSProperties}
     >
+      <GoogleFontLink font={invitation.custom_settings.font} />
       {!ready && !embed && <LoadingScreen invitation={invitation} onDone={handleReady} />}
 
       {stage && (
@@ -994,9 +1528,13 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
         <LoveStorySection invitation={invitation} />
         <CountdownSection invitation={invitation} />
         <AgendaSection invitation={invitation} />
+        <VenueSection invitation={invitation} />
         <GallerySection invitation={invitation} />
+        <FunFactsSection invitation={invitation} />
         <VideoSection invitation={invitation} />
         <GiftSection invitation={invitation} />
+        <RsvpSection invitation={invitation} />
+        <WishesSection invitation={invitation} />
         <ThankYouSection invitation={invitation} />
 
         <div className="h-px bg-gradient-to-r from-transparent via-accent/25 to-transparent" />

@@ -4,7 +4,10 @@ import { InvitationView } from "@/components/invitation/InvitationView";
 import { getInvitationBySlug } from "@/lib/invitations-query";
 import { coupleLabel } from "@/lib/invitation";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +42,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PublicInvitationPage({ params }: Props) {
+export default async function PublicInvitationPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const sp = await searchParams;
   const invitation = await getInvitationBySlug(slug, { publishedOnly: true });
   if (!invitation) notFound();
-  return <InvitationView invitation={invitation} />;
+  return (
+    <InvitationView
+      invitation={invitation}
+      embed={sp.embed === "1"}
+      frameSrc={`/${slug}?embed=1`}
+    />
+  );
 }

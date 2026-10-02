@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { uploadFile } from "@/lib/imagekit";
+import { allowedUploadFolders, defaultUploadFolder } from "@/lib/upload-folders";
 import { v4 as uuid } from "uuid";
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -25,6 +26,12 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const file = formData.get("file");
+
+  const rawFolder = formData.get("folder");
+  const folder =
+    typeof rawFolder === "string" && allowedUploadFolders.includes(rawFolder)
+      ? rawFolder
+      : defaultUploadFolder;
 
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
@@ -51,7 +58,7 @@ export async function POST(request: Request) {
   const fileName = `${fileType}-${uuid()}.${finalExt}`;
 
   try {
-    const uploaded = await uploadFile(buffer, fileName, file.type || "application/octet-stream", "invitations");
+    const uploaded = await uploadFile(buffer, fileName, file.type || "application/octet-stream", folder);
     return NextResponse.json({ data: uploaded });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed";

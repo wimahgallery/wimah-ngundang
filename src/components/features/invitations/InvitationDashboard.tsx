@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Eye, LogOut } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, LogOut, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,14 +20,41 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { invitationCreateSchema, type InvitationCreateInput } from "@/lib/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { EVENT_TYPES } from "@/lib/invitation";
 import { cn } from "@/lib/utils";
-import { templateMeta } from "@/components/invitation/template-registry";
+import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
+import { TemplatePicker } from "./TemplatePicker";
 import { useInvitations, useCreateInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
 import type { InvitationRow } from "@/features/invitations/services/invitationApi";
+
+function TemplateBadge({ id }: { id: string }) {
+  if (!isTemplateId(id)) {
+    return <span className="text-muted-foreground">{id}</span>;
+  }
+  const meta = templateMetaById[id];
+  return (
+    <Badge variant="outline" className="gap-1.5 font-normal text-foreground">
+      <span
+        aria-hidden
+        className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+        style={{ background: meta.colors.hero }}
+      />
+      {meta.name}
+    </Badge>
+  );
+}
 
 export default function InvitationDashboard() {
   const router = useRouter();
@@ -58,6 +85,7 @@ export default function InvitationDashboard() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const items: InvitationRow[] = invitations ?? [];
   const filtered = items.filter(
@@ -86,8 +114,9 @@ export default function InvitationDashboard() {
     }
   };
 
-  const handleDelete = async (slug: string) => {
-    if (!confirm(`Hapus undangan /${slug}?`)) return;
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const slug = confirmDelete;
     setDeleting(slug);
     try {
       await deleteMutation.mutateAsync(slug);
@@ -95,6 +124,7 @@ export default function InvitationDashboard() {
       // error displayed via mutation state
     } finally {
       setDeleting(null);
+      setConfirmDelete(null);
     }
   };
 
@@ -122,7 +152,7 @@ export default function InvitationDashboard() {
             <Button size="sm" className="min-h-11 px-4" onClick={() => setOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" /> Buat Baru
             </Button>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Buat Undangan Baru</DialogTitle>
             </DialogHeader>
@@ -159,7 +189,7 @@ export default function InvitationDashboard() {
                   <Input placeholder="Rina Maharani" {...register("bride_name")} />
                 </div>
               </div>
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
+              <div className="grid max-w-[24rem] grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
                 <div className="min-w-0">
                   <Label className="text-xs">Jenis Acara</Label>
                   <Select
@@ -176,22 +206,17 @@ export default function InvitationDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="min-w-0">
-                  <Label className="text-xs">Template</Label>
-                  <Select
-                    value={templateId ?? "lume"}
-                    onValueChange={(v) => { if (v) setValue("template_id", v); }}
-                  >
-                    <SelectTrigger className="w-full min-w-0">
-                      <SelectValue placeholder="Pilih template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templateMeta.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Template</Label>
+                <TemplatePicker
+                  className="mt-1.5"
+                  value={templateId}
+                  onChange={(id) => setValue("template_id", id)}
+                />
+                {errors.template_id && (
+                  <p className="mt-0.5 text-xs text-red-500">{errors.template_id.message}</p>
+                )}
               </div>
               {createMutation.error && (
                 <p className="text-xs text-red-500">{(createMutation.error as Error).message}</p>
@@ -219,90 +244,87 @@ export default function InvitationDashboard() {
       </div>
 
       <div className="relative">
-        <input
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cari slug, judul, atau nama..."
           aria-label="Cari undangan"
-          className="w-full rounded-lg border border-border bg-white py-3 pl-10 pr-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:py-2.5 md:text-sm"
+          className="h-11 w-full rounded-lg bg-white pl-10 pr-3 text-base md:h-10 md:text-sm"
         />
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <path d="M21 21l-4.35-4.35" />
-        </svg>
       </div>
 
       {error && <p className="text-sm text-red-500">{(error as Error).message}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white">
-        <table className="w-full min-w-[34rem] text-left text-xs">
-          <thead className="border-b border-border/60 bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th scope="col" className="px-3 py-2">Acara</th>
-              <th scope="col" className="px-3 py-2">Template</th>
-              <th scope="col" className="px-3 py-2">Status</th>
-              <th scope="col" className="px-3 py-2 text-right">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="min-w-[34rem]">
+          <TableHeader className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
+            <TableRow className="border-b border-border/60 hover:bg-transparent">
+              <TableHead className="text-muted-foreground">Acara</TableHead>
+              <TableHead className="text-muted-foreground">Template</TableHead>
+              <TableHead className="text-muted-foreground">Status</TableHead>
+              <TableHead className="text-right text-muted-foreground">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filtered.map((item: InvitationRow) => (
-              <tr key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0">
-                <td className="px-3 py-2">
+              <TableRow key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40">
+                <TableCell>
                   <p className="font-medium text-foreground">{item.event_title || item.slug}</p>
                   <p className="text-[11px] text-muted-foreground">/{item.slug}</p>
-                </td>
-                <td className="px-3 py-2 text-muted-foreground">{item.template_id}</td>
-                <td className="px-3 py-2">
-                  <span
+                </TableCell>
+                <TableCell>
+                  <TemplateBadge id={item.template_id} />
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "border-transparent font-normal",
                       item.is_published
                         ? "bg-primary/15 text-accent-dark"
                         : "bg-background text-muted-foreground",
                     )}
                   >
                     {item.is_published ? "Published" : "Draft"}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11"
                       onClick={() => router.push(`/dashboard/invitations/${item.slug}`)}
-                      className="grid h-11 w-11 place-items-center rounded-md hover:bg-background transition-colors"
                       aria-label={`Edit ${item.event_title || item.slug}`}
                     >
                       <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11"
                       onClick={() => router.push(`/preview/invitation/${item.slug}`)}
-                      className="grid h-11 w-11 place-items-center rounded-md hover:bg-background transition-colors"
                       aria-label={`Preview ${item.event_title || item.slug}`}
                     >
                       <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.slug)}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 text-red-500 hover:bg-red-50 hover:text-red-600"
+                      onClick={() => setConfirmDelete(item.slug)}
                       disabled={deleting === item.slug || deleteMutation.isPending}
-                      className="grid h-11 w-11 place-items-center rounded-md text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
                       aria-label={`Hapus ${item.event_title || item.slug}`}
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
 
         {filtered.length === 0 && (
           <div className="py-12 text-center">
@@ -317,6 +339,32 @@ export default function InvitationDashboard() {
           </div>
         )}
       </div>
+
+      <Dialog open={confirmDelete !== null} onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hapus Undangan?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Undangan <span className="font-medium text-foreground">/{confirmDelete}</span> akan dihapus
+            permanen dan tidak bisa dikembalikan.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" size="sm" className="min-h-11 px-4" onClick={() => setConfirmDelete(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="min-h-11 px-4"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Menghapus..." : "Hapus"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

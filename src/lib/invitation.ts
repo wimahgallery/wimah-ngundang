@@ -49,7 +49,12 @@ export type SectionKey =
   | "closing"
   | "music";
 
-export type CustomSettings = Record<SectionKey, SectionSettings>;
+export interface FontSettings {
+  heading: string | null;
+  body: string | null;
+}
+
+export type CustomSettings = Record<SectionKey, SectionSettings> & { font?: FontSettings };
 
 export interface GalleryImage {
   id: string;
@@ -189,6 +194,7 @@ export function defaultCustomSettings(): CustomSettings {
     funfacts: defaultSection(),
     closing: defaultSection(),
     music: defaultSection({ headingSize: "sm" }),
+    font: { heading: null, body: null },
   };
 }
 

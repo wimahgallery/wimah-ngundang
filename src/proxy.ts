@@ -38,8 +38,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Ucapan/RSVP tamu adalah fitur publik (tanpa login) — divalidasi & RLS di route-nya.
+  const isGuestWishes = /^\/api\/invitations\/[^/]+\/wishes$/.test(pathname);
+
   const isProtectedApi =
-    pathname.startsWith("/api/invitations") || pathname.startsWith("/api/upload");
+    (pathname.startsWith("/api/invitations") && !isGuestWishes) || pathname.startsWith("/api/upload");
 
   if (isProtectedApi && MUTATING_METHODS.includes(method) && !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

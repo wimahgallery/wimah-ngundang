@@ -6,7 +6,6 @@ export function useSaveInvitation(slug: string) {
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => saveInvitation(slug, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitation", slug] });
       queryClient.invalidateQueries({ queryKey: ["invitations"] });
     },
   });

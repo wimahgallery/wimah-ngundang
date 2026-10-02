@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   alignClass,
@@ -183,12 +184,55 @@ export function StoryParagraphs({ content }: { content?: string | null }) {
 }
 
 export function MusicDock({ url }: { url: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = 0.5;
+  }, []);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      void audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  };
+
   return (
     <div
-      className="fixed left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2 rounded-full border border-border bg-glass/95 px-4 py-2 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur"
+      className="fixed left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2"
       style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
     >
-      <audio controls src={url} className="h-9 w-full" preload="none" aria-label="Musik undangan" />
+      <audio
+        ref={audioRef}
+        src={url}
+        preload="none"
+        aria-label="Musik undangan"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? "Jeda musik" : "Putar musik"}
+        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-glass/95 px-4 py-2.5 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur transition hover:bg-glass"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-background">
+          {playing ? (
+            <Pause className="h-4 w-4" fill="currentColor" />
+          ) : (
+            <Play className="h-4 w-4 translate-x-[1px]" fill="currentColor" />
+          )}
+        </span>
+        <span className="text-xs font-medium tracking-wide text-text-secondary">
+          {playing ? "Sedang diputar — ketuk untuk jeda" : "Putar musik undangan"}
+        </span>
+      </button>
     </div>
   );
 }

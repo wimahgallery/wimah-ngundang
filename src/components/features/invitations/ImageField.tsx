@@ -9,23 +9,38 @@ interface ImageFieldProps {
   label: string;
   value: string | null;
   onChange: (url: string | null) => void;
-  positionX: number;
-  positionY: number;
-  zoom: number;
-  rotate: number;
-  onPositionChange: (x: number, y: number) => void;
+  /** Folder ImageKit untuk upload (lihat src/lib/upload-folders.ts). */
+  folder?: string;
+  /** Rasio crop sesuai tampilan template (default 3/4). */
+  aspect?: number;
+  positionX?: number;
+  positionY?: number;
+  zoom?: number;
+  rotate?: number;
+  onPositionChange?: (x: number, y: number) => void;
   onZoomChange?: (zoom: number) => void;
   onRotateChange?: (rotate: number) => void;
+}
+
+function ratioText(aspect: number): string {
+  if (aspect === 1) return "1:1";
+  if (aspect === 16 / 9) return "16:9";
+  if (aspect === 4 / 5) return "4:5";
+  if (aspect === 4 / 3) return "4:3";
+  if (aspect === 3 / 4) return "3:4";
+  return aspect.toFixed(2).replace(".", ":");
 }
 
 export default function ImageField({
   label,
   value,
   onChange,
-  positionX,
-  positionY,
-  zoom,
-  rotate,
+  folder,
+  aspect = 3 / 4,
+  positionX = 50,
+  positionY = 50,
+  zoom = 100,
+  rotate = 0,
   onPositionChange,
   onZoomChange,
   onRotateChange,
@@ -48,7 +63,7 @@ export default function ImageField({
       setError("");
       setBusy(true);
       try {
-        const url = await uploadFile(file);
+        const url = await uploadFile(file, folder);
         onChange(url);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Upload gagal");
@@ -56,7 +71,7 @@ export default function ImageField({
         setBusy(false);
       }
     },
-    [onChange],
+    [onChange, folder],
   );
 
   async function applyCrop() {
@@ -64,7 +79,7 @@ export default function ImageField({
     setBusy(true);
     try {
       const blob = await getCroppedBlob(cropSrc, croppedArea, cropRotate);
-      const url = await uploadBlob(blob, "cropped.jpg");
+      const url = await uploadBlob(blob, "cropped.jpg", folder);
       onChange(url);
       onZoomChange?.(100);
       onRotateChange?.(cropRotate);
@@ -78,7 +93,12 @@ export default function ImageField({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-foreground">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+          Rasio {ratioText(aspect)}
+        </span>
+      </div>
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -97,6 +117,7 @@ export default function ImageField({
             type="button"
             className="relative block h-48 w-full"
             onClick={(e) => {
+              if (!onPositionChange) return;
               const rect = e.currentTarget.getBoundingClientRect();
               const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
               const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
@@ -156,43 +177,50 @@ export default function ImageField({
             >
               <Scan className="h-3.5 w-3.5" /> Crop / Zoom
             </button>
-            <button
-              type="button"
-              onClick={() => onRotateChange?.((rotate + 90) % 360)}
-              className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground"
-            >
-              <RotateCw className="h-3.5 w-3.5" /> Rotate
-            </button>
+            {onRotateChange && (
+              <button
+                type="button"
+                onClick={() => onRotateChange((rotate + 90) % 360)}
+                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs text-foreground"
+              >
+                <RotateCw className="h-3.5 w-3.5" /> Rotate
+              </button>
+            )}
             <button type="button" onClick={() => onChange(null)} className="min-h-10 rounded-lg px-3 py-2 text-xs text-red-500">
               Hapus
             </button>
           </>
         )}
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
-        <label className="text-xs text-muted-foreground">
-          Position X {positionX}
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={positionX}
-            onChange={(e) => onPositionChange(Number(e.target.value), positionY)}
-            className="mt-1 w-full"
-          />
-        </label>
-        <label className="text-xs text-muted-foreground">
-          Position Y {positionY}
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={positionY}
-            onChange={(e) => onPositionChange(positionX, Number(e.target.value))}
-            className="mt-1 w-full"
-          />
-        </label>
-        {onZoomChange && (
+      {(onPositionChange || onZoomChange) && (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3">
+          {onPositionChange && (
+            <>
+              <label className="text-xs text-muted-foreground">
+                Position X {positionX}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={positionX}
+                  onChange={(e) => onPositionChange(Number(e.target.value), positionY)}
+                  className="mt-1 w-full"
+                />
+              </label>
+              <label className="text-xs text-muted-foreground">
+                Position Y {positionY}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={positionY}
+                  onChange={(e) => onPositionChange(positionX, Number(e.target.value))}
+                  className="mt-1 w-full"
+                />
+              </label>
+            </>
+          )}
+          {onZoomChange && (
           <label className="text-xs text-muted-foreground">
             Zoom {zoom}%
             <input
@@ -205,7 +233,8 @@ export default function ImageField({
             />
           </label>
         )}
-      </div>
+        </div>
+      )}
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       {cropOpen && cropSrc && (
@@ -219,7 +248,9 @@ export default function ImageField({
         >
           <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-4 py-3">
-              <p className="text-sm font-medium">Crop gambar</p>
+              <p className="text-sm font-medium">
+                Crop gambar <span className="text-muted-foreground">· Rasio {ratioText(aspect)}</span>
+              </p>
               <button
                 type="button"
                 onClick={() => setCropOpen(false)}
@@ -235,7 +266,7 @@ export default function ImageField({
                 crop={crop}
                 zoom={cropZoom}
                 rotation={cropRotate}
-                aspect={3 / 4}
+                aspect={aspect}
                 onCropChange={setCrop}
                 onZoomChange={setCropZoom}
                 onRotationChange={setCropRotate}

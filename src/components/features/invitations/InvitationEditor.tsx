@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuid } from "uuid";
-import { Plus, ArrowLeft, ArrowRight, Rocket, Save, Trash2, Eye, FileText, Image, Video, Music, MapPin, Calendar, Users, Gift } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Rocket, Save, Trash2, Eye, FileText, Image, Video, Music, MapPin, Calendar, Users, Gift, ChevronDown, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,16 +16,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EVENT_TYPES, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings } from "@/lib/invitation";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { EVENT_TYPES, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey } from "@/lib/invitation";
+  BODY_FONTS,
+  DEFAULT_BODY,
+  DEFAULT_HEADING,
+  HEADING_FONTS,
+  SPECIMEN_HREFS,
+  findBodyFont,
+  findHeadingFont,
+  fontStack,
+} from "@/lib/wedding-fonts";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
-import { templateMeta } from "@/components/invitation/template-registry";
+import { fetchWishes } from "@/features/invitations/services/invitationApi";
+import { GuestWishesList } from "@/components/invitation/shared";
+import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
+import { uploadFolders } from "@/lib/upload-folders";
+import { TemplatePicker } from "./TemplatePicker";
 import { uploadFile } from "@/lib/crop-image";
 import { cn } from "@/lib/utils";
 import ImageField from "./ImageField";
@@ -37,8 +44,9 @@ const inputClass =
 
 type FieldChange = (field: string, value: string | number | boolean) => void;
 
-const STEPS: { key: SectionKey; label: string; icon: React.ElementType }[] = [
+const STEPS: { key: SectionKey | "font"; label: string; icon: React.ElementType }[] = [
   { key: "info", label: "Info", icon: FileText },
+  { key: "font", label: "Font", icon: Type },
   { key: "couple", label: "Mempelai", icon: Users },
   { key: "hero", label: "Hero", icon: Image },
   { key: "greeting", label: "Sapaan", icon: FileText },
@@ -66,11 +74,25 @@ export default function InvitationEditor({ slug }: { slug: string }) {
 
 const [activeStep, setActiveStep] = useState(0);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
-  const settings = invitation?.custom_settings;
+  const templateId = invitation?.template_id ?? "";
+  const currentTemplate = isTemplateId(templateId) ? templateMetaById[templateId] : templateMetaById.lume;
+
+  const [dirty, setDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const revRef = useRef(0);
+  const saveAsyncRef = useRef(saveMutation.mutateAsync);
+  useEffect(() => {
+    saveAsyncRef.current = saveMutation.mutateAsync;
+  }, [saveMutation.mutateAsync]);
 
   const patch = useCallback((partial: Partial<Invitation>) => {
     if (!invitation) return;
+    revRef.current += 1;
+    setDirty(true);
+    setSaveStatus("idle");
     queryClient.setQueryData(["invitation", slug], { ...invitation, ...partial });
   }, [invitation, slug, queryClient]);
 
@@ -81,18 +103,65 @@ const [activeStep, setActiveStep] = useState(0);
 
   const doSave = useCallback(async (extra: Partial<Invitation> = {}) => {
     if (!invitation) return;
-    const result = await saveMutation.mutateAsync({ ...invitation, ...extra });
-    const next = normalizeInvitation(result);
-    queryClient.setQueryData(["invitation", slug], next);
-  }, [invitation, slug, saveMutation, queryClient]);
+    const rev = revRef.current;
+    setSaveStatus("saving");
+    try {
+      const result = await saveMutation.mutateAsync({ ...invitation, ...extra });
+      const next = normalizeInvitation(result);
+      if (revRef.current === rev) {
+        queryClient.setQueryData(["invitation", slug], next);
+        setDirty(false);
+        setSaveStatus("saved");
+        if (next.slug && next.slug !== slug) {
+          queryClient.setQueryData(["invitation", next.slug], next);
+          router.replace(`/dashboard/invitations/${next.slug}`);
+        }
+      }
+    } catch (e) {
+      if (revRef.current === rev) setSaveStatus("idle");
+      throw e;
+    }
+  }, [invitation, slug, saveMutation, queryClient, router]);
+
+  useEffect(() => {
+    if (!invitation || !dirty) return;
+    const timer = setTimeout(async () => {
+      const rev = revRef.current;
+      setSaveStatus("saving");
+      try {
+        const result = await saveAsyncRef.current({ ...invitation, slug });
+        if (revRef.current !== rev) return;
+        queryClient.setQueryData(["invitation", slug], { ...normalizeInvitation(result), slug: invitation.slug });
+        setDirty(false);
+        setSaveStatus("saved");
+      } catch {
+        if (revRef.current === rev) setSaveStatus("idle");
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [invitation, dirty, slug, queryClient]);
+
+  useEffect(() => {
+    if (saveStatus !== "saved") return;
+    const timer = setTimeout(() => setPreviewNonce((n) => n + 1), 2000);
+    return () => clearTimeout(timer);
+  }, [saveStatus]);
 
   const handlePublish = async () => {
-    await doSave({ is_published: true });
-    setPublishDialogOpen(false);
+    try {
+      await doSave({ is_published: true });
+      setPublishDialogOpen(false);
+    } catch {
+      /* error ditampilkan lewat saveMutation.error */
+    }
   };
 
   const handleDraft = async () => {
-    await doSave({ is_published: false });
+    try {
+      await doSave({ is_published: false });
+    } catch {
+      /* error ditampilkan lewat saveMutation.error */
+    }
   };
 
   const handleDelete = async () => {
@@ -126,6 +195,11 @@ const [activeStep, setActiveStep] = useState(0);
     patch({ events });
   }, [patch]);
 
+  const onChangeFont = useCallback((font: FontSettings) => {
+    if (!invitation) return;
+    patch({ custom_settings: { ...invitation.custom_settings, font } });
+  }, [invitation, patch]);
+
   const ActiveIcon = STEPS[activeStep].icon;
   const stepTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -134,6 +208,7 @@ const [activeStep, setActiveStep] = useState(0);
     if (!s) return null;
     switch (STEPS[activeStep].key) {
       case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} />;
+      case "font": return <StepFont invitation={invitation!} onChange={onChangeFont} />;
       case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "greeting": return <StepGreeting invitation={invitation!} onChange={onChangeField} />;
@@ -145,13 +220,13 @@ const [activeStep, setActiveStep] = useState(0);
       case "gift": return <StepGift invitation={invitation!} settings={s.gift} onChangeSettings={patchSettings} onChangeGifts={onChangeGifts} />;
       case "music": return <StepMusic invitation={invitation!} settings={s.music} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "countdown": return <StepCountdown settings={s.countdown} onChangeSettings={patchSettings} />;
-      case "rsvp": return <StepRsvp invitation={invitation!} onChange={onChangeField} />;
-      case "wishes": return <StepWishes invitation={invitation!} onChange={onChangeField} />;
+      case "rsvp": return <StepRsvp invitation={invitation!} settings={s.rsvp} onChangeSettings={patchSettings} onChange={onChangeField} />;
+      case "wishes": return <StepWishes slug={invitation!.slug} settings={s.wishes} onChangeSettings={patchSettings} />;
       case "funfacts": return <StepFunFacts invitation={invitation!} onChangeFacts={onChangeFunFacts} />;
       case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} />;
       default: return null;
     }
-  }, [activeStep, invitation, patchSettings, onChangeField, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
+  }, [activeStep, invitation, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
 
   const selectStep = useCallback((i: number) => {
     setActiveStep(i);
@@ -179,7 +254,8 @@ const [activeStep, setActiveStep] = useState(0);
   }
 
   return (
-    <div className="space-y-3 py-1">
+    <div className="flex flex-col gap-6 py-1 xl:flex-row xl:items-start">
+      <div className="min-w-0 flex-1 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="outline" size="sm" className="grid h-11 w-11 shrink-0 place-items-center p-0" onClick={() => router.push("/dashboard/invitations")} aria-label="Kembali ke daftar undangan">
@@ -203,25 +279,54 @@ const [activeStep, setActiveStep] = useState(0);
           <Button variant="destructive" size="sm" className="grid h-11 w-11 place-items-center p-0" onClick={handleDelete} disabled={deleteMutation.isPending} aria-label="Hapus undangan">
             <Trash2 className="h-4 w-4" />
           </Button>
+          <span role="status" aria-live="polite" className="flex min-h-11 items-center px-1 text-xs font-medium">
+            {saveStatus === "saving" ? (
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <span aria-hidden className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Menyimpan…
+              </span>
+            ) : dirty ? (
+              <span className="text-amber-600">Belum tersimpan</span>
+            ) : saveStatus === "saved" ? (
+              <span className="text-green-600">Tersimpan ✓</span>
+            ) : null}
+          </span>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Label className="text-xs text-muted-foreground">Template:</Label>
-        <Select
-          value={invitation.template_id || "lume"}
-          onValueChange={(v) => onChangeField("template_id", v ?? "lume")}
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-11 gap-2 px-3"
+          onClick={() => setTemplateDialogOpen(true)}
         >
-          <SelectTrigger className="w-full min-w-0 max-w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {templateMeta.map((t) => (
-              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <span
+            aria-hidden
+            className="h-3 w-3 rounded-full ring-1 ring-black/10"
+            style={{ background: currentTemplate.colors.hero }}
+          />
+          {currentTemplate.name}
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        </Button>
+        <span className="hidden max-w-[40ch] truncate text-xs text-muted-foreground sm:inline">
+          {currentTemplate.description}
+        </span>
       </div>
+
+      {saveMutation.isError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-medium">Gagal menyimpan perubahan.</p>
+          <p className="mt-1 break-words">{(saveMutation.error as Error).message}</p>
+          {/column|does not exist|schema/i.test((saveMutation.error as Error).message) && (
+            <p className="mt-1">
+              Kolom belum ada di database — jalankan isi file <code className="font-medium">supabase/invitations.sql</code> di
+              Supabase SQL Editor, lalu simpan lagi.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 pb-2 pt-2 backdrop-blur">
         <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
@@ -273,6 +378,45 @@ const [activeStep, setActiveStep] = useState(0);
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pilih Template</DialogTitle>
+          </DialogHeader>
+          <TemplatePicker
+            name="editor-template-picker"
+            value={invitation.template_id || "lume"}
+            onChange={(id) => onChangeField("template_id", id)}
+          />
+          <DialogFooter>
+            <Button size="sm" className="min-h-11 px-4" onClick={() => setTemplateDialogOpen(false)}>
+              Selesai
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </div>
+
+      <aside className="hidden w-[400px] shrink-0 xl:block">
+        <div className="sticky top-4 space-y-2">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-semibold text-foreground">Preview undangan</p>
+            <p className="text-[11px] text-muted-foreground">sinkron ±2 detik setelah simpan</p>
+          </div>
+          <div
+            className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
+            style={{ height: "min(75vh, 760px)" }}
+          >
+            <iframe
+              key={previewNonce}
+              src={`/preview/invitation/${slug}?v=${previewNonce}`}
+              className="h-full w-full border-0"
+              title="Preview undangan"
+            />
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
@@ -297,16 +441,130 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
   );
 }
 
+function useSpecimenFonts() {
+  useEffect(() => {
+    SPECIMEN_HREFS.forEach((href, index) => {
+      const id = `font-specimen-${index}`;
+      if (document.getElementById(id)) return;
+      const link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = href;
+      document.head.appendChild(link);
+    });
+  }, []);
+}
+
+function StepFont({ invitation, onChange }: { invitation: Invitation; onChange: (font: FontSettings) => void }) {
+  const font = invitation.custom_settings.font ?? { heading: null, body: null };
+  useSpecimenFonts();
+
+  return (
+    <div className="space-y-5">
+      <p className="text-xs text-muted-foreground">
+        Pilih font judul &amp; teks. Semua pilihan tersimpan otomatis; preview di panel kanan
+        menyegarkan ±2 detik setelah tersimpan.
+      </p>
+
+      <div className="rounded-xl border border-border bg-background p-5 text-center">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Contoh tampilan</p>
+        <p className="mt-2 text-3xl md:text-4xl" style={{ fontFamily: fontStack(findHeadingFont(font.heading), "heading") }}>
+          Wisnu &amp; Nilam
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground" style={{ fontFamily: fontStack(findBodyFont(font.body), "body") }}>
+          Sabtu, 12 Desember 2026 — Dengan penuh kebahagiaan kami mengundang Bapak/Ibu/Saudara/i
+          untuk hadir di hari pernikahan kami.
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-semibold text-foreground">Font judul &amp; nama pasangan</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <FontOptionButton
+            sample="Wisnu &amp; Nilam"
+            name={DEFAULT_HEADING.name}
+            stack={fontStack(null, "heading")}
+            selected={!font.heading}
+            onClick={() => onChange({ ...font, heading: null })}
+          />
+          {HEADING_FONTS.map((option) => (
+            <FontOptionButton
+              key={option.id}
+              sample="Wisnu &amp; Nilam"
+              name={option.name}
+              stack={`"${option.family}", ${option.fallback}`}
+              selected={font.heading === option.id}
+              onClick={() => onChange({ ...font, heading: option.id })}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-semibold text-foreground">Font teks &amp; paragraf</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <FontOptionButton
+            sample="Sabtu, 12 Desember"
+            name={DEFAULT_BODY.name}
+            stack={fontStack(null, "body")}
+            selected={!font.body}
+            onClick={() => onChange({ ...font, body: null })}
+          />
+          {BODY_FONTS.map((option) => (
+            <FontOptionButton
+              key={option.id}
+              sample="Sabtu, 12 Desember"
+              name={option.name}
+              stack={`"${option.family}", ${option.fallback}`}
+              selected={font.body === option.id}
+              onClick={() => onChange({ ...font, body: option.id })}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FontOptionButton({
+  sample,
+  name,
+  stack,
+  selected,
+  onClick,
+}: {
+  sample: string;
+  name: string;
+  stack: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "rounded-lg border px-3 py-2.5 text-left transition",
+        selected ? "border-primary bg-primary/5 ring-2 ring-ring/40" : "border-border hover:border-primary/40",
+      )}
+    >
+      <span className="block truncate text-lg leading-snug" style={{ fontFamily: stack }}>{sample}</span>
+      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{name}</span>
+    </button>
+  );
+}
+
 function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"]) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("couple", next)} />
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Foto mempelai wanita">
-          <ImageField label="Foto mempelai wanita" value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("couple", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("couple", { ...settings, rotate: r })} />
+          <ImageField label="Foto mempelai wanita" folder={uploadFolders.couple} value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("couple", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("couple", { ...settings, rotate: r })} />
         </Field>
         <Field label="Foto mempelai pria">
-          <ImageField label="Foto mempelai pria" value={invitation.groom_photo} onChange={(url) => onChange("groom_photo", url ?? "")} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => { onChange("groom_image_position_x", x); onChange("groom_image_position_y", y); }} onZoomChange={(z) => onChange("groom_image_zoom", z)} onRotateChange={(r) => onChange("groom_image_rotate", r)} />
+          <ImageField label="Foto mempelai pria" folder={uploadFolders.couple} value={invitation.groom_photo} onChange={(url) => onChange("groom_photo", url ?? "")} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => { onChange("groom_image_position_x", x); onChange("groom_image_position_y", y); }} onZoomChange={(z) => onChange("groom_image_zoom", z)} onRotateChange={(r) => onChange("groom_image_rotate", r)} />
         </Field>
       </div>
     </>
@@ -321,7 +579,7 @@ function StepHero({ invitation, settings, onChangeSettings, onChange }: { invita
         <Field label="Hero title"><input className={inputClass} value={invitation.hero_title || ""} onChange={(e) => onChange("hero_title", e.target.value)} /></Field>
         <Field label="Hero subtitle"><Textarea className={inputClass} rows={2} value={invitation.hero_subtitle || ""} onChange={(e) => onChange("hero_subtitle", e.target.value)} /></Field>
         <Field label="Cover image">
-          <ImageField label="Cover image" value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("hero", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("hero", { ...settings, rotate: r })} />
+          <ImageField label="Cover image" folder={uploadFolders.hero} value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("hero", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("hero", { ...settings, rotate: r })} />
         </Field>
       </div>
     </>
@@ -332,7 +590,14 @@ function StepGreeting({ invitation, onChange }: { invitation: Invitation; onChan
   return (
     <div className="grid gap-3">
       <Field label="Teks sapaan"><Textarea className={inputClass} rows={3} value={invitation.greeting_text || ""} onChange={(e) => onChange("greeting_text", e.target.value)} /></Field>
-      <Field label="Nama penerima"><input className={inputClass} value={invitation.recipient_name || ""} onChange={(e) => onChange("recipient_name", e.target.value)} /></Field>
+      <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2.5">
+        <p className="text-xs text-muted-foreground">
+          Nama penerima tampil otomatis dari link tamu — tambahkan{" "}
+          <code className="font-medium text-foreground">?to=NamaTamu</code> di akhir URL, misal{" "}
+          <code className="font-medium text-foreground">/{invitation.slug}?to=Wisnu</code>. Tanpa parameter itu, tampil
+          “Tamu Undangan”.
+        </p>
+      </div>
     </div>
   );
 }
@@ -370,7 +635,7 @@ function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeM
               <input type="date" className={inputClass} value={item.date || ""} onChange={(e) => updateMilestone(index, { date: e.target.value })} />
             </div>
             <Textarea className={inputClass} rows={4} placeholder="Ceritakan babak ini..." value={item.description} onChange={(e) => updateMilestone(index, { description: e.target.value })} />
-            <ImageUrlField label="Foto babak (opsional)" value={item.image} onChange={(url) => updateMilestone(index, { image: url || null })} />
+            <ImageField label="Foto babak (opsional)" aspect={4 / 5} value={item.image ?? null} onChange={(url) => updateMilestone(index, { image: url || null })} />
             <div>
               <button type="button" className="min-h-10 rounded-lg px-2 text-xs text-red-500" onClick={() => onChangeMilestones(milestones.filter((_, i) => i !== index))}>
                 Hapus babak
@@ -448,7 +713,7 @@ function StepGallery({ invitation, settings, onChangeSettings, onChangeGallery }
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("gallery", next)} />
-      <div className="mt-3"><GalleryField images={invitation.gallery_images} onChange={onChangeGallery} /></div>
+      <div className="mt-3"><GalleryField folder={uploadFolders.gallery} images={invitation.gallery_images} onChange={onChangeGallery} /></div>
     </>
   );
 }
@@ -457,7 +722,7 @@ function StepVideo({ invitation, onChange }: { invitation: Invitation; onChange:
   return (
     <div className="grid gap-3">
       <Field label="Video URL (YouTube/Vimeo)"><input className={inputClass} value={invitation.video_url || ""} onChange={(e) => onChange("video_url", e.target.value)} /></Field>
-      <Field label="Video poster"><ImageField label="Video poster" value={invitation.video_poster || null} onChange={(url) => onChange("video_poster", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
+      <Field label="Video poster"><ImageField label="Video poster" aspect={16 / 9} folder={uploadFolders.videoPoster} value={invitation.video_poster || null} onChange={(url) => onChange("video_poster", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
     </div>
   );
 }
@@ -487,7 +752,7 @@ function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invit
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("music", next)} />
       <div className="mt-3 space-y-2">
-        <input type="file" accept="audio/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const url = await uploadFile(file); onChange("music_url", url); } catch { /* ignore */ } }} className="text-xs" />
+        <input type="file" accept="audio/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const url = await uploadFile(file, uploadFolders.music); onChange("music_url", url); } catch { /* ignore */ } }} className="text-xs" />
         {invitation.music_url && <audio controls src={invitation.music_url} className="w-full text-xs" aria-label="Musik undangan" />}
       </div>
     </>
@@ -503,34 +768,124 @@ function StepCountdown({ settings, onChangeSettings }: { settings: CustomSetting
   );
 }
 
-function StepRsvp({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
+function StepRsvp({
+  invitation,
+  settings,
+  onChangeSettings,
+  onChange,
+}: {
+  invitation: Invitation;
+  settings: CustomSettings["rsvp"];
+  onChangeSettings: (key: SectionKey, next: CustomSettings["rsvp"]) => void;
+  onChange: FieldChange;
+}) {
   return (
-    <div className="grid gap-3">
-      <Field label="RSVP aktif">
-        <select className={inputClass} value={invitation.rsvp_enabled ? "true" : "false"} onChange={(e) => onChange("rsvp_enabled", e.target.value)}>
-          <option value="true">Ya</option>
-          <option value="false">Tidak</option>
-        </select>
-      </Field>
-    </div>
+    <>
+      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("rsvp", next)} />
+      <div className="mt-3 grid gap-3">
+        <Field label="RSVP aktif">
+          <select className={inputClass} value={invitation.rsvp_enabled ? "true" : "false"} onChange={(e) => onChange("rsvp_enabled", e.target.value)}>
+            <option value="true">Ya</option>
+            <option value="false">Tidak</option>
+          </select>
+        </Field>
+        <p className="text-xs text-muted-foreground">
+          Saat aktif, tamu dapat mengonfirmasi kehadiran lewat section “Konfirmasi Kehadiran” di undangan.
+        </p>
+      </div>
+    </>
   );
 }
 
-function StepWishes({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
+function StepWishes({
+  slug,
+  settings,
+  onChangeSettings,
+}: {
+  slug: string;
+  settings: CustomSettings["wishes"];
+  onChangeSettings: (key: SectionKey, next: CustomSettings["wishes"]) => void;
+}) {
+  const { data: wishes, isLoading } = useQuery({
+    queryKey: ["wishes", slug],
+    queryFn: () => fetchWishes(slug),
+  });
+
   return (
-    <div className="grid gap-3">
-      <Field label="Pesan doa & harapan"><Textarea className={inputClass} rows={4} value={invitation.closing_message || ""} onChange={(e) => onChange("closing_message", e.target.value)} /></Field>
-    </div>
+    <>
+      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("wishes", next)} />
+      <div className="mt-3 space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Tamu mengirim doa &amp; ucapan lewat section “Doa &amp; Harapan” di undangan. Daftar di bawah adalah ucapan yang sudah masuk.
+        </p>
+        {isLoading ? (
+          <p className="text-xs text-muted-foreground">Memuat ucapan…</p>
+        ) : wishes && wishes.length > 0 ? (
+          <GuestWishesList wishes={wishes.map((w) => ({ name: w.name, message: w.message || "", created_at: w.created_at }))} />
+        ) : (
+          <p className="rounded-lg border border-dashed border-border bg-background p-4 text-xs text-muted-foreground">
+            Belum ada ucapan masuk.
+          </p>
+        )}
+      </div>
+    </>
   );
 }
+
+const FUN_FACT_ICONS = ["calendar", "camera", "coffee", "gift", "gem", "heart", "home", "map", "music", "plane", "ring", "star", "sparkles"];
 
 function StepFunFacts({ invitation, onChangeFacts }: { invitation: Invitation; onChangeFacts: (facts: Invitation["fun_facts"]) => void }) {
   const facts = invitation.fun_facts || [];
+
+  const updateFact = (index: number, partial: Partial<(typeof facts)[number]>) => {
+    onChangeFacts(facts.map((fact, i) => (i === index ? { ...fact, ...partial } : fact)));
+  };
+
   return (
-    <div className="grid gap-3">
-      <Field label="Tahun bertemu"><input className={inputClass} value={facts[0]?.value || ""} onChange={(e) => onChangeFacts([{ icon: "calendar", label: "Tahun bertemu", value: e.target.value }, ...facts.slice(1)])} /></Field>
-      <Field label="Lagu favorit"><input className={inputClass} value={facts[1]?.value || ""} onChange={(e) => onChangeFacts([facts[0] || { icon: "music", label: "", value: "" }, { icon: "music", label: "Lagu favorit", value: e.target.value }, ...facts.slice(2)])} /></Field>
-      <Field label="Tempat pertama"><input className={inputClass} value={facts[2]?.value || ""} onChange={(e) => onChangeFacts([...facts.slice(0, 2), { icon: "map", label: "Tempat pertama", value: e.target.value }])} /></Field>
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Muncul di section “Fun Facts” undangan. Kosongkan label/nilai untuk menyembunyikan satu fakta.
+      </p>
+
+      {facts.map((fact, index) => (
+        <div key={index} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-xs text-muted-foreground">
+            Ikon
+            <select
+              className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
+              value={fact.icon || "sparkles"}
+              onChange={(e) => updateFact(index, { icon: e.target.value })}
+            >
+              {FUN_FACT_ICONS.map((icon) => (
+                <option key={icon} value={icon}>
+                  {icon}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs text-muted-foreground">
+            Label
+            <input className={`${inputClass} mt-0.5`} placeholder="mis. Kopi Pertama" value={fact.label} onChange={(e) => updateFact(index, { label: e.target.value })} />
+          </label>
+          <label className="text-xs text-muted-foreground">
+            Nilai
+            <input className={`${inputClass} mt-0.5`} placeholder="mis. Tahun 2021" value={fact.value} onChange={(e) => updateFact(index, { value: e.target.value })} />
+          </label>
+          <div className="flex items-end">
+            <button
+              type="button"
+              className="min-h-10 rounded-lg px-2 text-xs text-red-500"
+              onClick={() => onChangeFacts(facts.filter((_, i) => i !== index))}
+            >
+              Hapus fakta
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <Button variant="outline" size="sm" onClick={() => onChangeFacts([...facts, { icon: "sparkles", label: "", value: "" }])}>
+        <Plus className="mr-1.5 h-3.5 w-3.5" /> Tambah fakta
+      </Button>
     </div>
   );
 }
@@ -541,53 +896,10 @@ function StepClosing({ invitation, settings, onChangeSettings, onChange }: { inv
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("closing", next)} />
       <div className="mt-3 grid gap-3">
         <Field label="Pesan penutup"><Textarea className={inputClass} rows={4} value={invitation.closing_message || ""} onChange={(e) => onChange("closing_message", e.target.value)} /></Field>
-        <Field label="Gambar penutup"><ImageField label="Closing image" value={invitation.closing_image || null} onChange={(url) => onChange("closing_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
-        <Field label="QRIS image"><ImageField label="QRIS" value={invitation.qris_image || null} onChange={(url) => onChange("qris_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
+        <Field label="Gambar penutup"><ImageField label="Closing image" folder={uploadFolders.closing} value={invitation.closing_image || null} onChange={(url) => onChange("closing_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
+        <Field label="QRIS image"><ImageField label="QRIS" aspect={1} folder={uploadFolders.closing} value={invitation.qris_image || null} onChange={(url) => onChange("qris_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
       </div>
     </>
-  );
-}
-
-function ImageUrlField({ label, value, onChange }: { label: string; value?: string | null; onChange: (url: string) => void }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleFile = async (file?: File) => {
-    if (!file) return;
-    setError("");
-    setBusy(true);
-    try {
-      onChange(await uploadFile(file));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload gagal");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex flex-wrap items-center gap-3">
-        {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt={label} className="h-20 w-20 rounded-md border border-border object-cover" loading="lazy" />
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="min-h-10 rounded-lg border border-border px-3 py-2 text-xs text-foreground" onClick={() => inputRef.current?.click()}>
-            {busy ? "Mengunggah..." : value ? "Ganti" : "Unggah gambar"}
-          </button>
-          {value ? (
-            <button type="button" className="min-h-10 rounded-lg px-3 py-2 text-xs text-red-500" onClick={() => onChange("")}>
-              Hapus
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => void handleFile(e.target.files?.[0])} />
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
-    </div>
   );
 }
 

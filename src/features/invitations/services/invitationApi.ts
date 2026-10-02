@@ -1,4 +1,5 @@
 import { invitationCreateSchema, type InvitationCreateInput } from "@/lib/schemas";
+import { getDeviceId } from "@/lib/device-id";
 
 const BASE = "/api/invitations";
 
@@ -64,6 +65,69 @@ export async function fetchInvitation(slug: string) {
   if (!res.ok) throw new Error("Undangan tidak ditemukan");
   const json = await res.json();
   return json.data;
+}
+
+export type WishRow = {
+  id: string;
+  name: string;
+  message: string | null;
+  attendance: string | null;
+  guest_count: number | null;
+  created_at: string;
+  mine?: boolean;
+};
+
+export type WishPayload = {
+  name: string;
+  message?: string | null;
+  attendance?: string | null;
+  guest_count?: number | null;
+};
+
+function deviceHeaders(): Record<string, string> {
+  const id = getDeviceId();
+  return id ? { "x-device-id": id } : {};
+}
+
+export async function fetchWishes(slug: string): Promise<WishRow[]> {
+  try {
+    const res = await fetch(`/api/invitations/${slug}/wishes`, { headers: deviceHeaders() });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json.data) ? json.data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function submitGuestWish(
+  slug: string,
+  payload: WishPayload,
+): Promise<{ status: "created" | "exists"; row: WishRow }> {
+  const res = await fetch(`/api/invitations/${slug}/wishes`, {
+    method: "POST",
+    headers: { ...deviceHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => null);
+  if (res.status === 409 && json?.data) return { status: "exists", row: json.data as WishRow };
+  if (!res.ok) throw new Error(json?.error || "Gagal mengirim. Coba lagi nanti.");
+  return { status: "created", row: json.data as WishRow };
+}
+
+export async function updateGuestWish(
+  slug: string,
+  payload: WishPayload,
+): Promise<{ status: "updated" | "not_found"; row?: WishRow }> {
+  const res = await fetch(`/api/invitations/${slug}/wishes`, {
+    method: "PATCH",
+    headers: { ...deviceHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => null);
+  if (res.status === 403) return { status: "not_found" };
+  if (!res.ok) throw new Error(json?.error || "Gagal menyimpan. Coba lagi nanti.");
+  return { status: "updated", row: json.data as WishRow };
 }
 
 export async function saveInvitation(slug: string, data: Record<string, unknown>) {

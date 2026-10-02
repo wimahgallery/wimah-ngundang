@@ -45,19 +45,21 @@ export async function getCroppedBlob(
   });
 }
 
-export async function uploadBlob(blob: Blob, fileName: string) {
+export async function uploadBlob(blob: Blob, fileName: string, folder?: string) {
   const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
   const form = new FormData();
   form.append("file", file);
+  if (folder) form.append("folder", folder);
   const res = await fetch("/api/upload", { method: "POST", body: form });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || "Upload gagal");
   return (json.data?.url ?? json.url) as string;
 }
 
-export async function uploadFile(file: File) {
+export async function uploadFile(file: File, folder?: string) {
   const form = new FormData();
   form.append("file", file);
+  if (folder) form.append("folder", folder);
   const res = await fetch("/api/upload", { method: "POST", body: form });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || "Upload gagal");

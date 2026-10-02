@@ -1,6 +1,16 @@
 import type { ComponentType } from "react";
 import type { Invitation } from "@/lib/invitation";
 import { FallbackTemplate } from "./fallback-template";
+import {
+  aka,
+  chocolateDream,
+  elegantBlack,
+  ivoryDream,
+  milkyWhite,
+  sora,
+  simpleBlack,
+  truePotential,
+} from "./templates/lume-themes";
 
 export const TEMPLATE_IDS = [
   "lume",
@@ -16,17 +26,48 @@ export const TEMPLATE_IDS = [
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
-export const templateMeta: { id: TemplateId; name: string; description: string }[] = [
-  { id: "lume", name: "Lume", description: "Klasik hangat dengan loading nama pasangan, agenda lengkap, aksen emas" },
-  { id: "chocolate-dream", name: "Chocolate Dream", description: "Cokelat hangat dan krem lembut, romantis seperti cokelat leleh" },
-  { id: "true-potential", name: "True Potential", description: "Hijau pekat dan putih bersih, modern dan penuh harapan" },
-  { id: "ivory-dream", name: "Ivory Dream", description: "Gading lembut dengan serif romantis dan aksen emas pudar" },
-  { id: "milky-white", name: "Milky White", description: "Putih susu super terang, lapang dan minim distraksi" },
-  { id: "simple-black", name: "Simple Black", description: "Hitam putih monokrom, bersih tanpa ornamen berlebih" },
-  { id: "elegant-black", name: "Elegant Black", description: "Halaman gelap mewah dengan aksen emas menyala" },
-  { id: "sora", name: "Sora", description: "Tipografi geometris modern dengan aksen indigo berani" },
-  { id: "aka", name: "Aka", description: "Merah bata, hitam, dan putih dengan sentuhan oriental elegan" },
+export type TemplateColors = {
+  background: string;
+  hero: string;
+  accent: string;
+  gold: string;
+};
+
+const colorsOf = (css: Record<string, string>): TemplateColors => ({
+  background: css["--background"] ?? "#FFFFFF",
+  hero: css["--hero"] ?? "#141512",
+  accent: css["--accent"] ?? "#7C8472",
+  gold: css["--gold"] ?? "#D4A853",
+});
+
+/** Palet bawaan Lume — token :root di globals.css. */
+const lumeColors: TemplateColors = {
+  background: "#F5F3EE",
+  hero: "#141512",
+  accent: "#7C8472",
+  gold: "#D4A853",
+};
+
+export const templateMeta: {
+  id: TemplateId;
+  name: string;
+  description: string;
+  colors: TemplateColors;
+}[] = [
+  { id: "lume", name: "Lume", description: "Klasik hangat dengan loading nama pasangan, agenda lengkap, aksen emas", colors: lumeColors },
+  { id: "chocolate-dream", name: "Chocolate Dream", description: "Cokelat hangat dan krem lembut, romantis seperti cokelat leleh", colors: colorsOf(chocolateDream.css) },
+  { id: "true-potential", name: "True Potential", description: "Hijau pekat dan putih bersih, modern dan penuh harapan", colors: colorsOf(truePotential.css) },
+  { id: "ivory-dream", name: "Ivory Dream", description: "Gading lembut dengan serif romantis dan aksen emas pudar", colors: colorsOf(ivoryDream.css) },
+  { id: "milky-white", name: "Milky White", description: "Putih susu super terang, lapang dan minim distraksi", colors: colorsOf(milkyWhite.css) },
+  { id: "simple-black", name: "Simple Black", description: "Hitam putih monokrom, bersih tanpa ornamen berlebih", colors: colorsOf(simpleBlack.css) },
+  { id: "elegant-black", name: "Elegant Black", description: "Halaman gelap mewah dengan aksen emas menyala", colors: colorsOf(elegantBlack.css) },
+  { id: "sora", name: "Sora", description: "Tipografi geometris modern dengan aksen indigo berani", colors: colorsOf(sora.css) },
+  { id: "aka", name: "Aka", description: "Merah bata, hitam, dan putih dengan sentuhan oriental elegan", colors: colorsOf(aka.css) },
 ];
+
+export const templateMetaById = Object.fromEntries(
+  templateMeta.map((t) => [t.id, t]),
+) as Record<TemplateId, (typeof templateMeta)[number]>;
 
 export function isTemplateId(id: string): id is TemplateId {
   return (TEMPLATE_IDS as readonly string[]).includes(id);
