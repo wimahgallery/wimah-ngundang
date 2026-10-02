@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { EVENT_TYPES, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings } from "@/lib/invitation";
+import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings } from "@/lib/invitation";
 import { TypographyStep } from "./TypographyStep";
 import { defaultPreset } from "@/lib/font-library";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
@@ -36,6 +36,17 @@ const inputClass =
   "w-full max-w-[65ch] rounded-md border border-border bg-white px-3 py-2 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:py-1.5 md:text-sm";
 
 type FieldChange = (field: string, value: string | number | boolean) => void;
+
+/** Aturan slug sama dengan `invitationCreateSchema` di lib/schemas.ts. */
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function slugError(value: string | null | undefined): string | null {
+  const slug = (value ?? "").trim();
+  if (slug.length < 3) return "Slug minimal 3 karakter";
+  if (!SLUG_PATTERN.test(slug)) return "Gunakan huruf kecil, angka, dan tanda hubung";
+  if (RESERVED_SLUGS.includes(slug)) return "Slug ini tidak dapat digunakan";
+  return null;
+}
 
 const STEPS: { key: SectionKey | "font"; label: string; icon: React.ElementType }[] = [
   { key: "info", label: "Info", icon: FileText },
@@ -117,23 +128,40 @@ const [activeStep, setActiveStep] = useState(0);
     }
   }, [invitation, slug, saveMutation, queryClient, router]);
 
+  /**
+   * Auto-save. Slug IKUT tersimpan (tidak lagi dipaksa balik ke slug lama) supaya
+   * perubahan slug benar-benar masuk ke database. Kalau slug belum valid
+   * (mis. masih diketik), simpan ditunda agar tidak menulis slug sampah.
+   */
   useEffect(() => {
     if (!invitation || !dirty) return;
+    const nextSlug = (invitation.slug ?? "").trim();
     const timer = setTimeout(async () => {
+      if (slugError(nextSlug)) {
+        setSaveStatus("idle");
+        return;
+      }
       const rev = revRef.current;
       setSaveStatus("saving");
       try {
-        const result = await saveAsyncRef.current({ ...invitation, slug });
+        const result = await saveAsyncRef.current({ ...invitation, slug: nextSlug });
         if (revRef.current !== rev) return;
-        queryClient.setQueryData(["invitation", slug], { ...normalizeInvitation(result), slug: invitation.slug });
+        const next = normalizeInvitation(result);
         setDirty(false);
         setSaveStatus("saved");
+        if (next.slug && next.slug !== slug) {
+          // Slug berubah — pindahkan cache & URL dashboard ke slug baru.
+          queryClient.setQueryData(["invitation", next.slug], next);
+          router.replace(`/dashboard/invitations/${next.slug}`);
+        } else {
+          queryClient.setQueryData(["invitation", slug], next);
+        }
       } catch {
         if (revRef.current === rev) setSaveStatus("idle");
       }
     }, 1500);
     return () => clearTimeout(timer);
-  }, [invitation, dirty, slug, queryClient]);
+  }, [invitation, dirty, slug, queryClient, router]);
 
   useEffect(() => {
     if (saveStatus !== "saved") return;
@@ -433,9 +461,20 @@ const [activeStep, setActiveStep] = useState(0);
 }
 
 function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
+  const slugIssue = slugError(invitation.slug);
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label="Slug"><input className={inputClass} value={invitation.slug || ""} onChange={(e) => onChange("slug", e.target.value)} /></Field>
+      <Field label="Slug" className="sm:col-span-2">
+        <input
+          className={cn(inputClass, slugIssue && "border-red-400 focus-visible:ring-red-400/60")}
+          value={invitation.slug || ""}
+          onChange={(e) => onChange("slug", e.target.value)}
+          placeholder="mis. nilam-dodi"
+        />
+        <span className={cn("mt-1 block text-xs", slugIssue ? "text-red-600" : "text-muted-foreground")}>
+          {slugIssue ?? `Tautan undangan: /${invitation.slug}`}
+        </span>
+      </Field>
       <Field label="Jenis acara">
         <select className={inputClass} value={invitation.event_type || ""} onChange={(e) => onChange("event_type", e.target.value)}>
           {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}

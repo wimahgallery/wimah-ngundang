@@ -6,6 +6,9 @@ import { safeHttpUrl } from "@/lib/utils";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
+/** Aturan slug sama dengan `invitationCreateSchema` di lib/schemas.ts. */
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export async function GET(_request: Request, context: RouteContext) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
@@ -88,9 +91,17 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (typeof patch.slug === "string") {
-    if (RESERVED_SLUGS.includes(patch.slug)) {
+    const nextSlug = patch.slug.trim();
+    if (nextSlug.length < 3 || !SLUG_PATTERN.test(nextSlug)) {
+      return NextResponse.json(
+        { error: "Slug tidak valid — gunakan huruf kecil, angka, dan tanda hubung (min. 3 karakter)" },
+        { status: 400 },
+      );
+    }
+    if (RESERVED_SLUGS.includes(nextSlug)) {
       return NextResponse.json({ error: "Slug ini tidak dapat digunakan" }, { status: 400 });
     }
+    patch.slug = nextSlug;
   }
 
   if (typeof patch.template_id === "string" && !isTemplateId(patch.template_id)) {
