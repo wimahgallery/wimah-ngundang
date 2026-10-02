@@ -1740,7 +1740,6 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
         <RsvpSection invitation={invitation} />
         <WishesSection invitation={invitation} />
         <ThankYouSection invitation={invitation} />
-
         <div className="h-px bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
         <div className="invite-wrap py-10 text-center">
           <p className="text-[10px] uppercase tracking-[0.24em] text-text-secondary">

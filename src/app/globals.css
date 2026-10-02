@@ -278,7 +278,9 @@
     border: 0;
     outline: none;
     overflow: hidden;
-    background: var(--background);
+    /* Warna panel stage (gelap) — bukan --background tema. Jika iframe meleset
+       <1px, celahnya jadi gelap dan menyatu dengan kolom, bukan garis putih. */
+    background: var(--stage-panel);
   }
 
   @media (min-width: 1200px) {
