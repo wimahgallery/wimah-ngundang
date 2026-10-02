@@ -3,6 +3,7 @@ import { parsePagination, paginatedResponse, requireAuth } from "@/lib/api-helpe
 import { defaultCustomSettings, RESERVED_SLUGS } from "@/lib/invitation";
 import { invitationCreateSchema } from "@/lib/schemas";
 import { isTemplateId } from "@/components/invitation/template-registry";
+import { defaultPreset } from "@/lib/font-library";
 
 function sanitizeSearch(input: string): string {
   return input.replace(/[%_,]/g, (char) => `\\${char}`);
@@ -67,7 +68,11 @@ export async function POST(request: Request) {
       template_id,
       bride_name: bride_name || null,
       groom_name: groom_name || null,
-      custom_settings: defaultCustomSettings(),
+      custom_settings: {
+        ...defaultCustomSettings(),
+        // Undangan baru lahir dengan DNA tipografi template-nya.
+        font: { ...defaultPreset(template_id) },
+      },
       gallery_images: [],
       gift_accounts: [],
       is_published: false,

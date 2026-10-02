@@ -38,6 +38,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Preview undangan (admin): butuh refresh cookie sesi di sini — Server Component
+  // tidak bisa mem-persist rotasi refresh token sendiri, jadi tanpa match ini
+  // /preview/invitation/* akan mantah ke /admin/login begitu access token kedaluwarsa.
+
   // Ucapan/RSVP tamu adalah fitur publik (tanpa login) — divalidasi & RLS di route-nya.
   const isGuestWishes = /^\/api\/invitations\/[^/]+\/wishes$/.test(pathname);
 
@@ -59,6 +63,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
+    "/preview/:path*",
     "/api/invitations/:path*",
     "/api/upload/:path*",
     "/api/auth/me",

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import {
@@ -7,7 +8,13 @@ import {
   type TemplateShowcaseItem,
 } from "@/lib/homepage-content";
 import { waMessages, whatsappLink } from "@/lib/site-config";
-import { PreviewModal, type PreviewModalData } from "./preview-modal";
+import { LazyFrame } from "@/components/lazy";
+import type { PreviewModalData } from "./preview-modal";
+
+const PreviewModal = dynamic(
+  () => import("./preview-modal").then((mod) => mod.PreviewModal),
+  { ssr: false },
+);
 import { SectionIntro } from "./section-intro";
 
 export function TemplateShowcase() {
@@ -84,16 +91,20 @@ export function TemplateShowcase() {
                         ref={attachScreen}
                         className="relative h-full w-full overflow-hidden rounded-[1rem] bg-black"
                       >
-                        <iframe
+                        <LazyFrame
                           src={`/preview/${item.id}`}
                           title={`Preview template ${item.name}`}
-                          loading="lazy"
                           tabIndex={-1}
                           style={{
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            width: "390px",
                             height: "calc(100% / var(--k, 1))",
                             transform: "scale(var(--k, 1))",
+                            transformOrigin: "top left",
                           }}
-                          className="pointer-events-none absolute left-0 top-0 w-[390px] origin-top-left select-none border-0"
+                          fallbackClassName="bg-[#0e0e12]"
                         />
                         <span
                           aria-hidden

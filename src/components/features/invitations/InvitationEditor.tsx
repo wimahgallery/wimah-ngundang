@@ -17,20 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EVENT_TYPES, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings } from "@/lib/invitation";
-import {
-  BODY_FONTS,
-  DEFAULT_BODY,
-  DEFAULT_HEADING,
-  HEADING_FONTS,
-  SPECIMEN_HREFS,
-  findBodyFont,
-  findHeadingFont,
-  fontStack,
-} from "@/lib/wedding-fonts";
+import { TypographyStep } from "./TypographyStep";
+import { defaultPreset } from "@/lib/font-library";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
 import { fetchWishes } from "@/features/invitations/services/invitationApi";
+import { LazyFrame } from "@/components/lazy";
 import { GuestWishesList } from "@/components/invitation/shared";
-import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
+import { isTemplateId, templateMetaById, type TemplateId } from "@/components/invitation/template-registry";
 import { uploadFolders } from "@/lib/upload-folders";
 import { TemplatePicker } from "./TemplatePicker";
 import { uploadFile } from "@/lib/crop-image";
@@ -78,6 +71,7 @@ const [activeStep, setActiveStep] = useState(0);
 
   const templateId = invitation?.template_id ?? "";
   const currentTemplate = isTemplateId(templateId) ? templateMetaById[templateId] : templateMetaById.lume;
+  const resolvedTemplateId = currentTemplate.id;
 
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -200,6 +194,22 @@ const [activeStep, setActiveStep] = useState(0);
     patch({ custom_settings: { ...invitation.custom_settings, font } });
   }, [invitation, patch]);
 
+  /**
+   * Template = visual preset utuh. Saat ganti template, tipografi dikembalikan
+   * ke default template BARU — font lama tidak boleh terbawa (stale).
+   */
+  const handleTemplateChange = useCallback(
+    (id: TemplateId) => {
+      if (!invitation) return;
+      const nextFont = defaultPreset(id);
+      patch({
+        template_id: id,
+        custom_settings: { ...invitation.custom_settings, font: { ...nextFont } },
+      });
+    },
+    [invitation, patch],
+  );
+
   const ActiveIcon = STEPS[activeStep].icon;
   const stepTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -208,7 +218,7 @@ const [activeStep, setActiveStep] = useState(0);
     if (!s) return null;
     switch (STEPS[activeStep].key) {
       case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} />;
-      case "font": return <StepFont invitation={invitation!} onChange={onChangeFont} />;
+      case "font": return <TypographyStep templateId={resolvedTemplateId} font={invitation.custom_settings.font ?? { heading: null, body: null, accent: null }} onChange={onChangeFont} />;
       case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "greeting": return <StepGreeting invitation={invitation!} onChange={onChangeField} />;
@@ -387,7 +397,7 @@ const [activeStep, setActiveStep] = useState(0);
           <TemplatePicker
             name="editor-template-picker"
             value={invitation.template_id || "lume"}
-            onChange={(id) => onChangeField("template_id", id)}
+            onChange={handleTemplateChange}
           />
           <DialogFooter>
             <Button size="sm" className="min-h-11 px-4" onClick={() => setTemplateDialogOpen(false)}>
@@ -408,11 +418,12 @@ const [activeStep, setActiveStep] = useState(0);
             className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
             style={{ height: "min(75vh, 760px)" }}
           >
-            <iframe
+            <LazyFrame
               key={previewNonce}
               src={`/preview/invitation/${slug}?v=${previewNonce}`}
-              className="h-full w-full border-0"
               title="Preview undangan"
+              className="h-full"
+              fallbackClassName="bg-background"
             />
           </div>
         </div>
@@ -441,119 +452,7 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
   );
 }
 
-function useSpecimenFonts() {
-  useEffect(() => {
-    SPECIMEN_HREFS.forEach((href, index) => {
-      const id = `font-specimen-${index}`;
-      if (document.getElementById(id)) return;
-      const link = document.createElement("link");
-      link.id = id;
-      link.rel = "stylesheet";
-      link.href = href;
-      document.head.appendChild(link);
-    });
-  }, []);
-}
 
-function StepFont({ invitation, onChange }: { invitation: Invitation; onChange: (font: FontSettings) => void }) {
-  const font = invitation.custom_settings.font ?? { heading: null, body: null };
-  useSpecimenFonts();
-
-  return (
-    <div className="space-y-5">
-      <p className="text-xs text-muted-foreground">
-        Pilih font judul &amp; teks. Semua pilihan tersimpan otomatis; preview di panel kanan
-        menyegarkan ±2 detik setelah tersimpan.
-      </p>
-
-      <div className="rounded-xl border border-border bg-background p-5 text-center">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Contoh tampilan</p>
-        <p className="mt-2 text-3xl md:text-4xl" style={{ fontFamily: fontStack(findHeadingFont(font.heading), "heading") }}>
-          Wisnu &amp; Nilam
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground" style={{ fontFamily: fontStack(findBodyFont(font.body), "body") }}>
-          Sabtu, 12 Desember 2026 — Dengan penuh kebahagiaan kami mengundang Bapak/Ibu/Saudara/i
-          untuk hadir di hari pernikahan kami.
-        </p>
-      </div>
-
-      <div>
-        <p className="mb-2 text-xs font-semibold text-foreground">Font judul &amp; nama pasangan</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <FontOptionButton
-            sample="Wisnu &amp; Nilam"
-            name={DEFAULT_HEADING.name}
-            stack={fontStack(null, "heading")}
-            selected={!font.heading}
-            onClick={() => onChange({ ...font, heading: null })}
-          />
-          {HEADING_FONTS.map((option) => (
-            <FontOptionButton
-              key={option.id}
-              sample="Wisnu &amp; Nilam"
-              name={option.name}
-              stack={`"${option.family}", ${option.fallback}`}
-              selected={font.heading === option.id}
-              onClick={() => onChange({ ...font, heading: option.id })}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-2 text-xs font-semibold text-foreground">Font teks &amp; paragraf</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <FontOptionButton
-            sample="Sabtu, 12 Desember"
-            name={DEFAULT_BODY.name}
-            stack={fontStack(null, "body")}
-            selected={!font.body}
-            onClick={() => onChange({ ...font, body: null })}
-          />
-          {BODY_FONTS.map((option) => (
-            <FontOptionButton
-              key={option.id}
-              sample="Sabtu, 12 Desember"
-              name={option.name}
-              stack={`"${option.family}", ${option.fallback}`}
-              selected={font.body === option.id}
-              onClick={() => onChange({ ...font, body: option.id })}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FontOptionButton({
-  sample,
-  name,
-  stack,
-  selected,
-  onClick,
-}: {
-  sample: string;
-  name: string;
-  stack: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "rounded-lg border px-3 py-2.5 text-left transition",
-        selected ? "border-primary bg-primary/5 ring-2 ring-ring/40" : "border-border hover:border-primary/40",
-      )}
-    >
-      <span className="block truncate text-lg leading-snug" style={{ fontFamily: stack }}>{sample}</span>
-      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{name}</span>
-    </button>
-  );
-}
 
 function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"]) => void; onChange: FieldChange }) {
   return (

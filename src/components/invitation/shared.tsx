@@ -13,7 +13,7 @@ import {
   type Invitation,
   type SectionSettings,
 } from "@/lib/invitation";
-import { formatDate } from "@/lib/utils";
+import { formatDate, safeHttpUrl } from "@/lib/utils";
 
 export function InvitationPhoto({
   src,
@@ -79,7 +79,7 @@ export function SectionShell({
 
 export function SectionKicker({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[11px] font-medium uppercase tracking-[clamp(0.1em,0.06rem+0.3vw,0.2em)] text-accent-dark">
+    <p className="dna-kicker text-[11px] font-medium uppercase tracking-[clamp(0.1em,0.06rem+0.3vw,0.2em)] text-accent-dark">
       {children}
     </p>
   );
@@ -122,7 +122,7 @@ export function CoupleNames({ invitation, className }: { invitation: Invitation;
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
   return (
     <span className={className}>
-      {bride} <span className="font-elegant italic text-accent-light">&</span> {groom}
+      {bride} <span className="font-accent italic text-accent-light">&</span> {groom}
     </span>
   );
 }
@@ -143,7 +143,7 @@ export function GiftList({ invitation }: { invitation: Invitation }) {
   return (
     <div className="grid w-full gap-3 sm:grid-cols-2">
       {invitation.gift_accounts.map((gift) => (
-        <article key={gift.id} className="rounded-xl border border-border bg-surface/80 p-5 text-left">
+        <article key={gift.id} className="dna-card rounded-xl border border-border bg-surface/80 p-5 text-left">
           <p className="text-xs uppercase tracking-[0.16em] text-accent">{gift.bank}</p>
           <p className="mt-2 font-heading text-xl">{gift.accountNumber}</p>
           <p className="mt-1 text-sm text-text-secondary">{gift.accountName}</p>
@@ -154,10 +154,11 @@ export function GiftList({ invitation }: { invitation: Invitation }) {
 }
 
 export function MapsButton({ invitation }: { invitation: Invitation }) {
-  if (!invitation.google_maps_url) return null;
+  const href = safeHttpUrl(invitation.google_maps_url);
+  if (!href) return null;
   return (
     <a
-      href={invitation.google_maps_url}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition hover:bg-accent-light"
@@ -391,7 +392,7 @@ export function GuestWishesList({ wishes }: { wishes: Array<{ name: string; mess
       {wishes.map((wish, i) => (
         <article
           key={i}
-          className="rounded-lg border border-border bg-surface/60 p-4 text-left backdrop-blur-sm"
+          className="dna-card rounded-lg border border-border bg-surface/60 p-4 text-left backdrop-blur-sm"
         >
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/15 text-xs font-medium text-accent">

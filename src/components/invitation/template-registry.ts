@@ -54,15 +54,15 @@ export const templateMeta: {
   description: string;
   colors: TemplateColors;
 }[] = [
-  { id: "lume", name: "Lume", description: "Klasik hangat dengan loading nama pasangan, agenda lengkap, aksen emas", colors: lumeColors },
-  { id: "chocolate-dream", name: "Chocolate Dream", description: "Cokelat hangat dan krem lembut, romantis seperti cokelat leleh", colors: colorsOf(chocolateDream.css) },
-  { id: "true-potential", name: "True Potential", description: "Hijau pekat dan putih bersih, modern dan penuh harapan", colors: colorsOf(truePotential.css) },
-  { id: "ivory-dream", name: "Ivory Dream", description: "Gading lembut dengan serif romantis dan aksen emas pudar", colors: colorsOf(ivoryDream.css) },
-  { id: "milky-white", name: "Milky White", description: "Putih susu super terang, lapang dan minim distraksi", colors: colorsOf(milkyWhite.css) },
-  { id: "simple-black", name: "Simple Black", description: "Hitam putih monokrom, bersih tanpa ornamen berlebih", colors: colorsOf(simpleBlack.css) },
-  { id: "elegant-black", name: "Elegant Black", description: "Halaman gelap mewah dengan aksen emas menyala", colors: colorsOf(elegantBlack.css) },
-  { id: "sora", name: "Sora", description: "Tipografi geometris modern dengan aksen indigo berani", colors: colorsOf(sora.css) },
-  { id: "aka", name: "Aka", description: "Merah bata, hitam, dan putih dengan sentuhan oriental elegan", colors: colorsOf(aka.css) },
+  { id: "lume", name: "Lume", description: "Cahaya lilin di atas ivory — glow lembut, grain kertas hangat, serif romantis", colors: lumeColors },
+  { id: "chocolate-dream", name: "Chocolate Dream", description: "Velvet kakao berlapis dengan kilau glossy, kartu rasa kemasan cokelat premium", colors: colorsOf(chocolateDream.css) },
+  { id: "true-potential", name: "True Potential", description: "Editorial print berani — sudut tajam, nomor raksasa, tipografi jadi dekorasi", colors: colorsOf(truePotential.css) },
+  { id: "ivory-dream", name: "Ivory Dream", description: "Kertas handmade berserat dengan bingkai tinta ganda dan nuansa fine-art", colors: colorsOf(ivoryDream.css) },
+  { id: "milky-white", name: "Milky White", description: "Susu dan awan — sudut bulat lembut, bayangan tersebar, mengambang tenang", colors: colorsOf(milkyWhite.css) },
+  { id: "simple-black", name: "Simple Black", description: "Art book minimalis — nol ornamen, hanya tipografi, spasi, dan rule tipis", colors: colorsOf(simpleBlack.css) },
+  { id: "elegant-black", name: "Elegant Black", description: "Satin hitam sinematik dengan bingkai metalik emas dan sorot spotlight", colors: colorsOf(elegantBlack.css) },
+  { id: "sora", name: "Sora", description: "Langit dan horizon — awan berarak pelan, kartu kaca tenang, hening", colors: colorsOf(sora.css) },
+  { id: "aka", name: "Aka", description: "Washi dan tinta vermilion — sudut tajam, stempel merah, goresan kuas", colors: colorsOf(aka.css) },
 ];
 
 export const templateMetaById = Object.fromEntries(

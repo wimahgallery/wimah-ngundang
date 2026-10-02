@@ -1,8 +1,9 @@
 import type { LumeTheme } from "./lume-theme";
 
 /**
- * Varian Lume — layout tetap mengikuti Lume, palet/tipografi/ritme section
- * mengikuti nama temanya.
+ * Varian Lume — satu arsitektur komponen, sembilan dunia visual.
+ * Setiap tema membawa DNA lengkap: tekstur, radius, border, treatment foto,
+ * bahasa kicker, dan motion. Implementasi CSS-nya di invitation-dna.css.
  */
 
 export const chocolateDream: LumeTheme = {
@@ -27,10 +28,26 @@ export const chocolateDream: LumeTheme = {
       "radial-gradient(120% 80% at 75% 8%, #4E3728 0%, #3B2A20 55%, #2A1E16 100%)",
     "--stage-ring": "rgba(192, 138, 78, 0.32)",
   },
-  pageGradient: "linear-gradient(135deg, #FBF6EF 0%, #F1E6DA 50%, #FBF6EF 100%)",
+  pageGradient:
+    "linear-gradient(135deg, #FBF6EF 0%, #F1E6DA 50%, #FBF6EF 100%)",
   layout: {
     openingPhoto: "left",
-    tones: { couple: "plain", story: "soft", countdown: "soft", gallery: "plain", gift: "soft" },
+    tones: {
+      couple: "plain",
+      story: "soft",
+      countdown: "soft",
+      gallery: "plain",
+      gift: "soft",
+    },
+  },
+  dna: {
+    cssClass: "dna-chocolate",
+    radius: "round",
+    borders: "framed",
+    density: "normal",
+    imageTreatment: "cinematic",
+    kickerStyle: "letterspaced",
+    motion: "liquid",
   },
 };
 
@@ -62,7 +79,22 @@ export const truePotential: LumeTheme = {
     agendaHeader: "right",
     storyFirstPhoto: "right",
     galleryWide: true,
-    tones: { couple: "soft", story: "plain", countdown: "plain", gallery: "soft", gift: "soft" },
+    tones: {
+      couple: "soft",
+      story: "plain",
+      countdown: "plain",
+      gallery: "soft",
+      gift: "soft",
+    },
+  },
+  dna: {
+    cssClass: "dna-editorial",
+    radius: "sharp",
+    borders: "offset",
+    density: "compact",
+    imageTreatment: "editorial",
+    kickerStyle: "numbered",
+    motion: "typographic",
   },
 };
 
@@ -89,12 +121,28 @@ export const ivoryDream: LumeTheme = {
       "radial-gradient(120% 80% at 75% 8%, #453E33 0%, #2F2A23 55%, #1F1B16 100%)",
     "--stage-ring": "rgba(198, 174, 133, 0.32)",
   },
-  pageGradient: "linear-gradient(150deg, #FCFAF4 0%, #F4EFE3 55%, #FCFAF4 100%)",
+  pageGradient:
+    "linear-gradient(150deg, #FCFAF4 0%, #F4EFE3 55%, #FCFAF4 100%)",
   layout: {
     openingPhoto: "left",
     coupleStagger: "first",
     thankPhoto: "right",
-    tones: { couple: "soft", story: "soft", countdown: "plain", gallery: "soft", gift: "plain" },
+    tones: {
+      couple: "soft",
+      story: "soft",
+      countdown: "plain",
+      gallery: "soft",
+      gift: "plain",
+    },
+  },
+  dna: {
+    cssClass: "dna-ivory",
+    radius: "slightly",
+    borders: "double",
+    density: "normal",
+    imageTreatment: "fineart",
+    kickerStyle: "plain",
+    motion: "paper",
   },
 };
 
@@ -124,7 +172,22 @@ export const milkyWhite: LumeTheme = {
   layout: {
     coupleStagger: "first",
     galleryWide: true,
-    tones: { couple: "plain", story: "plain", countdown: "soft", gallery: "plain", gift: "plain" },
+    tones: {
+      couple: "plain",
+      story: "plain",
+      countdown: "soft",
+      gallery: "plain",
+      gift: "plain",
+    },
+  },
+  dna: {
+    cssClass: "dna-milky",
+    radius: "pill",
+    borders: "none",
+    density: "airy",
+    imageTreatment: "airy",
+    kickerStyle: "plain",
+    motion: "float",
   },
 };
 
@@ -147,7 +210,8 @@ export const simpleBlack: LumeTheme = {
     "--glass-border": "rgba(17, 17, 17, 0.10)",
     "--heading-font": "var(--font-inter)",
     "--stage-panel": "#0B0B0B",
-    "--stage-column": "radial-gradient(120% 80% at 75% 8%, #171717 0%, #0B0B0B 55%, #000000 100%)",
+    "--stage-column":
+      "radial-gradient(120% 80% at 75% 8%, #171717 0%, #0B0B0B 55%, #000000 100%)",
     "--stage-ring": "rgba(255, 255, 255, 0.22)",
   },
   pageGradient: "linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%)",
@@ -156,7 +220,22 @@ export const simpleBlack: LumeTheme = {
     agendaHeader: "right",
     storyFirstPhoto: "right",
     thankPhoto: "right",
-    tones: { couple: "plain", story: "plain", countdown: "plain", gallery: "plain", gift: "plain" },
+    tones: {
+      couple: "plain",
+      story: "plain",
+      countdown: "plain",
+      gallery: "plain",
+      gift: "plain",
+    },
+  },
+  dna: {
+    cssClass: "dna-simple",
+    radius: "sharp",
+    borders: "hairline",
+    density: "airy",
+    imageTreatment: "raw",
+    kickerStyle: "vertical",
+    motion: "precise",
   },
 };
 
@@ -182,10 +261,26 @@ export const elegantBlack: LumeTheme = {
       "radial-gradient(120% 80% at 75% 8%, #1A160D 0%, #0B0A08 55%, #050505 100%)",
     "--stage-ring": "rgba(212, 168, 83, 0.35)",
   },
-  pageGradient: "linear-gradient(160deg, #0C0C0B 0%, #161614 50%, #0A0A09 100%)",
+  pageGradient:
+    "linear-gradient(160deg, #0C0C0B 0%, #161614 50%, #0A0A09 100%)",
   layout: {
     openingPhoto: "left",
-    tones: { couple: "soft", story: "soft", countdown: "soft", gallery: "soft", gift: "soft" },
+    tones: {
+      couple: "soft",
+      story: "soft",
+      countdown: "soft",
+      gallery: "soft",
+      gift: "soft",
+    },
+  },
+  dna: {
+    cssClass: "dna-elegant",
+    radius: "slightly",
+    borders: "metallic",
+    density: "normal",
+    imageTreatment: "dramatic",
+    kickerStyle: "metallic",
+    motion: "cinematic",
   },
 };
 
@@ -221,7 +316,22 @@ export const sora: LumeTheme = {
     thankPhoto: "right",
     coupleStagger: "first",
     galleryWide: true,
-    tones: { couple: "soft", story: "plain", countdown: "plain", gallery: "soft", gift: "soft" },
+    tones: {
+      couple: "soft",
+      story: "plain",
+      countdown: "plain",
+      gallery: "soft",
+      gift: "soft",
+    },
+  },
+  dna: {
+    cssClass: "dna-sora",
+    radius: "soft",
+    borders: "none",
+    density: "airy",
+    imageTreatment: "serene",
+    kickerStyle: "plain",
+    motion: "drift",
   },
 };
 
@@ -248,11 +358,27 @@ export const aka: LumeTheme = {
       "radial-gradient(120% 80% at 75% 8%, #2A1A15 0%, #17110F 55%, #0C0806 100%)",
     "--stage-ring": "rgba(217, 87, 58, 0.32)",
   },
-  pageGradient: "linear-gradient(135deg, #FBFAF8 0%, #F2EDE7 50%, #FBFAF8 100%)",
+  pageGradient:
+    "linear-gradient(135deg, #FBFAF8 0%, #F2EDE7 50%, #FBFAF8 100%)",
   layout: {
     openingPhoto: "left",
     storyFirstPhoto: "left",
-    tones: { couple: "soft", story: "plain", countdown: "soft", gallery: "plain", gift: "soft" },
+    tones: {
+      couple: "soft",
+      story: "plain",
+      countdown: "soft",
+      gallery: "plain",
+      gift: "soft",
+    },
+  },
+  dna: {
+    cssClass: "dna-aka",
+    radius: "sharp",
+    borders: "inked",
+    density: "compact",
+    imageTreatment: "inked",
+    kickerStyle: "brushed",
+    motion: "ink",
   },
 };
 

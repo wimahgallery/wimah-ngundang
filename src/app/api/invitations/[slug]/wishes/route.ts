@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -103,6 +104,12 @@ export async function GET(request: Request, context: RouteContext) {
 
 export async function POST(request: Request, context: RouteContext) {
   const { slug } = await context.params;
+  if (!rateLimit(`wish:${clientIp(request)}`, 10, 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan. Coba lagi sebentar lagi." },
+      { status: 429 },
+    );
+  }
   const deviceId = readDeviceId(request);
   if (!deviceId) {
     return NextResponse.json(
@@ -145,6 +152,12 @@ export async function POST(request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { slug } = await context.params;
+  if (!rateLimit(`wish:${clientIp(request)}`, 10, 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan. Coba lagi sebentar lagi." },
+      { status: 429 },
+    );
+  }
   const deviceId = readDeviceId(request);
   if (!deviceId) {
     return NextResponse.json(

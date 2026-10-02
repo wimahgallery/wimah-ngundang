@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import Image from "next/image";
 import {
   Calendar,
@@ -18,14 +24,25 @@ import {
   Star,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
-import { agendaEvents, coupleLabel, googleCalendarLink, type Invitation } from "@/lib/invitation";
+import { LazyMount, useInViewOnce } from "@/components/lazy";
+import {
+  agendaEvents,
+  coupleLabel,
+  googleCalendarLink,
+  type Invitation,
+} from "@/lib/invitation";
 import {
   fetchWishes,
   submitGuestWish,
   updateGuestWish,
   type WishRow,
 } from "@/features/invitations/services/invitationApi";
-import { invitationFontsHref, resolveFontVars, type FontSettingsLike } from "@/lib/wedding-fonts";
+import {
+  ensureInvitationFontsLoaded,
+  invitationFontsHref,
+  resolveFontVars,
+  type FontSettingsLike,
+} from "@/lib/wedding-fonts";
 import type { TemplateProps } from "../template-registry";
 import {
   LumeThemeProvider,
@@ -79,24 +96,36 @@ function Band({
         tone === "dark" && "bg-hero text-hero-ink",
       )}
     >
-      <div className={wide ? "invite-wrap-wide" : "invite-wrap"}>{children}</div>
+      <div className={wide ? "invite-wrap-wide" : "invite-wrap"}>
+        {children}
+      </div>
     </section>
   );
 }
 
 function OpeningPhotos(invitation: Invitation) {
   const gallery = invitation.gallery_images;
-  return [gallery[0]?.url, gallery[1]?.url].filter(Boolean).slice(0, 2) as string[];
+  return [gallery[0]?.url, gallery[1]?.url]
+    .filter(Boolean)
+    .slice(0, 2) as string[];
 }
 
 /* ─── 1. Loading dengan nama mempelai ─── */
-function LoadingScreen({ invitation, onDone }: { invitation: Invitation; onDone: () => void }) {
+function LoadingScreen({
+  invitation,
+  onDone,
+}: {
+  invitation: Invitation;
+  onDone: () => void;
+}) {
   const [progress, setProgress] = useState(0);
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     if (reduced) {
       onDone();
       return;
@@ -123,7 +152,10 @@ function LoadingScreen({ invitation, onDone }: { invitation: Invitation; onDone:
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-hero px-6 text-center text-hero-ink">
-      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden
+        className="texture-noise pointer-events-none absolute inset-0"
+      />
 
       <p className="relative text-[10px] uppercase tracking-[0.34em] text-gold md:text-xs desk:text-sm">
         {invitation.hero_title || "The Wedding of"}
@@ -137,7 +169,9 @@ function LoadingScreen({ invitation, onDone }: { invitation: Invitation; onDone:
 
       <div className="relative mt-8 w-[min(16rem,70vw)]">
         <div className="flex items-end justify-between">
-          <span className="text-[10px] uppercase tracking-[0.24em] text-hero-ink/50">Memuat</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-hero-ink/50">
+            Memuat
+          </span>
           <span className="font-heading text-2xl tabular-nums text-gold md:text-3xl desk:text-4xl">
             {progress}%
           </span>
@@ -187,7 +221,10 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
 
   return (
     <section className="relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-hero py-[clamp(4.5rem,10vw,7rem)] text-hero-ink">
-      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden
+        className="texture-noise pointer-events-none absolute inset-0"
+      />
       <div
         aria-hidden
         className="pointer-events-none absolute -left-20 top-[16%] h-56 w-56 rounded-full bg-gold/10 blur-3xl md:h-72 md:w-72"
@@ -222,7 +259,9 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
         <figure
           className={cn(
             "relative mx-auto w-full max-w-[24rem] md:col-start-2 md:row-start-1 md:row-span-2 md:max-w-none md:self-center desk:col-span-5 desk:row-start-1 desk:row-span-2 desk:max-w-[34rem]",
-            photoLeft ? "desk:col-start-1 desk:-mr-6" : "desk:col-start-8 desk:-ml-6",
+            photoLeft
+              ? "desk:col-start-1 desk:-mr-6"
+              : "desk:col-start-8 desk:-ml-6",
           )}
         >
           <span
@@ -271,8 +310,18 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
             className="mt-7 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] md:w-auto md:max-w-none md:px-9"
           >
             Buka Undangan
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
+              />
             </svg>
           </a>
         </div>
@@ -304,7 +353,9 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
             photoRight ? "desk:col-start-1" : "desk:col-start-6",
           )}
         >
-          <SectionKicker>{invitation.hero_title || "The Wedding of"}</SectionKicker>
+          <SectionKicker>
+            {invitation.hero_title || "The Wedding of"}
+          </SectionKicker>
           <h2 className="mt-3 font-heading text-[clamp(1.75rem,1.2rem+2.4vw,2.5rem)] md:text-[clamp(2rem,1.2rem+2vw,3rem)] leading-[1.15]">
             <CoupleNames invitation={invitation} />
           </h2>
@@ -447,7 +498,9 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
       {milestones.length > 0 ? (
         <div className="mt-11 space-y-14 md:mt-14 md:space-y-20 desk:space-y-28">
           {milestones.map((item, index) => {
-            const textOnLeft = photoFirstLeft ? index % 2 === 1 : index % 2 === 0;
+            const textOnLeft = photoFirstLeft
+              ? index % 2 === 1
+              : index % 2 === 0;
             return (
               <article
                 key={item.id || `${item.title}-${index}`}
@@ -473,7 +526,8 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
                   className={cn(
                     "relative z-10 min-w-0",
                     textOnLeft ? "md:order-1" : "md:order-2",
-                    !item.image && "md:col-span-2 md:mx-auto md:max-w-2xl md:text-center",
+                    !item.image &&
+                      "md:col-span-2 md:mx-auto md:max-w-2xl md:text-center",
                     item.image && textOnLeft && "desk:-mr-24",
                     item.image && !textOnLeft && "desk:-ml-24",
                     item.image &&
@@ -581,7 +635,8 @@ function AgendaSection({ invitation }: { invitation: Invitation }) {
             Mari Menjadi Saksi Cinta Kami
           </SectionHeading>
           <SectionCopy settings={settings} className="mt-4 md:mx-0">
-            Dengan penuh cinta dan harapan, kami mengundang kehadiranmu di hari bahagia kami.
+            Dengan penuh cinta dan harapan, kami mengundang kehadiranmu di hari
+            bahagia kami.
           </SectionCopy>
         </header>
 
@@ -613,13 +668,19 @@ function AgendaCard({
   };
 }) {
   return (
-    <article className="flex min-w-0 flex-col gap-5 rounded-2xl border border-border bg-background/80 p-6 text-left shadow-[0_14px_44px_rgba(84,82,77,0.07)] backdrop-blur-sm md:p-7 desk:gap-6 desk:p-8">
+    <article className="dna-card flex min-w-0 flex-col gap-5 rounded-2xl border border-border bg-background/80 p-6 text-left shadow-[0_14px_44px_rgba(84,82,77,0.07)] backdrop-blur-sm md:p-7 desk:gap-6 desk:p-8">
       <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.24em] text-accent md:text-[11px]">Agenda</p>
-        <h3 className="mt-2 font-heading text-2xl text-text-primary md:text-[1.75rem]">{event.name}</h3>
+        <p className="text-[10px] uppercase tracking-[0.24em] text-accent md:text-[11px]">
+          Agenda
+        </p>
+        <h3 className="mt-2 font-heading text-2xl text-text-primary md:text-[1.75rem]">
+          {event.name}
+        </h3>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm md:text-[0.95rem]">
-          {event.date && <span className="text-text-primary">{formatDate(event.date)}</span>}
+          {event.date && (
+            <span className="text-text-primary">{formatDate(event.date)}</span>
+          )}
           {event.time && (
             <>
               <span aria-hidden className="h-1 w-1 rounded-full bg-accent/50" />
@@ -631,7 +692,10 @@ function AgendaCard({
         {(event.location || event.address) && (
           <div className="mt-4 border-t border-border pt-4">
             <p className="flex items-start gap-1.5 text-sm text-text-primary">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+              <MapPin
+                className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                aria-hidden="true"
+              />
               <span className="min-w-0 break-words">{event.location}</span>
             </p>
             {event.address && (
@@ -683,7 +747,9 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
       <div className="text-center">
         <SectionKicker>Galeri</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
-          <span className="block text-[0.55em] uppercase tracking-[0.2em] text-accent-dark">A Journey Of</span>
+          <span className="block text-[0.55em] uppercase tracking-[0.2em] text-accent-dark">
+            A Journey Of
+          </span>
           <CoupleNames invitation={invitation} />
         </SectionHeading>
       </div>
@@ -725,37 +791,74 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
             className="absolute right-4 top-4 grid h-11 w-11 place-items-center text-white/70 transition-colors hover:text-white"
             aria-label="Tutup"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setActive((prev) => (prev === 0 ? images.length - 1 : (prev ?? 0) - 1));
+              setActive((prev) =>
+                prev === 0 ? images.length - 1 : (prev ?? 0) - 1,
+              );
             }}
             className="absolute left-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:left-4"
             aria-label="Sebelumnya"
           >
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 19.5L8.25 12l7.5-7.5"
+              />
             </svg>
           </button>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setActive((prev) => (prev === images.length - 1 ? 0 : (prev ?? 0) + 1));
+              setActive((prev) =>
+                prev === images.length - 1 ? 0 : (prev ?? 0) + 1,
+              );
             }}
             className="absolute right-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:right-4"
             aria-label="Berikutnya"
           >
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            <svg
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.25 4.5l7.5 7.5-7.5 7.5"
+              />
             </svg>
           </button>
-          <div className="relative max-h-[82vh] max-w-[92vw]" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="relative max-h-[82vh] max-w-[92vw]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Image
               src={images[active].url}
               alt={images[active].alt || "Galeri"}
@@ -774,6 +877,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
 /* ─── 9. Video / YouTube ─── */
 function VideoSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.video;
+  const { ref, inView } = useInViewOnce<HTMLDivElement>();
   if (!settings.visible || !invitation.video_url) return null;
 
   return (
@@ -783,8 +887,18 @@ function VideoSection({ invitation }: { invitation: Invitation }) {
         <SectionHeading settings={settings} className="mt-3">
           Cerita dalam Video
         </SectionHeading>
-        <div className="mt-8 md:mt-10">
-          <VideoPlayer url={invitation.video_url} poster={invitation.video_poster} />
+        <div ref={ref} className="mt-8 md:mt-10">
+          {inView ? (
+            <VideoPlayer
+              url={invitation.video_url}
+              poster={invitation.video_poster}
+            />
+          ) : (
+            <div
+              aria-hidden
+              className="aspect-video w-full animate-pulse rounded-lg border border-border bg-surface"
+            />
+          )}
         </div>
       </div>
     </Band>
@@ -811,8 +925,8 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
             Wedding Gift
           </SectionHeading>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-text-secondary md:mx-0 md:text-base">
-            Ucapan dan doa sudah sangat berarti. Namun jika ingin memberikan hadiah secara langsung,
-            dapat melalui rekening di bawah ini:
+            Ucapan dan doa sudah sangat berarti. Namun jika ingin memberikan
+            hadiah secara langsung, dapat melalui rekening di bawah ini:
           </p>
 
           {invitation.qris_image && (
@@ -825,7 +939,9 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
                 className="w-full rounded-xl border border-border shadow-[0_14px_44px_rgba(84,82,77,0.1)]"
                 loading="lazy"
               />
-              <p className="mt-2 text-xs text-text-secondary md:text-left">Scan QRIS untuk transfer</p>
+              <p className="mt-2 text-xs text-text-secondary md:text-left">
+                Scan QRIS untuk transfer
+              </p>
             </div>
           )}
         </div>
@@ -835,7 +951,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
             {invitation.gift_accounts.map((gift) => (
               <article
                 key={gift.id}
-                className="flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 p-6 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:p-7"
+                className="dna-card flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 p-6 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:p-7"
               >
                 <p className="text-[10px] uppercase tracking-[0.24em] text-accent md:text-[11px]">
                   {gift.bank}
@@ -843,7 +959,9 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
                 <p className="mt-3 break-all font-heading text-xl text-text-primary md:text-2xl desk:text-[1.75rem]">
                   {gift.accountNumber}
                 </p>
-                <p className="mt-1.5 text-sm text-text-secondary md:text-[0.95rem]">{gift.accountName}</p>
+                <p className="mt-1.5 text-sm text-text-secondary md:text-[0.95rem]">
+                  {gift.accountName}
+                </p>
                 <CopyButton text={gift.accountNumber} className="mt-4" />
               </article>
             ))}
@@ -857,7 +975,11 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
 /* ─── 10b. Lokasi acara (venue_name / venue_address / google_maps_url) ─── */
 function VenueSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.venue;
-  const { venue_name: venueName, venue_address: venueAddress, google_maps_url: mapsUrl } = invitation;
+  const {
+    venue_name: venueName,
+    venue_address: venueAddress,
+    google_maps_url: mapsUrl,
+  } = invitation;
   const hasContent = Boolean(venueName || venueAddress || mapsUrl);
 
   if (!settings.visible || !hasContent) return null;
@@ -868,7 +990,9 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
     : null;
   const openUrl =
     mapsUrl ||
-    (mapQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}` : null);
+    (mapQuery
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
+      : null);
 
   return (
     <Band visible>
@@ -876,7 +1000,8 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
         <header
           className={cn(
             "text-center md:mx-auto md:max-w-2xl desk:col-span-4 desk:mx-0 desk:max-w-none desk:text-left",
-            !embedUrl && "desk:col-span-12 desk:mx-auto desk:max-w-2xl desk:text-center",
+            !embedUrl &&
+              "desk:col-span-12 desk:mx-auto desk:max-w-2xl desk:text-center",
           )}
         >
           <SectionKicker>Lokasi</SectionKicker>
@@ -884,7 +1009,11 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
             Lokasi Acara
           </SectionHeading>
 
-          {venueName && <p className="mt-5 font-heading text-xl text-text-primary md:text-2xl">{venueName}</p>}
+          {venueName && (
+            <p className="mt-5 font-heading text-xl text-text-primary md:text-2xl">
+              {venueName}
+            </p>
+          )}
           {venueAddress && (
             <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-text-secondary md:text-[0.95rem]">
               {venueAddress}
@@ -921,7 +1050,10 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
 }
 
 /* ─── 10c. Fun facts / trivia (fun_facts[]) ─── */
-const funFactIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+const funFactIcons: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   calendar: Calendar,
   camera: Camera,
   coffee: Coffee,
@@ -959,13 +1091,17 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
         )}
       >
         {facts.map((fact, index) => {
-          const Icon = funFactIcons[(fact.icon || "").toLowerCase()] ?? Sparkles;
+          const Icon =
+            funFactIcons[(fact.icon || "").toLowerCase()] ?? Sparkles;
           return (
             <article
               key={`${fact.label}-${index}`}
-              className="flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 px-3 py-5 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:px-4 md:py-6"
+              className="dna-card flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 px-3 py-5 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:px-4 md:py-6"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-accent/10 text-accent" aria-hidden="true">
+              <span
+                className="grid h-11 w-11 place-items-center rounded-full bg-accent/10 text-accent"
+                aria-hidden="true"
+              >
                 <Icon className="h-5 w-5" />
               </span>
               <p className="mt-3.5 w-full truncate text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-[11px]">
@@ -987,7 +1123,8 @@ const guestFieldClass =
   "h-12 w-full rounded-full border border-border bg-white/80 px-5 text-sm text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent";
 const guestButtonClass =
   "min-h-12 w-full rounded-full bg-accent px-6 text-sm font-medium text-background transition hover:bg-accent-dark disabled:opacity-50";
-const guestLabelClass = "text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-[11px]";
+const guestLabelClass =
+  "text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-[11px]";
 
 function applyOwnRow(
   row: WishRow,
@@ -996,7 +1133,11 @@ function applyOwnRow(
   setGuestCount: (value: number) => void,
 ) {
   setName(row.name);
-  if (row.attendance === "hadir" || row.attendance === "ragu" || row.attendance === "tidak") {
+  if (
+    row.attendance === "hadir" ||
+    row.attendance === "ragu" ||
+    row.attendance === "tidak"
+  ) {
     setAttendance(row.attendance);
   }
   if (row.guest_count) setGuestCount(row.guest_count);
@@ -1006,16 +1147,19 @@ function applyOwnRow(
 function RsvpSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.rsvp;
   const [name, setName] = useState("");
-  const [attendance, setAttendance] = useState<"hadir" | "ragu" | "tidak" | "">("");
+  const [attendance, setAttendance] = useState<"hadir" | "ragu" | "tidak" | "">(
+    "",
+  );
   const [guestCount, setGuestCount] = useState(1);
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState("");
   const [mine, setMine] = useState<WishRow | null>(null);
 
   const enabled = settings.visible && invitation.rsvp_enabled;
+  const { ref, inView } = useInViewOnce<HTMLDivElement>();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !inView) return;
     let cancelled = false;
     fetchWishes(invitation.slug)
       .then((rows) => {
@@ -1028,7 +1172,7 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, invitation.slug]);
+  }, [enabled, invitation.slug, inView]);
 
   if (!enabled) return null;
 
@@ -1063,7 +1207,9 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
           applyOwnRow(created.row, setName, setAttendance, setGuestCount);
           setMine(created.row);
           setStatus("idle");
-          setError("Kamu sudah mengirim konfirmasi dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.");
+          setError(
+            "Kamu sudah mengirim konfirmasi dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.",
+          );
           return;
         }
         setMine(created.row);
@@ -1077,20 +1223,24 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band tone="soft" visible>
-      <div className="mx-auto max-w-xl text-center">
+      <div ref={ref} className="mx-auto max-w-xl text-center">
         <SectionKicker>RSVP</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Konfirmasi Kehadiran
         </SectionHeading>
         <SectionCopy settings={settings} className="mt-4">
-          Mohon konfirmasi kehadiranmu agar kami dapat mempersiapkan hari bahagia dengan baik.
+          Mohon konfirmasi kehadiranmu agar kami dapat mempersiapkan hari
+          bahagia dengan baik.
         </SectionCopy>
 
         {status === "done" ? (
-          <div className="mt-8 rounded-2xl border border-accent/40 bg-background/85 p-6">
-            <p className="font-heading text-lg text-text-primary md:text-xl">Terima kasih, {name.trim()}!</p>
+          <div className="dna-card mt-8 rounded-2xl border border-accent/40 bg-background/85 p-6">
+            <p className="font-heading text-lg text-text-primary md:text-xl">
+              Terima kasih, {name.trim()}!
+            </p>
             <p className="mt-2 text-sm text-text-secondary">
-              Konfirmasi kehadiranmu sudah kami terima. Sampai jumpa di hari bahagia kami.
+              Konfirmasi kehadiranmu sudah kami terima. Sampai jumpa di hari
+              bahagia kami.
             </p>
             <button
               type="button"
@@ -1104,10 +1254,14 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
             </button>
           </div>
         ) : (
-          <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5 text-left">
+          <form
+            onSubmit={(e) => void handleSubmit(e)}
+            className="mt-8 space-y-5 text-left"
+          >
             {mine && (
               <p className="rounded-full border border-accent/30 bg-background/70 px-4 py-2.5 text-center text-xs text-text-secondary">
-                Konfirmasi dari perangkat ini sudah tersimpan dan masih boleh diubah.
+                Konfirmasi dari perangkat ini sudah tersimpan dan masih boleh
+                diubah.
               </p>
             )}
             <div>
@@ -1129,7 +1283,11 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setAttendance(attendance === option.value ? "" : option.value)}
+                    onClick={() =>
+                      setAttendance(
+                        attendance === option.value ? "" : option.value,
+                      )
+                    }
                     aria-pressed={attendance === option.value}
                     className={cn(
                       "min-h-11 flex-1 rounded-full border px-4 py-2.5 text-sm transition",
@@ -1153,7 +1311,11 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
                   max={20}
                   className={`${guestFieldClass} mt-2`}
                   value={guestCount}
-                  onChange={(e) => setGuestCount(Math.min(20, Math.max(1, Number(e.target.value) || 1)))}
+                  onChange={(e) =>
+                    setGuestCount(
+                      Math.min(20, Math.max(1, Number(e.target.value) || 1)),
+                    )
+                  }
                 />
               </div>
             )}
@@ -1165,7 +1327,11 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
               className={guestButtonClass}
               disabled={status === "sending" || !name.trim() || !attendance}
             >
-              {status === "sending" ? "Menyimpan..." : mine ? "Simpan Perubahan" : "Kirim Konfirmasi"}
+              {status === "sending"
+                ? "Menyimpan..."
+                : mine
+                  ? "Simpan Perubahan"
+                  : "Kirim Konfirmasi"}
             </button>
           </form>
         )}
@@ -1185,9 +1351,10 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
   const [mine, setMine] = useState<WishRow | null>(null);
 
   const visible = settings.visible;
+  const { ref, inView } = useInViewOnce<HTMLDivElement>();
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !inView) return;
     let cancelled = false;
     fetchWishes(invitation.slug)
       .then((rows) => {
@@ -1206,7 +1373,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
     return () => {
       cancelled = true;
     };
-  }, [invitation.slug, visible]);
+  }, [invitation.slug, visible, inView]);
 
   if (!visible) return null;
 
@@ -1222,7 +1389,9 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
     setName(row.name);
     setMessage(row.message ?? "");
     setStatus("idle");
-    setError("Kamu sudah mengirim ucapan dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.");
+    setError(
+      "Kamu sudah mengirim ucapan dari perangkat ini. Data lama kami tampilkan — silakan ubah lalu simpan.",
+    );
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -1237,7 +1406,9 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
         if (updated.status === "updated" && updated.row) {
           const row = updated.row;
           setMine(row);
-          setWishes((prev) => (prev ?? []).map((wish) => (wish.id === row.id ? row : wish)));
+          setWishes((prev) =>
+            (prev ?? []).map((wish) => (wish.id === row.id ? row : wish)),
+          );
         } else {
           const created = await submitGuestWish(invitation.slug, payload);
           if (created.status === "exists") {
@@ -1265,7 +1436,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band visible>
-      <div className="mx-auto max-w-2xl text-center">
+      <div ref={ref} className="mx-auto max-w-2xl text-center">
         <SectionKicker>Wishes</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Doa &amp; Harapan
@@ -1274,7 +1445,10 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
           Kirimkan doa dan harapan terbaikmu untuk hari bahagia kami.
         </SectionCopy>
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-5 text-left">
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="mt-8 space-y-5 text-left"
+        >
           {mine && (
             <p className="rounded-full border border-accent/30 bg-background/70 px-4 py-2.5 text-center text-xs text-text-secondary">
               Ucapan dari perangkat ini sudah tersimpan dan masih boleh diubah.
@@ -1305,7 +1479,9 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
           {status === "done" && !error && (
-            <p className="text-sm text-accent">Terima kasih! Ucapanmu sudah tersimpan dan masih bisa diubah.</p>
+            <p className="text-sm text-accent">
+              Terima kasih! Ucapanmu sudah tersimpan dan masih bisa diubah.
+            </p>
           )}
 
           <button
@@ -1313,7 +1489,11 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
             className={guestButtonClass}
             disabled={status === "sending" || !name.trim() || !message.trim()}
           >
-            {status === "sending" ? "Menyimpan..." : mine ? "Simpan Perubahan" : "Kirim Ucapan"}
+            {status === "sending"
+              ? "Menyimpan..."
+              : mine
+                ? "Simpan Perubahan"
+                : "Kirim Ucapan"}
           </button>
         </form>
 
@@ -1344,7 +1524,10 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
       <div className="grid gap-9 md:gap-11 desk:grid-cols-12 desk:items-center desk:gap-16">
         {invitation.closing_image && (
           <figure
-            className={cn("desk:col-span-5", photoRight ? "desk:col-start-8" : "desk:col-start-1")}
+            className={cn(
+              "desk:col-span-5",
+              photoRight ? "desk:col-start-8" : "desk:col-start-1",
+            )}
           >
             <InvitationPhoto
               src={invitation.closing_image}
@@ -1363,7 +1546,9 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
         >
           <DecorativeDivider className="mb-7 desk:justify-start" />
 
-          <p className="text-[10px] uppercase tracking-[0.3em] text-accent md:text-[11px]">Thank You</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-accent md:text-[11px]">
+            Thank You
+          </p>
           <h2 className="mt-3 font-heading text-[clamp(1.75rem,1.2rem+2.4vw,2.5rem)] md:text-[clamp(2rem,1.2rem+2vw,3rem)] leading-[1.15] text-text-primary">
             Terima Kasih
           </h2>
@@ -1373,7 +1558,10 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
           </p>
 
           <div className="mt-8 md:mt-9">
-            <CoupleNames invitation={invitation} className="font-heading text-2xl text-text-primary md:text-3xl desk:text-4xl" />
+            <CoupleNames
+              invitation={invitation}
+              className="font-heading text-2xl text-text-primary md:text-3xl desk:text-4xl"
+            />
           </div>
 
           <DecorativeDivider className="mt-7 desk:justify-start" />
@@ -1394,7 +1582,10 @@ function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
   useEffect(() => {
     if (images.length < 2) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setActive((i) => (i + 1) % images.length), 4500);
+    const timer = window.setInterval(
+      () => setActive((i) => (i + 1) % images.length),
+      4500,
+    );
     return () => window.clearInterval(timer);
   }, [images.length]);
 
@@ -1406,6 +1597,7 @@ function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
           src={img.url}
           alt={img.alt || `Galeri ${i + 1}`}
           fill
+          priority={i === 0}
           sizes="(min-width: 1200px) 65vw"
           className={cn("lume-stage__shot", i === active && "is-active")}
         />
@@ -1460,10 +1652,17 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
 
 /* ─── Main template ─── */
 function GoogleFontLink({ font }: { font: FontSettingsLike }) {
+  // Pastikan font pilihan user (atau default template) termuat sebelum dipakai.
+  useEffect(() => {
+    ensureInvitationFontsLoaded(font);
+  }, [font]);
+
   const href = invitationFontsHref(font);
   useEffect(() => {
     if (!href) return;
-    let link = document.getElementById("invitation-google-fonts") as HTMLLinkElement | null;
+    let link = document.getElementById(
+      "invitation-google-fonts",
+    ) as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement("link");
       link.id = "invitation-google-fonts";
@@ -1476,7 +1675,7 @@ function GoogleFontLink({ font }: { font: FontSettingsLike }) {
 }
 
 function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
-  const { css, pageGradient } = useLumeTheme();
+  const { id: templateId, css, pageGradient } = useLumeTheme();
   const [ready, setReady] = useState(embed);
   const handleReady = useCallback(() => setReady(true), []);
 
@@ -1500,19 +1699,24 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
 
   return (
     <div
+      data-template={templateId}
       className={cn(
         "relative text-text-primary",
         !pageGradient && "bg-blob-1",
         stage && "lume-stage",
       )}
-      style={{
-        ...css,
-        ...resolveFontVars(invitation.custom_settings.font),
-        background: pageGradient,
-      } as CSSProperties}
+      style={
+        {
+          ...css,
+          ...resolveFontVars(invitation.custom_settings.font),
+          background: pageGradient,
+        } as CSSProperties
+      }
     >
       <GoogleFontLink font={invitation.custom_settings.font} />
-      {!ready && !embed && <LoadingScreen invitation={invitation} onDone={handleReady} />}
+      {!ready && !embed && (
+        <LoadingScreen invitation={invitation} onDone={handleReady} />
+      )}
 
       {stage && (
         <>
@@ -1540,7 +1744,9 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
         <div className="h-px bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
         <div className="invite-wrap py-10 text-center">
           <p className="text-[10px] uppercase tracking-[0.24em] text-text-secondary">
-            {sections.music.visible ? "Terima kasih atas doa restunya" : "Dengan cinta"}
+            {sections.music.visible
+              ? "Terima kasih atas doa restunya"
+              : "Dengan cinta"}
           </p>
         </div>
       </div>

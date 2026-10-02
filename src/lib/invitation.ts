@@ -1,3 +1,5 @@
+import { safeHttpUrl } from "@/lib/utils";
+
 export const RESERVED_SLUGS = [
   "admin",
   "dashboard",
@@ -52,6 +54,8 @@ export type SectionKey =
 export interface FontSettings {
   heading: string | null;
   body: string | null;
+  /** Font aksen opsional (mis. script untuk "The Wedding of"). Null/null string → ikut heading. */
+  accent?: string | null;
 }
 
 export type CustomSettings = Record<SectionKey, SectionSettings> & { font?: FontSettings };
@@ -194,7 +198,7 @@ export function defaultCustomSettings(): CustomSettings {
     funfacts: defaultSection(),
     closing: defaultSection(),
     music: defaultSection({ headingSize: "sm" }),
-    font: { heading: null, body: null },
+    font: { heading: null, body: null, accent: null },
   };
 }
 
@@ -211,6 +215,7 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
     ? (row.events as AgendaEvent[]).map((event, index) => ({
         ...event,
         id: event.id || `event-${index}`,
+        mapsUrl: safeHttpUrl(event.mapsUrl),
       }))
     : [];
 
@@ -233,7 +238,9 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
     bride_social: (row.bride_social as SocialLinks) ?? null,
     story_milestones: milestones as StoryMilestone[],
     events,
-    video_url: (row.video_url as string) ?? null,
+    google_maps_url: safeHttpUrl(row.google_maps_url),
+    music_url: safeHttpUrl(row.music_url),
+    video_url: safeHttpUrl(row.video_url),
     video_poster: (row.video_poster as string) ?? null,
     rsvp_enabled: row.rsvp_enabled === true || row.rsvp_enabled === "true",
     fun_facts: facts as FunFact[],

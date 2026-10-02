@@ -22,3 +22,15 @@ export function slugify(value: string) {
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 }
+
+/** Hanya izinkan URL http(s) — tolak javascript:, data:, dan skema berbahaya lain. */
+export function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" || url.protocol === "http:") return value;
+  } catch {
+    // bukan URL absolut — tolak
+  }
+  return null;
+}
