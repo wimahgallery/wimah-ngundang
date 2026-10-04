@@ -21,11 +21,13 @@ export default async function InvitationPreviewPage({
   const invitation = await getInvitationBySlug(slug);
   if (!invitation) notFound();
 
+  const gated = sp.gate !== "0";
   return (
     <InvitationView
       invitation={invitation}
       embed={sp.embed === "1"}
-      frameSrc={`/preview/invitation/${slug}?embed=1`}
+      frameSrc={`/preview/invitation/${slug}?embed=1${gated ? "" : "&gate=0"}`}
+      gated={gated}
     />
   );
 }

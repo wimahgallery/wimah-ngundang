@@ -45,6 +45,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <html
       lang="id"
+      suppressHydrationWarning
       className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, sora.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full bg-background text-text-primary font-body">

@@ -448,7 +448,7 @@ const [activeStep, setActiveStep] = useState(0);
           >
             <LazyFrame
               key={previewNonce}
-              src={`/preview/invitation/${slug}?v=${previewNonce}`}
+              src={`/preview/invitation/${slug}?v=${previewNonce}&gate=0`}
               title="Preview undangan"
               className="h-full"
               fallbackClassName="bg-background"

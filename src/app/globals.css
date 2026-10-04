@@ -344,6 +344,39 @@
   }
 }
 
+/* ── Tombol "Buka Undangan" di layar pertama desktop (≥1200px):
+      overlay bottom-center di atas galeri + frame HP, di luar @layer. ── */
+.lume-stage__cta {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .lume-stage__cta {
+    display: flex;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100svh;
+    z-index: 5;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: clamp(1.5rem, 4vh, 2.5rem);
+    pointer-events: none;
+  }
+
+  .lume-stage__cta > a {
+    pointer-events: auto;
+  }
+}
+
+/* ── Kunci scroll: halaman terkunci sampai pengguna klik "Buka Undangan" ──
+   (dipasang sebagai atribut html oleh halaman undangan sebelum hydration) */
+html[data-invitation-locked],
+html[data-invitation-locked] body {
+  overflow: hidden !important;
+}
+
 /* ── Reveal halus: section naik+muncul sekali saat masuk viewport ──
    Di luar @layer supaya tidak dikalahkan utility Tailwind. */
 .lume-reveal {

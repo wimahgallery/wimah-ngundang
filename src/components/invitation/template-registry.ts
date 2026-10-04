@@ -79,6 +79,8 @@ export type TemplateProps = {
   embed?: boolean;
   /** URL undangan untuk iframe kolom mobile (hanya di halaman induk) */
   frameSrc?: string;
+  /** true di halaman undangan nyata: scroll terkunci sampai klik "Buka Undangan" */
+  gated?: boolean;
 };
 
 export async function loadTemplate(id: TemplateId): Promise<ComponentType<TemplateProps>> {

@@ -239,7 +239,13 @@ function useGuestName(): string | null {
   return value ? value.trim().slice(0, 80) : null;
 }
 
-function HeroCover({ invitation }: { invitation: Invitation }) {
+function HeroCover({
+  invitation,
+  onOpen,
+}: {
+  invitation: Invitation;
+  onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const hero = invitation.custom_settings.hero;
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
@@ -337,6 +343,7 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
 
           <a
             href="#greeting"
+            onClick={onOpen}
             className="mt-7 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97] md:w-auto md:max-w-none md:px-9"
           >
             Buka Undangan
@@ -1681,11 +1688,61 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
   );
 }
 
+/* ─── Tombol "Buka Undangan" untuk layar pertama desktop (≥1200px):
+       overlay bottom-center di atas galeri + frame HP. Layout desktop tidak
+       menggulir (isi undangan ada di dalam iframe) — klik meneruskan klik ke
+       tombol di dalam frame HP, lalu tombol ini hilang. ─── */
+function DesktopStageCta({
+  onOpen,
+  hasMusic,
+}: {
+  onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  hasMusic?: boolean;
+}) {
+  return (
+    <div
+      className="lume-stage__cta"
+      style={
+        hasMusic
+          ? { paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }
+          : undefined
+      }
+    >
+      <a
+        href="#greeting"
+        onClick={onOpen}
+        className="inline-flex min-h-12 items-center gap-2 rounded-full border border-gold/50 bg-black/45 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-md transition-all duration-300 hover:bg-gold/20 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97]"
+      >
+        Buka Undangan
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
+          />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 /* ─── Mobile stage (<1200px): cover full-bleed seperti sampul — latar galeri
        yang otomatis berganti (sama seperti panel desktop), nama+tanggal di atas,
        "Kepada Yth" + tombol di bawah, muat satu layar.
        Di ≥1200px disembunyikan oleh CSS (desktop pakai galeri + frame HP). ─── */
-function MobileStageCover({ invitation }: { invitation: Invitation }) {
+function MobileStageCover({
+  invitation,
+  onOpen,
+}: {
+  invitation: Invitation;
+  onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const hero = invitation.custom_settings.hero;
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
@@ -1808,6 +1865,7 @@ function MobileStageCover({ invitation }: { invitation: Invitation }) {
         </p>
         <a
           href="#greeting"
+          onClick={onOpen}
           className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97]"
         >
           Buka Undangan
@@ -1854,10 +1912,57 @@ function GoogleFontLink({ font }: { font: FontSettingsLike }) {
   return null;
 }
 
-function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
+function LumeTemplate({
+  invitation,
+  embed = false,
+  frameSrc,
+  gated = false,
+}: TemplateProps) {
   const { id: templateId, css, pageGradient } = useLumeTheme();
   const [ready, setReady] = useState(embed);
+  const [opened, setOpened] = useState(false);
   const handleReady = useCallback(() => setReady(true), []);
+
+  // Buka kunci scroll + gulir ke section pembuka secara sinkron sebelum
+  // navigasi anchor default berjalan. Posisi target dihitung tanpa transform
+  // reveal (translateY) supaya mendarat pas di tepi viewport.
+  const handleOpen = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    document.documentElement.removeAttribute("data-invitation-locked");
+    setOpened(true);
+    const href = e.currentTarget.getAttribute("href");
+    if (!href?.startsWith("#")) return;
+    const target = document.getElementById(href.slice(1));
+    if (!target) return;
+    e.preventDefault();
+    history.replaceState(null, "", href);
+    const ty = new DOMMatrixReadOnly(getComputedStyle(target).transform).m42;
+    window.scrollTo({
+      top: target.getBoundingClientRect().top + window.scrollY - ty,
+      // "auto" mengikuti css scroll-behavior (smooth; instant saat reduced-motion)
+      behavior: "auto",
+    });
+  }, []);
+
+  // Desktop (≥1200px): halaman luar tidak menggulir (galeri + frame HP, isi
+  // undangan ada di dalam iframe) — jadi klik tombol diteruskan ke tombol
+  // "Buka Undangan" di dalam frame HP supaya undangan terbuka di sana.
+  const handleDesktopOpen = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault();
+      const frame = document.querySelector<HTMLIFrameElement>(
+        "iframe.lume-stage__frame",
+      );
+      const btn =
+        frame?.contentDocument?.querySelector<HTMLAnchorElement>(
+          'a[href="#greeting"]',
+        );
+      if (btn) {
+        btn.click();
+        setOpened(true);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (embed) document.documentElement.setAttribute("data-embed", "");
@@ -1876,6 +1981,29 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
   const gallery = invitation.custom_settings.gallery;
   const galleryImages = invitation.gallery_images;
   const stage = Boolean(gallery?.visible && galleryImages.length > 0) && !embed;
+
+  // Kunci scroll sampai pengguna klik "Buka Undangan" (hanya halaman undangan
+  // nyata; halaman katalog preview lewat begitu saja). Berlaku di semua breakpoint
+  // — di desktop, tombolnya ada di layar pertama (DesktopStageCta).
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!gated) {
+      root.removeAttribute("data-invitation-locked");
+      return;
+    }
+    if (opened || window.location.hash) {
+      root.removeAttribute("data-invitation-locked");
+      return;
+    }
+    root.setAttribute("data-invitation-locked", "");
+    // Pengaman iOS: cegah scroll sentuh selama terkunci.
+    const preventTouch = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", preventTouch, { passive: false });
+    return () => {
+      root.removeAttribute("data-invitation-locked");
+      document.removeEventListener("touchmove", preventTouch);
+    };
+  }, [gated, opened]);
 
   return (
     <div
@@ -1900,14 +2028,23 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
 
       {stage && (
         <>
-          <MobileStageCover invitation={invitation} />
+          <MobileStageCover invitation={invitation} onOpen={handleOpen} />
           <DesktopGalleryPanel invitation={invitation} />
           <DesktopPhoneFrame src={frameSrc} />
+          {!opened && (
+            <DesktopStageCta
+              onOpen={handleDesktopOpen}
+              hasMusic={
+                Boolean(invitation.music_url) &&
+                invitation.custom_settings.music.visible
+              }
+            />
+          )}
         </>
       )}
 
       <div className={cn(stage && "lume-stage__body")}>
-        {!stage && <HeroCover invitation={invitation} />}
+        {!stage && <HeroCover invitation={invitation} onOpen={handleOpen} />}
         <OpeningSection invitation={invitation} />
         <CoupleSection invitation={invitation} />
         <LoveStorySection invitation={invitation} />
