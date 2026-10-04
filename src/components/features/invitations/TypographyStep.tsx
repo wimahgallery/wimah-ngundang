@@ -131,7 +131,9 @@ function FontPicker({
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) setRecent(readRecent(role));
+    if (!open) return;
+    const id = requestAnimationFrame(() => setRecent(readRecent(role)));
+    return () => cancelAnimationFrame(id);
   }, [open, role]);
 
   useEffect(() => {

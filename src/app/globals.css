@@ -332,6 +332,18 @@
   }
 }
 
+/* ── Cover stage mobile: tampil <1200px, digantikan galeri+frame HP ≥1200px.
+      Di luar @layer supaya mengalahkan utility Tailwind (display:flex). ── */
+.lume-stage__cover {
+  display: flex;
+}
+
+@media (min-width: 1200px) {
+  .lume-stage__cover {
+    display: none;
+  }
+}
+
 /* kolom mobile: sembunyikan scrollbar agar terasa seperti layar ponsel */
 html[data-embed] {
   scrollbar-width: none;

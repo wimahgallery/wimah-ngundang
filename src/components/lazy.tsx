@@ -18,8 +18,8 @@ export function useInViewOnce<T extends HTMLElement>(rootMargin: string = ROOT_M
     const el = ref.current;
     if (!el || inView) return;
     if (typeof IntersectionObserver === "undefined") {
-      setInView(true);
-      return;
+      const id = requestAnimationFrame(() => setInView(true));
+      return () => cancelAnimationFrame(id);
     }
     const observer = new IntersectionObserver(
       (entries) => {

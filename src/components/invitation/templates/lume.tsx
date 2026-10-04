@@ -1650,6 +1650,149 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
   );
 }
 
+/* ─── Mobile stage (<1200px): cover full-bleed seperti sampul — latar galeri
+       yang otomatis berganti (sama seperti panel desktop), nama+tanggal di atas,
+       "Kepada Yth" + tombol di bawah, muat satu layar.
+       Di ≥1200px disembunyikan oleh CSS (desktop pakai galeri + frame HP). ─── */
+function MobileStageCover({ invitation }: { invitation: Invitation }) {
+  const hero = invitation.custom_settings.hero;
+  const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
+  const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
+  const guestName = useGuestName();
+  const images = invitation.gallery_images;
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    if (images.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(
+      () => setActive((i) => (i + 1) % images.length),
+      4500,
+    );
+    return () => window.clearInterval(timer);
+  }, [images.length]);
+
+  const activeIndex = images.length > 0 ? active % images.length : 0;
+
+  return (
+    <section
+      className="lume-stage__cover relative isolate flex min-h-[100svh] flex-col justify-between overflow-hidden bg-[#0c0d0b] text-white"
+      aria-label="Sampul undangan"
+    >
+      {images.length > 0 ? (
+        images.map((img, i) => (
+          <Image
+            key={img.id}
+            src={img.url}
+            alt={img.alt || `Foto ${i + 1}`}
+            fill
+            priority={i === 0}
+            sizes="100vw"
+            className={cn("lume-stage__shot", i === activeIndex && "is-active")}
+          />
+        ))
+      ) : (
+        <InvitationPhoto
+          src={invitation.cover_image}
+          alt={invitation.event_title || "Cover"}
+          className="absolute inset-0"
+          positionX={hero.imagePositionX}
+          positionY={hero.imagePositionY}
+          zoom={hero.zoom}
+          rotate={hero.rotate}
+          priority
+          sizes="100vw"
+        />
+      )}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(12,13,11,0.72) 0%, rgba(12,13,11,0.2) 32%, rgba(12,13,11,0.3) 58%, rgba(12,13,11,0.9) 100%)",
+        }}
+      />
+      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
+
+      {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
+      <div className="relative z-10 px-6 pt-[max(clamp(2rem,7vh,4rem),env(safe-area-inset-top))] text-center">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-white/75">
+          {invitation.hero_title || "The Wedding of"}
+        </p>
+        <h1 className="mt-3 font-heading text-[clamp(2.5rem,1.4rem+7vw,3.75rem)] leading-[1.05]">
+          <span className="block">{bride}</span>
+          <span className="my-0.5 block font-elegant text-[0.5em] italic leading-none text-gold">
+            &amp;
+          </span>
+          <span className="block">{groom}</span>
+        </h1>
+        {invitation.event_date && (
+          <p className="mt-3 font-heading text-sm tracking-wide text-white/85 md:text-base">
+            {formatDate(invitation.event_date)}
+          </p>
+        )}
+
+        {images.length > 1 && (
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <span className="lume-stage__count" aria-live="off">
+              {String(activeIndex + 1).padStart(2, "0")}
+              <span aria-hidden="true"> / </span>
+              <span className="sr-only">dari</span>
+              {String(images.length).padStart(2, "0")}
+            </span>
+            <div className="lume-stage__dots">
+              {images.map((img, i) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() => setActive(i)}
+                  aria-label={`Tampilkan foto ${i + 1}`}
+                  aria-current={i === activeIndex}
+                  className="-m-2 flex items-center p-2"
+                >
+                  <span
+                    className={cn("lume-stage__dot block", i === activeIndex && "is-active")}
+                    aria-hidden="true"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* bawah: sapaan tamu + tombol */}
+      <div className="relative z-10 px-6 pb-[max(clamp(2rem,6vh,3.5rem),env(safe-area-inset-bottom))] text-center">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-white/70">
+          {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
+        </p>
+        <p className="mt-2 font-heading text-2xl italic md:text-3xl">
+          {guestName || "Tamu Undangan"}
+        </p>
+        <a
+          href="#greeting"
+          className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)]"
+        >
+          Buka Undangan
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
+            />
+          </svg>
+        </a>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Main template ─── */
 function GoogleFontLink({ font }: { font: FontSettingsLike }) {
   // Pastikan font pilihan user (atau default template) termuat sebelum dipakai.
@@ -1720,13 +1863,14 @@ function LumeTemplate({ invitation, embed = false, frameSrc }: TemplateProps) {
 
       {stage && (
         <>
+          <MobileStageCover invitation={invitation} />
           <DesktopGalleryPanel invitation={invitation} />
           <DesktopPhoneFrame src={frameSrc} />
         </>
       )}
 
       <div className={cn(stage && "lume-stage__body")}>
-        <HeroCover invitation={invitation} />
+        {!stage && <HeroCover invitation={invitation} />}
         <OpeningSection invitation={invitation} />
         <CoupleSection invitation={invitation} />
         <LoveStorySection invitation={invitation} />
