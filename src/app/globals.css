@@ -344,6 +344,64 @@
   }
 }
 
+/* ── Reveal halus: section naik+muncul sekali saat masuk viewport ──
+   Di luar @layer supaya tidak dikalahkan utility Tailwind. */
+.lume-reveal {
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lume-reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* tanpa JS: konten tetap terlihat */
+@media (scripting: none) {
+  .lume-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Animasi fade/zoom masuk (sampul & lightbox galeri) ── */
+@keyframes lume-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lume-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lume-fade-up {
+  animation: lume-fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lume-lightbox-dialog {
+  animation: lume-fade-up 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lume-lightbox-photo {
+  animation: lume-zoom-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* kolom mobile: sembunyikan scrollbar agar terasa seperti layar ponsel */
 html[data-embed] {
   scrollbar-width: none;
@@ -355,7 +413,7 @@ html[data-embed]::-webkit-scrollbar {
 }
 
 html {
-  scroll-behavior: auto;
+  scroll-behavior: smooth;
   overflow-x: clip;
 }
 
@@ -642,6 +700,15 @@ body {
   * {
     animation: none !important;
     transition: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  .lume-reveal {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

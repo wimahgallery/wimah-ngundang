@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type CSSProperties,
@@ -86,12 +87,38 @@ function Band({
   wide?: boolean;
   children: React.ReactNode;
 }) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || revealed) return;
+    if (typeof IntersectionObserver === "undefined") {
+      const raf = requestAnimationFrame(() => setRevealed(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setRevealed(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "0px 0px -12% 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [revealed]);
+
   if (!visible) return null;
   return (
     <section
+      ref={ref}
       id={id}
       className={cn(
-        "relative py-[clamp(4rem,10vw,10rem)]",
+        "relative lume-reveal",
+        revealed && "is-revealed",
+        "py-[clamp(4rem,10vw,10rem)]",
         tone === "soft" && "bg-surface/40",
         tone === "dark" && "bg-hero text-hero-ink",
       )}
@@ -238,9 +265,10 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
         {/* 1 · nama mempelai */}
         <div
           className={cn(
-            "text-center md:col-start-1 md:row-start-1 md:self-end md:pb-3 md:text-left desk:col-span-7 desk:row-start-1 desk:self-end desk:pb-6",
+            "lume-fade-up text-center md:col-start-1 md:row-start-1 md:self-end md:pb-3 md:text-left desk:col-span-7 desk:row-start-1 desk:self-end desk:pb-6",
             photoLeft ? "desk:col-start-6" : "desk:col-start-1",
           )}
+          style={{ animationDelay: "100ms" }}
         >
           <p className="text-[10px] uppercase tracking-[0.3em] text-gold md:text-xs desk:text-[13px]">
             {invitation.hero_title || "The Wedding of"}
@@ -258,11 +286,12 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
         {/* 2 · foto */}
         <figure
           className={cn(
-            "relative mx-auto w-full max-w-[24rem] md:col-start-2 md:row-start-1 md:row-span-2 md:max-w-none md:self-center desk:col-span-5 desk:row-start-1 desk:row-span-2 desk:max-w-[34rem]",
+            "lume-fade-up relative mx-auto w-full max-w-[24rem] md:col-start-2 md:row-start-1 md:row-span-2 md:max-w-none md:self-center desk:col-span-5 desk:row-start-1 desk:row-span-2 desk:max-w-[34rem]",
             photoLeft
               ? "desk:col-start-1 desk:-mr-6"
               : "desk:col-start-8 desk:-ml-6",
           )}
+          style={{ animationDelay: "250ms" }}
         >
           <span
             aria-hidden
@@ -284,9 +313,10 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
         {/* 3 · tanggal, tamu, tombol */}
         <div
           className={cn(
-            "text-center md:col-start-1 md:row-start-2 md:self-start md:text-left desk:col-span-6 desk:row-start-2 desk:self-start desk:pt-8",
+            "lume-fade-up text-center md:col-start-1 md:row-start-2 md:self-start md:text-left desk:col-span-6 desk:row-start-2 desk:self-start desk:pt-8",
             photoLeft ? "desk:col-start-6" : "desk:col-start-1",
           )}
+          style={{ animationDelay: "400ms" }}
         >
           {invitation.event_date && (
             <p className="font-heading text-[clamp(1rem,0.8rem+1vw,1.25rem)] tracking-wide text-hero-ink/90 md:text-[clamp(1.1rem,0.8rem+0.6vw,1.5rem)]">
@@ -307,7 +337,7 @@ function HeroCover({ invitation }: { invitation: Invitation }) {
 
           <a
             href="#greeting"
-            className="mt-7 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] md:w-auto md:max-w-none md:px-9"
+            className="mt-7 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97] md:w-auto md:max-w-none md:px-9"
           >
             Buka Undangan
             <svg
@@ -760,7 +790,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
             key={img.id}
             type="button"
             onClick={() => setActive(i)}
-            className="overflow-hidden rounded-lg md:rounded-xl"
+            className="overflow-hidden rounded-lg transition active:scale-[0.98] md:rounded-xl"
             aria-label={`Buka foto ${i + 1}`}
           >
             <InvitationPhoto
@@ -782,13 +812,13 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
           role="dialog"
           aria-modal="true"
           aria-label="Galeri foto"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/92 p-4"
+          className="lume-lightbox-dialog fixed inset-0 z-[70] flex items-center justify-center bg-black/92 p-4"
           onClick={() => setActive(null)}
         >
           <button
             type="button"
             onClick={() => setActive(null)}
-            className="absolute right-4 top-4 grid h-11 w-11 place-items-center text-white/70 transition-colors hover:text-white"
+            className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center text-white/70 transition hover:text-white active:scale-90"
             aria-label="Tutup"
           >
             <svg
@@ -813,7 +843,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
                 prev === 0 ? images.length - 1 : (prev ?? 0) - 1,
               );
             }}
-            className="absolute left-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:left-4"
+            className="absolute left-2 z-10 grid h-12 w-12 place-items-center text-white/70 transition hover:text-white active:scale-90 sm:left-4"
             aria-label="Sebelumnya"
           >
             <svg
@@ -838,7 +868,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
                 prev === images.length - 1 ? 0 : (prev ?? 0) + 1,
               );
             }}
-            className="absolute right-2 grid h-12 w-12 place-items-center text-white/70 transition-colors hover:text-white sm:right-4"
+            className="absolute right-2 z-10 grid h-12 w-12 place-items-center text-white/70 transition hover:text-white active:scale-90 sm:right-4"
             aria-label="Berikutnya"
           >
             <svg
@@ -860,11 +890,12 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
+              key={active}
               src={images[active].url}
               alt={images[active].alt || "Galeri"}
               width={1000}
               height={1250}
-              className="max-h-[82vh] w-auto rounded-lg object-contain"
+              className="lume-lightbox-photo max-h-[82vh] w-auto rounded-lg object-contain"
               sizes="92vw"
             />
           </div>
@@ -1122,7 +1153,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
 const guestFieldClass =
   "h-12 w-full rounded-full border border-border bg-white/80 px-5 text-sm text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent";
 const guestButtonClass =
-  "min-h-12 w-full rounded-full bg-accent px-6 text-sm font-medium text-background transition hover:bg-accent-dark disabled:opacity-50";
+  "min-h-12 w-full rounded-full bg-accent px-6 text-sm font-medium text-background transition hover:bg-accent-dark active:scale-[0.97] disabled:opacity-50";
 const guestLabelClass =
   "text-[10px] uppercase tracking-[0.2em] text-text-secondary md:text-[11px]";
 
@@ -1290,7 +1321,7 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
                     }
                     aria-pressed={attendance === option.value}
                     className={cn(
-                      "min-h-11 flex-1 rounded-full border px-4 py-2.5 text-sm transition",
+                      "min-h-11 flex-1 rounded-full border px-4 py-2.5 text-sm transition active:scale-[0.97]",
                       attendance === option.value
                         ? "border-accent bg-accent text-background"
                         : "border-border bg-background/70 text-text-secondary hover:border-accent/50",
@@ -1715,7 +1746,10 @@ function MobileStageCover({ invitation }: { invitation: Invitation }) {
       <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
 
       {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
-      <div className="relative z-10 px-6 pt-[max(clamp(2rem,7vh,4rem),env(safe-area-inset-top))] text-center">
+      <div
+        className="lume-fade-up relative z-10 px-6 pt-[max(clamp(2rem,7vh,4rem),env(safe-area-inset-top))] text-center"
+        style={{ animationDelay: "150ms" }}
+      >
         <p className="text-[10px] uppercase tracking-[0.3em] text-white/75">
           {invitation.hero_title || "The Wedding of"}
         </p>
@@ -1762,7 +1796,10 @@ function MobileStageCover({ invitation }: { invitation: Invitation }) {
       </div>
 
       {/* bawah: sapaan tamu + tombol */}
-      <div className="relative z-10 px-6 pb-[max(clamp(2rem,6vh,3.5rem),env(safe-area-inset-bottom))] text-center">
+      <div
+        className="lume-fade-up relative z-10 px-6 pb-[max(clamp(2rem,6vh,3.5rem),env(safe-area-inset-bottom))] text-center"
+        style={{ animationDelay: "350ms" }}
+      >
         <p className="text-[10px] uppercase tracking-[0.24em] text-white/70">
           {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
         </p>
@@ -1771,7 +1808,7 @@ function MobileStageCover({ invitation }: { invitation: Invitation }) {
         </p>
         <a
           href="#greeting"
-          className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)]"
+          className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97]"
         >
           Buka Undangan
           <svg

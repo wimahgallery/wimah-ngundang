@@ -161,7 +161,7 @@ export function MapsButton({ invitation }: { invitation: Invitation }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition hover:bg-accent-light"
+      className="inline-flex rounded-full bg-accent px-6 py-3 text-sm font-medium text-background transition hover:bg-accent-light active:scale-[0.97]"
     >
       Buka di Google Maps
     </a>
@@ -221,7 +221,7 @@ export function MusicDock({ url }: { url: string }) {
         type="button"
         onClick={toggle}
         aria-label={playing ? "Jeda musik" : "Putar musik"}
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-glass/95 px-4 py-2.5 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur transition hover:bg-glass"
+        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-glass/95 px-4 py-2.5 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur transition hover:bg-glass active:scale-[0.98]"
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-background">
           {playing ? (
