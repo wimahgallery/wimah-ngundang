@@ -52,6 +52,7 @@ export async function InvitationView({
 
   return (
     <div
+      className={showMusic ? "invitation-shell invitation-shell--music" : "invitation-shell"}
       style={
         showMusic
           ? { paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }

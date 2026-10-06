@@ -34,3 +34,8 @@ export async function uploadFile(
     name: response.name,
   };
 }
+
+/** Hapus berkas dari ImageKit. Best-effort — pemanggil boleh mengabaikan error. */
+export async function deleteFile(fileId: string) {
+  await getClient().files.delete(fileId);
+}

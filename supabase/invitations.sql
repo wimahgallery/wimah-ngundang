@@ -291,3 +291,38 @@ GRANT EXECUTE ON FUNCTION public.list_guest_wishes(text, uuid) TO anon, authenti
 GRANT EXECUTE ON FUNCTION public.submit_guest_wish(text, uuid, text, text, text, int) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_guest_wish(text, uuid, text, text, text, int) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_guest_wish(text, uuid) TO anon, authenticated;
+
+-- ── Pustaka musik: lagu diunggah sekali di dashboard, lalu dipilih dari editor.
+--    Satu baris = satu lagu, sehingga undangan tidak menumpuk file musik sendiri.
+--    (aman dijalankan berulang) ──
+CREATE TABLE IF NOT EXISTS music_tracks (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  url text NOT NULL,
+  file_id text,
+  duration_seconds int,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS music_tracks_user_id_idx ON music_tracks (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS music_tracks_user_name_uk ON music_tracks (user_id, lower(name));
+CREATE UNIQUE INDEX IF NOT EXISTS music_tracks_user_url_uk ON music_tracks (user_id, url);
+
+ALTER TABLE music_tracks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own music" ON music_tracks;
+CREATE POLICY "Users can view their own music" ON music_tracks
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert their own music" ON music_tracks;
+CREATE POLICY "Users can insert their own music" ON music_tracks
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own music" ON music_tracks;
+CREATE POLICY "Users can update their own music" ON music_tracks
+  FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own music" ON music_tracks;
+CREATE POLICY "Users can delete their own music" ON music_tracks
+  FOR DELETE USING (auth.uid() = user_id);

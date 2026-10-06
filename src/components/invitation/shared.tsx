@@ -6,6 +6,7 @@ import { Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   alignClass,
+  eventTargetTime,
   headingClass,
   objectPosition,
   paragraphClass,
@@ -184,33 +185,91 @@ export function StoryParagraphs({ content }: { content?: string | null }) {
   );
 }
 
+/**
+ * Dipanggil oleh tombol "Buka Undangan". Klik itulah yang memberi izin autoplay
+ * ke browser, jadi listener di dokumen yang sama (termasuk di dalam iframe
+ * desktop) menjalankan `audio.play()` masih di dalam gelombang gesture.
+ */
+export const INVITATION_OPEN_EVENT = "invitation:open";
+
+export function dispatchInvitationOpen() {
+  document.dispatchEvent(new CustomEvent(INVITATION_OPEN_EVENT));
+}
+
 export function MusicDock({ url }: { url: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
+  /** True saat layar masih terkunci (sampul "Buka Undangan") — tombol melayang
+   *  disembunyikan supaya tidak menutupi tombol buka undangan. */
+  const [locked, setLocked] = useState(true);
+  /** True setelah audio benar-benar pernah berbunyi — dipakai supaya lagu yang
+   *  sengaja dijeda tamu tidak "hidup lagi" saat klik CTA kedua kali. */
+  const startedRef = useRef(false);
+
+  const play = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !audio.paused) return;
+    audio.volume = 0.5;
+    void audio.play().then(
+      () => {
+        startedRef.current = true;
+      },
+      () => {
+        // Autoplay ditolak (mis. tanpa gesture) — tombol dock tetap menawarkan
+        // "Putar musik undangan", jadi tamu bisa nyalakan manual.
+      },
+    );
+  }, []);
+
+  /** Auto-start dari CTA "Buka Undangan": hanya sekali, supaya lagu yang sudah
+   *  sengaja dijeda tamu tidak kembali hidup saat CTA diklik lagi. */
+  const start = useCallback(() => {
+    if (startedRef.current) return;
+    play();
+  }, [play]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = 0.5;
+    document.addEventListener(INVITATION_OPEN_EVENT, start);
+    return () => document.removeEventListener(INVITATION_OPEN_EVENT, start);
+  }, [start]);
+
+  // Pantau kunci scroll: tombol muncul begitu undangan dibuka (klik CTA,
+  // langsung dari URL ber-hash, atau halaman preview tanpa kunci).
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setLocked(root.hasAttribute("data-invitation-locked"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-invitation-locked"],
+    });
+    return () => observer.disconnect();
   }, []);
 
   const toggle = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) {
-      void audio.play().catch(() => {});
-    } else {
-      audio.pause();
-    }
+    if (audio.paused) play();
+    else audio.pause();
   };
 
   return (
     <div
-      className="fixed left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2"
+      className={cn(
+        "music-dock fixed right-4 z-40 transition duration-300 motion-reduce:transition-none sm:right-6",
+        locked
+          ? "pointer-events-none translate-y-3 opacity-0"
+          : "translate-y-0 opacity-100",
+      )}
       style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
     >
       <audio
         ref={audioRef}
         src={url}
-        preload="none"
+        loop
+        preload="metadata"
         aria-label="Musik undangan"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
@@ -220,33 +279,48 @@ export function MusicDock({ url }: { url: string }) {
       <button
         type="button"
         onClick={toggle}
-        aria-label={playing ? "Jeda musik" : "Putar musik"}
-        className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-glass/95 px-4 py-2.5 shadow-[0_12px_40px_rgba(84,82,77,0.12)] backdrop-blur transition hover:bg-glass active:scale-[0.98]"
+        aria-label={playing ? "Jeda musik undangan" : "Putar musik undangan"}
+        title={playing ? "Jeda musik" : "Putar musik"}
+        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border bg-glass/95 shadow-[0_12px_40px_rgba(84,82,77,0.18)] backdrop-blur transition hover:bg-glass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:scale-95 sm:h-14 sm:w-14"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-background">
+        {playing && (
+          <span
+            aria-hidden
+            className="absolute inset-0 animate-ping rounded-full bg-accent/25 motion-reduce:animate-none"
+          />
+        )}
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-accent text-background sm:h-10 sm:w-10">
           {playing ? (
             <Pause className="h-4 w-4" fill="currentColor" />
           ) : (
             <Play className="h-4 w-4 translate-x-[1px]" fill="currentColor" />
           )}
         </span>
-        <span className="text-xs font-medium tracking-wide text-text-secondary">
-          {playing ? "Sedang diputar — ketuk untuk jeda" : "Putar musik undangan"}
-        </span>
       </button>
     </div>
   );
 }
 
-export function CountdownTimer({ eventDate }: { eventDate?: string | null }) {
+export function CountdownTimer({
+  eventDate,
+  eventTime,
+}: {
+  eventDate?: string | null;
+  eventTime?: string | null;
+}) {
+  const target = eventTargetTime(eventDate, eventTime);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  // Acara sudah lewat: jangan menampilkan "00 Hari 00 Detik" selamanya.
+  const [passed, setPassed] = useState(
+    () => target !== null && Date.now() >= target,
+  );
 
   useEffect(() => {
-    if (!eventDate) return;
-    const target = new Date(eventDate).getTime();
+    if (target === null) return;
     const tick = () => {
       const now = Date.now();
       const diff = Math.max(0, target - now);
+      setPassed(target - now <= 0);
       setTimeLeft({
         days: Math.floor(diff / 86400000),
         hours: Math.floor((diff % 86400000) / 3600000),
@@ -257,9 +331,22 @@ export function CountdownTimer({ eventDate }: { eventDate?: string | null }) {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [eventDate]);
+  }, [target]);
 
-  if (!eventDate) return null;
+  if (target === null) return null;
+
+  if (passed) {
+    return (
+      <div className="grid place-items-center rounded-2xl border border-accent/30 bg-background/70 px-6 py-10 backdrop-blur-sm">
+        <p className="font-heading text-2xl leading-tight text-text-primary sm:text-3xl">
+          Hari Bahagia Telah Tiba
+        </p>
+        <p className="mt-2 text-sm text-text-secondary">
+          Terima kasih atas doa dan restunya.
+        </p>
+      </div>
+    );
+  }
 
   const units = [
     { label: "Hari", value: timeLeft.days },
@@ -308,6 +395,10 @@ export function VideoPlayer({
   if (!url) return null;
 
   const embed = videoEmbedUrl(url);
+  // Hanya URL file video yang boleh masuk ke <video> — URL halaman web biasa
+  // (tautan Google Drive, youtube.com/live, playlist) tidak akan pernah bisa
+  // diputar dan menghasilkan player hitam.
+  const directMedia = /\.(mp4|webm|ogg|ogv|m4v|mov|m3u8)([?#].*)?$/i.test(url);
 
   return (
     <div className={cn("overflow-hidden rounded-lg border border-border bg-black", className)}>
@@ -320,7 +411,7 @@ export function VideoPlayer({
           allowFullScreen
           className="aspect-video w-full border-0"
         />
-      ) : (
+      ) : directMedia ? (
         <video
           controls
           preload="none"
@@ -328,6 +419,22 @@ export function VideoPlayer({
           src={url}
           className="aspect-video w-full object-cover"
         />
+      ) : (
+        <div className="grid aspect-video w-full place-items-center bg-surface p-6 text-center">
+          <div>
+            <p className="text-sm text-text-secondary">
+              Video tidak bisa diputar langsung di sini.
+            </p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-background/70 px-5 text-sm font-medium text-text-primary transition hover:border-accent/50 hover:text-accent"
+            >
+              Buka video di tab baru
+            </a>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -335,22 +442,66 @@ export function VideoPlayer({
 
 export function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
+  useEffect(
+    () => () => {
       if (timeout.current) clearTimeout(timeout.current);
-      timeout.current = setTimeout(() => setCopied(false), 2000);
-    });
-  }, [text]);
+    },
+    [],
+  );
+
+  const showResult = useCallback((ok: boolean) => {
+    setCopied(ok);
+    setFailed(!ok);
+    if (timeout.current) clearTimeout(timeout.current);
+    timeout.current = setTimeout(() => {
+      setCopied(false);
+      setFailed(false);
+    }, 2000);
+  }, []);
+
+  const handleCopy = useCallback(() => {
+    // Fallback untuk origin non-HTTPS / browser lama / iframe (iOS sering
+    // menolak clipboard-write) — tanpa ini tombol diam-diam tidak berfungsi.
+    const legacyCopy = () => {
+      try {
+        const el = document.createElement("textarea");
+        el.value = text;
+        el.setAttribute("readonly", "");
+        el.style.position = "fixed";
+        el.style.top = "0";
+        el.style.opacity = "0";
+        document.body.appendChild(el);
+        el.select();
+        el.setSelectionRange(0, el.value.length);
+        const ok = document.execCommand("copy");
+        document.body.removeChild(el);
+        showResult(ok);
+      } catch {
+        showResult(false);
+      }
+    };
+
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => showResult(true),
+        legacyCopy,
+      );
+    } else {
+      legacyCopy();
+    }
+  }, [text, showResult]);
 
   return (
     <button
       type="button"
       onClick={handleCopy}
+      aria-live="polite"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent/40 hover:text-accent",
+        failed && "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700",
         className,
       )}
     >
@@ -360,6 +511,13 @@ export function CopyButton({ text, className }: { text: string; className?: stri
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
           </svg>
           Tersalin
+        </>
+      ) : failed ? (
+        <>
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Gagal — salin manual
         </>
       ) : (
         <>

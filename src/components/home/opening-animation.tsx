@@ -49,22 +49,35 @@ export function OpeningAnimation() {
     unmountTimer.current = window.setTimeout(() => setPhase("done"), SKIP_UNMOUNT_MS);
   }, []);
 
+  // Timer intro — arming di mount saja.
   useEffect(() => {
     if (reducedMotion) return;
-
-    const { body } = document;
-    const previousOverflow = body.style.overflow;
-    body.style.overflow = "hidden";
 
     exitTimer.current = window.setTimeout(() => setPhase("exit"), EXIT_AT_MS);
     unmountTimer.current = window.setTimeout(() => setPhase("done"), UNMOUNT_AT_MS);
 
     return () => {
-      body.style.overflow = previousOverflow;
       if (exitTimer.current) window.clearTimeout(exitTimer.current);
       if (unmountTimer.current) window.clearTimeout(unmountTimer.current);
     };
   }, [reducedMotion]);
+
+  /**
+   * Scroll lock hanya selama overlay intro benar-benar terlihat.
+   * Dulu efek ini tidak punya dependensi `phase` — komponen tidak pernah
+   * unmount, jadi `overflow: hidden` tertinggal di `<body>` selamanya dan
+   * landing page tidak bisa di-scroll sama sekali.
+   */
+  useEffect(() => {
+    if (reducedMotion || phase === "done") return;
+
+    const { body } = document;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = previousOverflow;
+    };
+  }, [reducedMotion, phase]);
 
   if (reducedMotion || phase === "done") return null;
 
@@ -73,12 +86,13 @@ export function OpeningAnimation() {
       className="opening"
       data-exiting={phase === "exit"}
       onClick={handleSkip}
-      aria-hidden="true"
     >
       <span className="opening-panel opening-panel-top" />
       <span className="opening-panel opening-panel-bottom" />
 
-      <div className="opening-content">
+      {/* aria-hidden dipindah ke konten dekoratif: tombol "Lewati" tidak boleh
+          berada di dalam subtree aria-hidden (focusable dalam aria-hidden). */}
+      <div className="opening-content" aria-hidden="true">
         <p className="opening-kicker opening-fade" style={{ animationDelay: "150ms" }}>
           Undangan Digital Premium
         </p>

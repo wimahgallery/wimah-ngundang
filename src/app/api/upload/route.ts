@@ -2,27 +2,31 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { uploadFile } from "@/lib/imagekit";
 import { allowedUploadFolders, defaultUploadFolder } from "@/lib/upload-folders";
+import { validateMediaFile } from "@/lib/upload-validation";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { v4 as uuid } from "uuid";
 
-const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const AUDIO_TYPES = new Set(["audio/mpeg", "audio/mp3", "audio/wav", "audio/mp4", "audio/aac", "audio/ogg"]);
-
-const ALLOWED_EXTENSIONS: Record<string, string[]> = {
-  image: ["jpg", "jpeg", "png", "webp", "gif"],
-  audio: ["mp3", "wav", "aac", "ogg", "m4a"],
-};
-
-function validateFileType(file: File): "image" | "audio" | null {
-  if (IMAGE_TYPES.has(file.type)) return "image";
-
-  if (AUDIO_TYPES.has(file.type)) return "audio";
-
-  return null;
-}
+/** Batas body sebelum diparse — di atas limit file terbesar (audio 15 MiB). */
+const MAX_BODY_BYTES = 18 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
+
+  // Rate limit SEBELUM body dibaca.
+  if (!rateLimit(`upload:${clientIp(request)}`, 60, 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak upload. Coba lagi sebentar lagi." },
+      { status: 429 },
+    );
+  }
+
+  // Cek Content-Length lebih dulu — `request.formData()` men-buffer seluruh
+  // body ke memori, jadi request raksasa harus ditolak sebelum sampai ke sana.
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "File terlalu besar" }, { status: 413 });
+  }
 
   const formData = await request.formData();
   const file = formData.get("file");
@@ -37,25 +41,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
   }
 
-  const fileType = validateFileType(file);
-  if (!fileType) {
-    return NextResponse.json({ error: "Tipe file tidak didukung" }, { status: 400 });
+  const validated = validateMediaFile(file);
+  if ("error" in validated) {
+    return NextResponse.json({ error: validated.error }, { status: 400 });
   }
-
-  const maxSize = fileType === "audio" ? 15 * 1024 * 1024 : 8 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return NextResponse.json({ error: "File terlalu besar" }, { status: 400 });
-  }
-
-  const ext = file.name.split(".").pop()?.toLowerCase() || "";
-  if (ext && !ALLOWED_EXTENSIONS[fileType].includes(ext)) {
-    return NextResponse.json({ error: "Ekstensi file tidak didukung" }, { status: 400 });
-  }
+  const { kind: fileType, extension } = validated;
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  const finalExt = ext || (fileType === "audio" ? "mp3" : "jpg");
-  const fileName = `${fileType}-${uuid()}.${finalExt}`;
+  const fileName = `${fileType}-${uuid()}.${extension}`;
 
   try {
     const uploaded = await uploadFile(buffer, fileName, file.type || "application/octet-stream", folder);

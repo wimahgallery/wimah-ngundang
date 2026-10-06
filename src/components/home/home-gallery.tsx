@@ -1,6 +1,7 @@
 "use client";
 
 import { Reveal } from "@/components/motion/reveal";
+import Image from "next/image";
 import { SectionIntro } from "./section-intro";
 
 const ROW_1 = [
@@ -42,11 +43,12 @@ function CarouselRow({
           key={`${img.src}-${i}`}
           className="group relative h-48 w-64 shrink-0 overflow-hidden rounded-xl sm:h-56 sm:w-72 md:h-64 md:w-80"
         >
-          <img
+          <Image
             src={img.src}
             alt={img.alt}
-            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 16rem, (max-width: 768px) 18rem, 20rem"
+            className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>

@@ -21,7 +21,12 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              // Lihat catatan di src/lib/supabase/server.ts — sesi tidak dibaca
+              // dari JS, jadi token bisa dilindungi dari akses script.
+              httpOnly: true,
+            }),
           );
         },
       },
@@ -46,7 +51,9 @@ export async function proxy(request: NextRequest) {
   const isGuestWishes = /^\/api\/invitations\/[^/]+\/wishes$/.test(pathname);
 
   const isProtectedApi =
-    (pathname.startsWith("/api/invitations") && !isGuestWishes) || pathname.startsWith("/api/upload");
+    (pathname.startsWith("/api/invitations") && !isGuestWishes) ||
+    pathname.startsWith("/api/upload") ||
+    pathname.startsWith("/api/music");
 
   if (isProtectedApi && MUTATING_METHODS.includes(method) && !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -66,6 +73,7 @@ export const config = {
     "/preview/:path*",
     "/api/invitations/:path*",
     "/api/upload/:path*",
+    "/api/music/:path*",
     "/api/auth/me",
   ],
 };

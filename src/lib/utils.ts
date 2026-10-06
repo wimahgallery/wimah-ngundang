@@ -1,9 +1,26 @@
 export { cn } from "cn"
 
+/**
+ * Parse tanggal tanpa jebakan timezone.
+ *
+ * `new Date("2026-10-09")` (date-only, tanpa jam) di-parse sebagai **tengah
+ * malam UTC**, bukan tanggal lokal — di zona negatif hasilnya maju/mundur satu
+ * hari, dan antara server (UTC) dengan klien (WISA/WITA) bisa tidak sama.
+ */
+function parseDateInput(value: string): Date | null {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
+  const d = parseDateInput(dateStr);
+  if (!d) return dateStr;
   return d.toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",

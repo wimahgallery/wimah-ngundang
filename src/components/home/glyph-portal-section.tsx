@@ -1,6 +1,7 @@
 "use client";
 
 import GlyphPortal from "@/components/ui/glyph-portal";
+import Image from "next/image";
 
 const GLYPH_FIELD_STYLE = {
   position: "absolute" as const,
@@ -45,7 +46,7 @@ const FRONT_OVERLAY = (
           pointerEvents: "none",
         }}
       >
-        <img
+        <Image
           src={p.src}
           alt=""
           width={p.size}

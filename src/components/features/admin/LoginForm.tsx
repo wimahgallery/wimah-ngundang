@@ -42,7 +42,7 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <main id="main" className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="font-heading text-2xl text-foreground">Wimah Ngundang</h1>
@@ -91,6 +91,6 @@ export default function LoginForm() {
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }

@@ -15,7 +15,10 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              // `@supabase/ssr` default `httpOnly: false`. Tidak ada client-side
+              // Supabase di app ini (semua auth lewat Server Components / route
+              // handler) — jadi token sesi bisa dan seharusnya tidak dibaca JS.
+              cookieStore.set(name, value, { ...options, httpOnly: true }),
             );
           } catch {
             // Ignore — Server Component, can't set cookies

@@ -332,6 +332,21 @@
   }
 }
 
+/* ── Dock musik + padding bawah hanya untuk halaman yang benar-benar
+      menggulir. Saat stage desktop aktif (≥1200px, isi undangan ada di
+      iframe) dock ini menutupi dot galeri, menumpuk dengan dock di dalam
+      iframe, dan padding 5.5rem membuat halaman yang seharusnya pas
+      100svh bisa digulir 88px. Di luar @layer + !important supaya
+      mengalahkan inline style. ── */
+@media (min-width: 1200px) {
+  .invitation-shell:has(.lume-stage) {
+    padding-bottom: 0 !important;
+  }
+  .invitation-shell:has(.lume-stage) .music-dock {
+    display: none !important;
+  }
+}
+
 /* ── Cover stage mobile: tampil <1200px, digantikan galeri+frame HP ≥1200px.
       Di luar @layer supaya mengalahkan utility Tailwind (display:flex). ── */
 .lume-stage__cover {

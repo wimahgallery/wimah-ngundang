@@ -123,6 +123,7 @@ export default function GalleryField({
   const [cropRotate, setCropRotate] = useState(0);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
   function handleDragEnd(event: DragEndEvent) {
@@ -134,21 +135,29 @@ export default function GalleryField({
   }
 
   async function handleFiles(files: FileList | null) {
-    if (!files?.length) return;
+    if (!files?.length || uploading) return;
+    setUploading(true);
+    setError("");
     const uploaded: GalleryImage[] = [];
-    for (const file of Array.from(files)) {
-      const url = await uploadFile(file, folder);
-      uploaded.push({
-        id: uuid(),
-        url,
-        alt: "",
-        positionX: 50,
-        positionY: 50,
-        zoom: 100,
-        rotate: 0,
-      });
+    try {
+      for (const file of Array.from(files)) {
+        const url = await uploadFile(file, folder);
+        uploaded.push({
+          id: uuid(),
+          url,
+          alt: "",
+          positionX: 50,
+          positionY: 50,
+          zoom: 100,
+          rotate: 0,
+        });
+      }
+      if (uploaded.length) onChange([...images, ...uploaded]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload gagal. Coba lagi.");
+    } finally {
+      setUploading(false);
     }
-    onChange([...images, ...uploaded]);
   }
 
   function openCrop(image: GalleryImage) {
@@ -186,12 +195,30 @@ export default function GalleryField({
         }}
         className="rounded-2xl border border-dashed border-border bg-white p-6 text-center text-sm text-muted-foreground"
       >
-        Rasio 1:1 sesuai template — drag foto ke sini atau{" "}
-        <label className="cursor-pointer font-medium text-primary">
-          pilih file
-          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => void handleFiles(e.target.files)} />
-        </label>
+        {uploading ? (
+          <p className="text-primary">Mengunggah foto…</p>
+        ) : (
+          <>
+            Rasio 1:1 sesuai template — drag foto ke sini atau{" "}
+            <label className="cursor-pointer font-medium text-primary">
+              pilih file
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  void handleFiles(files);
+                  // Reset supaya file yang sama bisa dipilih lagi setelah gagal.
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </>
+        )}
       </div>
+      {error && !cropImage && <p className="text-xs text-red-600">{error}</p>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={rectSortingStrategy}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

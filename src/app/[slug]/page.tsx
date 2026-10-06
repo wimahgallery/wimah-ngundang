@@ -47,11 +47,24 @@ export default async function PublicInvitationPage({ params, searchParams }: Pro
   const sp = await searchParams;
   const invitation = await getInvitationBySlug(slug, { publishedOnly: true });
   if (!invitation) notFound();
+
+  // Teruskan query asli (mis. ?to=Nama+Tamu) ke dalam frame HP supaya nama tamu
+  // ikut tampil di desktop — `useGuestName` membaca `location.search` di iframe.
+  const frameParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (key === "embed" || value === undefined) continue;
+    if (Array.isArray(value)) value.forEach((entry) => frameParams.append(key, entry));
+    else frameParams.append(key, value);
+  }
+  const frameQuery = frameParams.toString();
+
   return (
-    <InvitationView
-      invitation={invitation}
-      embed={sp.embed === "1"}
-      frameSrc={`/${slug}?embed=1`}
-    />
+    <main id="main">
+      <InvitationView
+        invitation={invitation}
+        embed={sp.embed === "1"}
+        frameSrc={`/${slug}?embed=1${frameQuery ? `&${frameQuery}` : ""}`}
+      />
+    </main>
   );
 }

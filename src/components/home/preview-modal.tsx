@@ -46,17 +46,16 @@ function PreviewModalShell({
   const [viewport, setViewport] = useState<Viewport>("phone");
   const [dragging, setDragging] = useState(false);
   const dragStartY = useRef(0);
+  /** Jarak drag terakhir dalam px — dipakai untuk ambang tutup. */
+  const dragDelta = useRef(0);
+  /** Listener window saat drag mouse; dibersihkan juga kalau dialog unmount. */
+  const mouseCleanupRef = useRef<(() => void) | null>(null);
 
   const [sheetSpring, sheetApi] = useSpring(() => ({
     y: 100,
     opacity: 0,
     config: springSheet,
     immediate: reducedMotion,
-  }));
-
-  const [dragSpring, dragApi] = useSpring(() => ({
-    y: 0,
-    config: { tension: 350, friction: 35, precision: 0.5 },
   }));
 
   const [backdropSpring, backdropApi] = useSpring(() => ({
@@ -131,59 +130,76 @@ function PreviewModalShell({
     }
   };
 
+  /**
+   * Drag harus MENULIS ke `sheetSpring.y` (yang dipakai `transform`), bukan ke
+   * spring terpisah — kalau tidak, sheet tidak ikut bergerak sama sekali dan
+   * pengguna hanya melihat "loncatan" saat dilepas.
+   * `sheetSpring.y` berbasis persen, jadi px dikonversi memakai tinggi sheet.
+   */
+  const applyDrag = useCallback(
+    (delta: number) => {
+      dragDelta.current = Math.max(0, delta);
+      if (dragDelta.current > 0) setDragging(true);
+      const height = dialogRef.current?.offsetHeight || window.innerHeight || 1;
+      sheetApi.set({ y: (dragDelta.current / height) * 100 });
+    },
+    [sheetApi],
+  );
+
+  const settleDrag = useCallback(() => {
+    if (dragDelta.current > DRAG_THRESHOLD) {
+      handleClose();
+    } else {
+      sheetApi.start({ y: 0 });
+    }
+    dragDelta.current = 0;
+    setDragging(false);
+  }, [sheetApi, handleClose]);
+
+  // Drag mouse memasang listener global — kalau dialog unmount di tengah drag
+  // (mis. Escape), listener itu harus ikut dilepas, bukan dibiarkan bocor.
+  useEffect(() => () => mouseCleanupRef.current?.(), []);
+
   const handleTouchStart = useCallback((e: TouchEvent) => {
     dragStartY.current = e.touches[0].clientY;
+    dragDelta.current = 0;
     setDragging(false);
   }, []);
 
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
-      const delta = e.touches[0].clientY - dragStartY.current;
-      if (delta > 0) {
-        setDragging(true);
-        dragApi.set({ y: delta });
-      }
+      applyDrag(e.touches[0].clientY - dragStartY.current);
     },
-    [dragApi],
+    [applyDrag],
   );
 
   const handleTouchEnd = useCallback(() => {
-    const currentY = dragSpring.y.get();
-    if (currentY > DRAG_THRESHOLD) {
-      handleClose();
-    } else {
-      dragApi.start({ y: 0 });
-    }
-    setDragging(false);
-  }, [dragSpring, dragApi, handleClose]);
+    settleDrag();
+  }, [settleDrag]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    dragStartY.current = e.clientY;
-    setDragging(false);
-
-    const onMouseMove = (ev: MouseEvent) => {
-      const delta = ev.clientY - dragStartY.current;
-      if (delta > 0) {
-        setDragging(true);
-        dragApi.set({ y: delta });
-      }
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      const currentY = dragSpring.y.get();
-      if (currentY > DRAG_THRESHOLD) {
-        handleClose();
-      } else {
-        dragApi.start({ y: 0 });
-      }
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      dragStartY.current = e.clientY;
+      dragDelta.current = 0;
       setDragging(false);
-    };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  }, [dragApi, dragSpring, handleClose]);
+      const onMouseMove = (ev: MouseEvent) => applyDrag(ev.clientY - dragStartY.current);
+      const cleanup = () => {
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+        mouseCleanupRef.current = null;
+      };
+      const onMouseUp = () => {
+        cleanup();
+        settleDrag();
+      };
+
+      mouseCleanupRef.current = cleanup;
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    },
+    [applyDrag, settleDrag],
+  );
 
   return (
     <div

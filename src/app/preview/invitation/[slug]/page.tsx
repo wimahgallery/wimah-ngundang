@@ -22,12 +22,22 @@ export default async function InvitationPreviewPage({
   if (!invitation) notFound();
 
   const gated = sp.gate !== "0";
+  const frameParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (key === "embed" || key === "gate" || value === undefined) continue;
+    if (Array.isArray(value)) value.forEach((entry) => frameParams.append(key, entry));
+    else frameParams.append(key, value);
+  }
+  const frameQuery = frameParams.toString();
+
   return (
-    <InvitationView
-      invitation={invitation}
-      embed={sp.embed === "1"}
-      frameSrc={`/preview/invitation/${slug}?embed=1${gated ? "" : "&gate=0"}`}
-      gated={gated}
-    />
+    <main id="main">
+      <InvitationView
+        invitation={invitation}
+        embed={sp.embed === "1"}
+        frameSrc={`/preview/invitation/${slug}?embed=1${gated ? "" : "&gate=0"}${frameQuery ? `&${frameQuery}` : ""}`}
+        gated={gated}
+      />
+    </main>
   );
 }

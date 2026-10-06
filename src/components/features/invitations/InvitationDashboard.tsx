@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Eye, LogOut, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, LogOut, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,7 +58,6 @@ function TemplateBadge({ id }: { id: string }) {
 
 export default function InvitationDashboard() {
   const router = useRouter();
-  const { data: invitations, isLoading, error } = useInvitations();
   const createMutation = useCreateInvitation();
   const deleteMutation = useDeleteInvitation();
 
@@ -84,16 +83,29 @@ export default function InvitationDashboard() {
   const templateId = watch("template_id");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const items: InvitationRow[] = invitations ?? [];
-  const filtered = items.filter(
-    (i: InvitationRow) =>
-      i.slug.toLowerCase().includes(search.toLowerCase()) ||
-      i.event_title.toLowerCase().includes(search.toLowerCase()) ||
-      `${i.bride_name} ${i.groom_name}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Pencarian & paginasi dilakukan di server (API mendukung `search` + `range`)
+  // supaya undangan ke-21 ke atas tetap terjangkau.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data, isLoading, error } = useInvitations({ page, search: debouncedSearch });
+  const items: InvitationRow[] = data?.items ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  // Hapus item terakhir di halaman terakhir → jangan sampai berhenti di halaman kosong.
+  useEffect(() => {
+    if (!isLoading && items.length === 0 && page > 1) setPage((p) => Math.max(1, p - 1));
+  }, [isLoading, items.length, page]);
 
   const onSubmit = async (values: InvitationCreateInput) => {
     try {
@@ -149,7 +161,7 @@ export default function InvitationDashboard() {
             <LogOut className="mr-1.5 h-4 w-4" /> Keluar
           </Button>
         <Dialog open={open} onOpenChange={setOpen}>
-            <Button size="sm" className="min-h-11 px-4" onClick={() => setOpen(true)}>
+            <Button size="sm" className="min-h-11 px-4" onClick={() => { createMutation.reset(); setOpen(true); }}>
               <Plus className="mr-1.5 h-4 w-4" /> Buat Baru
             </Button>
           <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -267,7 +279,7 @@ export default function InvitationDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((item: InvitationRow) => (
+            {items.map((item: InvitationRow) => (
               <TableRow key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40">
                 <TableCell>
                   <p className="font-medium text-foreground">{item.event_title || item.slug}</p>
@@ -326,7 +338,7 @@ export default function InvitationDashboard() {
           </TableBody>
         </Table>
 
-        {filtered.length === 0 && (
+        {items.length === 0 && (
           <div className="py-12 text-center">
             <p className="text-xs text-muted-foreground">
               {search ? "Tidak ditemukan." : "Belum ada undangan."}
@@ -338,7 +350,45 @@ export default function InvitationDashboard() {
             )}
           </div>
         )}
+
+        {totalPages > 1 && (
+          <nav
+            className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2.5"
+            aria-label="Navigasi halaman undangan"
+          >
+            <p className="text-xs text-muted-foreground">
+              Halaman {page} dari {totalPages}
+            </p>
+            <div className="flex gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-9 px-3"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" /> Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-9 px-3"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Berikutnya <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </nav>
+        )}
       </div>
+
+      {deleteMutation.isError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-medium">Gagal menghapus undangan.</p>
+          <p className="mt-1 break-words">{(deleteMutation.error as Error).message}</p>
+        </div>
+      )}
 
       <Dialog open={confirmDelete !== null} onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}>
         <DialogContent className="max-w-sm">

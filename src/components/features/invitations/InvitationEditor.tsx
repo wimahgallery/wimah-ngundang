@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { v4 as uuid } from "uuid";
 import { Plus, ArrowLeft, ArrowRight, Rocket, Save, Trash2, Eye, FileText, Image, Video, Music, MapPin, Calendar, Users, Gift, ChevronDown, Type } from "lucide-react";
@@ -20,13 +21,14 @@ import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, type Invitation, type
 import { TypographyStep } from "./TypographyStep";
 import { defaultPreset } from "@/lib/font-library";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
-import { fetchWishes } from "@/features/invitations/services/invitationApi";
+import { fetchWishes, flushInvitation } from "@/features/invitations/services/invitationApi";
 import { LazyFrame } from "@/components/lazy";
 import { GuestWishesList } from "@/components/invitation/shared";
 import { isTemplateId, templateMetaById, type TemplateId } from "@/components/invitation/template-registry";
 import { uploadFolders } from "@/lib/upload-folders";
+import { useMusicTracks } from "@/features/music/hooks";
+import { formatDuration } from "@/features/music/services/musicApi";
 import { TemplatePicker } from "./TemplatePicker";
-import { uploadFile } from "@/lib/crop-image";
 import { cn } from "@/lib/utils";
 import ImageField from "./ImageField";
 import GalleryField from "./GalleryField";
@@ -85,89 +87,207 @@ const [activeStep, setActiveStep] = useState(0);
   const resolvedTemplateId = currentTemplate.id;
 
   const [dirty, setDirty] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [previewNonce, setPreviewNonce] = useState(0);
   const revRef = useRef(0);
+  /** Slug terakhir yang benar-benar tersimpan — dipakai saat slug di UI sedang
+   *  tidak valid (masih diketik) supaya perubahan lain tetap bisa disimpan. */
+  const lastSavedSlugRef = useRef(slug);
+  const dirtyRef = useRef(false);
+  /** Fungsi flush terbaru; dipanggil saat komponen unmount (navigasi client-side
+   *  tidak memicu `beforeunload`/`pagehide`, jadi debounce 1,5 detik bisa hilang). */
+  const flushRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
   const saveAsyncRef = useRef(saveMutation.mutateAsync);
   useEffect(() => {
     saveAsyncRef.current = saveMutation.mutateAsync;
   }, [saveMutation.mutateAsync]);
 
-  const patch = useCallback((partial: Partial<Invitation>) => {
-    if (!invitation) return;
-    revRef.current += 1;
-    setDirty(true);
-    setSaveStatus("idle");
-    queryClient.setQueryData(["invitation", slug], { ...invitation, ...partial });
-  }, [invitation, slug, queryClient]);
+  /**
+   * `patch` memakai functional update — panggilan berurutan dalam satu handler
+   * (mis. mengatur posisi foto X lalu Y) saling melengkapi, bukan menimpa.
+   */
+  const patch = useCallback(
+    (partial: Partial<Invitation> | ((prev: Invitation) => Partial<Invitation>)) => {
+      if (!invitation) return;
+      revRef.current += 1;
+      setDirty(true);
+      setSaveStatus("idle");
+      queryClient.setQueryData<Invitation>(["invitation", slug], (prev) => {
+        const base = prev ?? invitation;
+        return { ...base, ...(typeof partial === "function" ? partial(base) : partial) };
+      });
+    },
+    [invitation, slug, queryClient],
+  );
 
-  const patchSettings = useCallback((key: SectionKey, next: CustomSettings[SectionKey]) => {
-    if (!invitation) return;
-    patch({ custom_settings: { ...invitation.custom_settings, [key]: next } });
-  }, [invitation, patch]);
+  const patchSettings = useCallback(
+    (key: SectionKey, next: CustomSettings[SectionKey] | ((prev: CustomSettings[SectionKey]) => CustomSettings[SectionKey])) => {
+      // Functional update: handler yang dipanggil berurutan dalam satu tick
+      // (mis. onZoomChange lalu onRotateChange saat applyCrop) tetap menumpuk,
+      // bukan membangun dari snapshot props yang sama.
+      patch((prev) => ({
+        custom_settings: {
+          ...prev.custom_settings,
+          [key]: typeof next === "function" ? next(prev.custom_settings[key]) : next,
+        },
+      }));
+    },
+    [patch],
+  );
 
-  const doSave = useCallback(async (extra: Partial<Invitation> = {}) => {
-    if (!invitation) return;
-    const rev = revRef.current;
-    setSaveStatus("saving");
-    try {
-      const result = await saveMutation.mutateAsync({ ...invitation, ...extra });
-      const next = normalizeInvitation(result);
-      if (revRef.current === rev) {
-        queryClient.setQueryData(["invitation", slug], next);
-        setDirty(false);
-        setSaveStatus("saved");
-        if (next.slug && next.slug !== slug) {
-          queryClient.setQueryData(["invitation", next.slug], next);
-          router.replace(`/dashboard/invitations/${next.slug}`);
+  /** Snapshot terkini dari cache — bukan closure basi saat callback dieksekusi. */
+  const currentInvitation = useCallback(
+    () => queryClient.getQueryData<Invitation>(["invitation", slug]) ?? invitation ?? null,
+    [queryClient, slug, invitation],
+  );
+
+  /**
+   * Semua simpanan dirantai (chained) supaya autosave tidak pernah menimpa
+   * publish — atau sebaliknya — di server.
+   */
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  const doSave = useCallback(
+    (extra: Partial<Invitation> = {}): Promise<void> => {
+      const task = async () => {
+        const current = currentInvitation();
+        if (!current) return;
+        // Slug sedang tidak valid (masih diketik) → tahan pakai slug terakhir
+        // yang sah supaya publish/draft/autosave tidak pernah menulis slug sampah,
+        // dan perubahan field lain tetap tersimpan.
+        const typedSlug = (current.slug ?? "").trim();
+        const safeSlug = slugError(typedSlug) ? lastSavedSlugRef.current : typedSlug;
+        const sent = { ...current, ...extra, slug: safeSlug };
+
+        // `extra` (publish/draft) harus ikut masuk ke cache. Kalau tidak, edit
+        // yang masuk selama request berjalan membuat autosave berikutnya mengirim
+        // `is_published` lama dan membatalkan publish diam-diam.
+        if (Object.keys(extra).length > 0) {
+          queryClient.setQueryData<Invitation>(["invitation", slug], (prev) => ({
+            ...(prev ?? current),
+            ...extra,
+          }));
         }
-      }
-    } catch (e) {
-      if (revRef.current === rev) setSaveStatus("idle");
-      throw e;
-    }
-  }, [invitation, slug, saveMutation, queryClient, router]);
+
+        const rev = revRef.current;
+        setSaveStatus("saving");
+        try {
+          const result = await saveAsyncRef.current(sent);
+          const next = normalizeInvitation(result);
+          const changedWhileSaving = revRef.current !== rev;
+
+          // Jawapan server adalah kebenaran, KECUALI field yang memang berubah
+          // di client selama request berlangsung — kalau dibuang, publish/renami
+          // bisa tertimpa oleh autosave yang mengirim snapshot basi.
+          const local = queryClient.getQueryData<Invitation>(["invitation", slug]) ?? next;
+          const merged = { ...next } as Invitation;
+          for (const key of Object.keys(sent) as (keyof Invitation)[]) {
+            try {
+              if (JSON.stringify(local[key]) !== JSON.stringify(sent[key])) {
+                (merged as unknown as Record<string, unknown>)[key] = local[key];
+              }
+            } catch {
+              /* nilai tak ter-serialisasi — pakai versi server */
+            }
+          }
+
+          queryClient.setQueryData<Invitation>(["invitation", slug], merged);
+          lastSavedSlugRef.current = (next.slug || current.slug || slug).trim();
+          setDirty(changedWhileSaving);
+          setSaveStatus(changedWhileSaving ? "idle" : "saved");
+
+          if (next.slug && next.slug !== slug) {
+            // Pindahkan cache ke key baru memakai `merged`, bukan `next`, supaya
+            // edit yang masuk saat rename tidak hilang setelah redirect.
+            queryClient.setQueryData<Invitation>(["invitation", next.slug], merged);
+            router.replace(`/dashboard/invitations/${next.slug}`);
+          }
+        } catch (e) {
+          // Varian "error" supaya indikator header tidak terjebak di
+          // "Belum tersimpan" (amber) saat simpanan memang gagal.
+          if (revRef.current === rev) setSaveStatus("error");
+          throw e;
+        }
+      };
+      const run = saveChainRef.current.then(task, task);
+      saveChainRef.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
+    },
+    [currentInvitation, slug, queryClient, router],
+  );
 
   /**
    * Auto-save. Slug IKUT tersimpan (tidak lagi dipaksa balik ke slug lama) supaya
-   * perubahan slug benar-benar masuk ke database. Kalau slug belum valid
-   * (mis. masih diketik), simpan ditunda agar tidak menulis slug sampah.
+   * perubahan slug benar-benar masuk ke database. Kalau slug sedang tidak valid,
+   * `doSave` otomatis menahannya dengan slug terakhir yang sah — simpanan untuk
+   * field lain tetap jalan.
    */
   useEffect(() => {
     if (!invitation || !dirty) return;
-    const nextSlug = (invitation.slug ?? "").trim();
-    const timer = setTimeout(async () => {
-      if (slugError(nextSlug)) {
-        setSaveStatus("idle");
-        return;
-      }
-      const rev = revRef.current;
-      setSaveStatus("saving");
-      try {
-        const result = await saveAsyncRef.current({ ...invitation, slug: nextSlug });
-        if (revRef.current !== rev) return;
-        const next = normalizeInvitation(result);
-        setDirty(false);
-        setSaveStatus("saved");
-        if (next.slug && next.slug !== slug) {
-          // Slug berubah — pindahkan cache & URL dashboard ke slug baru.
-          queryClient.setQueryData(["invitation", next.slug], next);
-          router.replace(`/dashboard/invitations/${next.slug}`);
-        } else {
-          queryClient.setQueryData(["invitation", slug], next);
-        }
-      } catch {
-        if (revRef.current === rev) setSaveStatus("idle");
-      }
+    const timer = setTimeout(() => {
+      // Snapshot dibaca di dalam task (bukan dari closure) sehingga selalu
+      // versi cache terbaru; doSave menunggu antrian simpanan sebelumnya.
+      void doSave().catch(() => {
+        /* error ditampilkan lewat saveMutation.error */
+      });
     }, 1500);
     return () => clearTimeout(timer);
-  }, [invitation, dirty, slug, queryClient, router]);
+  }, [invitation, dirty, doSave]);
 
   useEffect(() => {
     if (saveStatus !== "saved") return;
     const timer = setTimeout(() => setPreviewNonce((n) => n + 1), 2000);
     return () => clearTimeout(timer);
   }, [saveStatus]);
+
+  /**
+   * Auto-save berdebounce 1,5 detik — kalau tab ditutup sebelum itu, perubahan
+   * hilang diam-diam. `flushInvitation` memakai `fetch keepalive` supaya tetap
+   * terkirim walau halaman sudah pergi, dan dialog native dipakai sebagai
+   * jaring pengaman kalau request itu ternyata tidak jalan.
+   */
+  useEffect(() => {
+    if (!dirty || !invitation) return;
+
+    const flush = () => {
+      if (!dirtyRef.current) return;
+      const current =
+        queryClient.getQueryData<Invitation>(["invitation", slug]) ?? invitation;
+      const payload = slugError((current.slug ?? "").trim())
+        ? { ...current, slug: lastSavedSlugRef.current }
+        : current;
+      flushInvitation(slug, payload as unknown as Record<string, unknown>);
+    };
+    flushRef.current = flush;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      flush();
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [dirty, invitation, slug, queryClient]);
+
+  /**
+   * Navigasi client-side (tombol Kembali / Preview) tidak memicu `beforeunload`
+   * maupun `pagehide` — tanpa flush ini, edit yang masih dalam jendela debounce
+   * 1,5 detik hilang begitu saja saat komponen dilepas.
+   */
+  useEffect(() => () => {
+    flushRef.current?.();
+  }, []);
 
   const handlePublish = async () => {
     try {
@@ -186,10 +306,36 @@ const [activeStep, setActiveStep] = useState(0);
     }
   };
 
+  /**
+   * Preview dulu menyimpan perubahan yang masih pending — kalau slug belum pernah
+   * tersimpan (atau tidak valid), navigasi membuka 404 karena server `notFound()`.
+   */
+  const handlePreview = async () => {
+    const typedSlug = (invitation?.slug ?? "").trim();
+    const valid = !slugError(typedSlug);
+    if (dirtyRef.current && valid) {
+      try {
+        await doSave();
+      } catch {
+        /* gagal simpan — jangan buka preview yang kemungkinan 404 */
+        return;
+      }
+      router.push(`/preview/invitation/${lastSavedSlugRef.current}`);
+      return;
+    }
+    router.push(
+      `/preview/invitation/${valid ? typedSlug : lastSavedSlugRef.current}`,
+    );
+  };
+
   const handleDelete = async () => {
     if (!confirm(`Hapus undangan /${slug}?`)) return;
-    await deleteMutation.mutateAsync(slug);
-    router.push("/dashboard/invitations");
+    try {
+      await deleteMutation.mutateAsync(slug);
+      router.push("/dashboard/invitations");
+    } catch {
+      /* error ditampilkan lewat deleteMutation.error */
+    }
   };
 
   const onChangeField = useCallback((field: string, value: string | number | boolean) => {
@@ -264,7 +410,7 @@ const [activeStep, setActiveStep] = useState(0);
       case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} />;
       default: return null;
     }
-  }, [activeStep, invitation, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
+  }, [activeStep, invitation, resolvedTemplateId, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
 
   const selectStep = useCallback((i: number) => {
     setActiveStep(i);
@@ -305,7 +451,7 @@ const [activeStep, setActiveStep] = useState(0);
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Button variant="outline" size="sm" className="min-h-11 px-3" onClick={() => router.push(`/preview/invitation/${invitation.slug}`)}>
+          <Button variant="outline" size="sm" className="min-h-11 px-3" onClick={() => void handlePreview()}>
             <Eye className="mr-1.5 h-4 w-4" /> Preview
           </Button>
           <Button variant={invitation.is_published ? "secondary" : "default"} size="sm" className="min-h-11 px-4" onClick={() => setPublishDialogOpen(true)} disabled={saveMutation.isPending}>
@@ -323,6 +469,8 @@ const [activeStep, setActiveStep] = useState(0);
                 <span aria-hidden className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 Menyimpan…
               </span>
+            ) : saveStatus === "error" ? (
+              <span className="text-red-600">Gagal menyimpan</span>
             ) : dirty ? (
               <span className="text-amber-600">Belum tersimpan</span>
             ) : saveStatus === "saved" ? (
@@ -363,6 +511,13 @@ const [activeStep, setActiveStep] = useState(0);
               Supabase SQL Editor, lalu simpan lagi.
             </p>
           )}
+        </div>
+      )}
+
+      {deleteMutation.isError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="font-medium">Gagal menghapus undangan.</p>
+          <p className="mt-1 break-words">{(deleteMutation.error as Error).message}</p>
         </div>
       )}
 
@@ -493,13 +648,13 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
 
 
 
-function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"]) => void; onChange: FieldChange }) {
+function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["couple"]; onChangeSettings: (key: SectionKey, next: CustomSettings["couple"] | ((prev: CustomSettings["couple"]) => CustomSettings["couple"])) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("couple", next)} />
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <Field label="Foto mempelai wanita">
-          <ImageField label="Foto mempelai wanita" folder={uploadFolders.couple} value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("couple", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("couple", { ...settings, rotate: r })} />
+          <ImageField label="Foto mempelai wanita" folder={uploadFolders.couple} value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", (prev) => ({ ...prev, imagePositionX: x, imagePositionY: y }))} onZoomChange={(z) => onChangeSettings("couple", (prev) => ({ ...prev, zoom: z }))} onRotateChange={(r) => onChangeSettings("couple", (prev) => ({ ...prev, rotate: r }))} />
         </Field>
         <Field label="Foto mempelai pria">
           <ImageField label="Foto mempelai pria" folder={uploadFolders.couple} value={invitation.groom_photo} onChange={(url) => onChange("groom_photo", url ?? "")} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => { onChange("groom_image_position_x", x); onChange("groom_image_position_y", y); }} onZoomChange={(z) => onChange("groom_image_zoom", z)} onRotateChange={(r) => onChange("groom_image_rotate", r)} />
@@ -509,7 +664,7 @@ function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invi
   );
 }
 
-function StepHero({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"]) => void; onChange: FieldChange }) {
+function StepHero({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"] | ((prev: CustomSettings["hero"]) => CustomSettings["hero"])) => void; onChange: FieldChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("hero", next)} />
@@ -517,7 +672,7 @@ function StepHero({ invitation, settings, onChangeSettings, onChange }: { invita
         <Field label="Hero title"><input className={inputClass} value={invitation.hero_title || ""} onChange={(e) => onChange("hero_title", e.target.value)} /></Field>
         <Field label="Hero subtitle"><Textarea className={inputClass} rows={2} value={invitation.hero_subtitle || ""} onChange={(e) => onChange("hero_subtitle", e.target.value)} /></Field>
         <Field label="Cover image">
-          <ImageField label="Cover image" folder={uploadFolders.hero} value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", { ...settings, imagePositionX: x, imagePositionY: y })} onZoomChange={(z) => onChangeSettings("hero", { ...settings, zoom: z })} onRotateChange={(r) => onChangeSettings("hero", { ...settings, rotate: r })} />
+          <ImageField label="Cover image" folder={uploadFolders.hero} value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", (prev) => ({ ...prev, imagePositionX: x, imagePositionY: y }))} onZoomChange={(z) => onChangeSettings("hero", (prev) => ({ ...prev, zoom: z }))} onRotateChange={(r) => onChangeSettings("hero", (prev) => ({ ...prev, rotate: r }))} />
         </Field>
       </div>
     </>
@@ -567,7 +722,7 @@ function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeM
         </div>
 
         {milestones.map((item, index) => (
-          <div key={item.title || index} className="grid gap-2 rounded-lg border border-border p-3">
+          <div key={item.id || `milestone-${index}`} className="grid gap-2 rounded-lg border border-border p-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <input className={inputClass} placeholder="Judul babak (mis. Pertemuan yang Tak Terduga)" value={item.title} onChange={(e) => updateMilestone(index, { title: e.target.value })} />
               <input type="date" className={inputClass} value={item.date || ""} onChange={(e) => updateMilestone(index, { date: e.target.value })} />
@@ -686,12 +841,63 @@ function StepGift({ invitation, settings, onChangeSettings, onChangeGifts }: { i
 }
 
 function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["music"]; onChangeSettings: (key: SectionKey, next: CustomSettings["music"]) => void; onChange: FieldChange }) {
+  const { data: tracks, isLoading, error, refetch } = useMusicTracks();
+  const list = tracks ?? [];
+  const current = invitation.music_url || "";
+  const currentMissing = current !== "" && !list.some((track) => track.url === current);
+
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("music", next)} />
-      <div className="mt-3 space-y-2">
-        <input type="file" accept="audio/*" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const url = await uploadFile(file, uploadFolders.music); onChange("music_url", url); } catch { /* ignore */ } }} className="text-xs" />
-        {invitation.music_url && <audio controls src={invitation.music_url} className="w-full text-xs" aria-label="Musik undangan" />}
+      <div className="mt-3 space-y-3">
+        <Field label="Pilih musik">
+          <select
+            className={inputClass}
+            value={current}
+            disabled={isLoading}
+            onChange={(e) => onChange("music_url", e.target.value)}
+          >
+            <option value="">Tanpa musik</option>
+            {currentMissing && (
+              <option value={current}>Musik terpilih saat ini (belum ada di daftar)</option>
+            )}
+            {list.map((track) => (
+              <option key={track.id} value={track.url}>
+                {track.name}
+                {track.duration_seconds ? ` — ${formatDuration(track.duration_seconds)}` : ""}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {isLoading && <p className="text-xs text-muted-foreground">Memuat daftar musik…</p>}
+
+        {error && (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            <p>Gagal memuat daftar musik.</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-2 rounded-full border border-red-300 px-3 py-1 transition hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !error && list.length === 0 && (
+          <p className="rounded-lg border border-dashed border-border bg-background p-4 text-xs text-muted-foreground">
+            Belum ada musik di daftar. Unggah lagunya lewat{" "}
+            <Link href="/dashboard/music" className="text-foreground underline underline-offset-2">
+              menu Musik
+            </Link>
+            , lalu lagu itu akan muncul di pilihan ini.
+          </p>
+        )}
+
+        {current && (
+          <audio controls src={current} className="w-full text-xs" aria-label="Pratinjau musik terpilih" />
+        )}
       </div>
     </>
   );
@@ -744,7 +950,7 @@ function StepWishes({
   settings: CustomSettings["wishes"];
   onChangeSettings: (key: SectionKey, next: CustomSettings["wishes"]) => void;
 }) {
-  const { data: wishes, isLoading } = useQuery({
+  const { data: wishes, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["wishes", slug],
     queryFn: () => fetchWishes(slug),
   });
@@ -757,11 +963,22 @@ function StepWishes({
           Tamu mengirim doa &amp; ucapan lewat section “Doa &amp; Harapan” di undangan. Daftar di bawah adalah ucapan yang sudah masuk.
         </p>
         {isLoading ? (
-          <p className="text-xs text-muted-foreground">Memuat ucapan…</p>
+          <p className="text-xs text-text-secondary">Memuat ucapan…</p>
+        ) : isError ? (
+          <div role="alert" className="rounded-lg border border-dashed border-red-300 bg-red-50 p-4 text-xs text-red-700">
+            <p>{error instanceof Error ? error.message : "Gagal memuat ucapan."}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-2 rounded-full border border-red-300 px-3 py-1 text-red-700 transition hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
         ) : wishes && wishes.length > 0 ? (
           <GuestWishesList wishes={wishes.map((w) => ({ name: w.name, message: w.message || "", created_at: w.created_at }))} />
         ) : (
-          <p className="rounded-lg border border-dashed border-border bg-background p-4 text-xs text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-border bg-background p-4 text-xs text-text-secondary">
             Belum ada ucapan masuk.
           </p>
         )}

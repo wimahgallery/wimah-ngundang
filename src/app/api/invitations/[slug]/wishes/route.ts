@@ -85,6 +85,14 @@ function rpcError(error: { code?: string | null; message?: string } | null | und
 
 export async function GET(request: Request, context: RouteContext) {
   const { slug } = await context.params;
+  // Read-only tapi tetap dibatasi: endpoint ini memanggil RPC yang memicu query
+  // ke Postgres — tanpa batas, satu IP bisa membebani instance.
+  if (!rateLimit(`wish:get:${clientIp(request)}`, 120, 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan. Muat ulang halaman sebentar lagi." },
+      { status: 429 },
+    );
+  }
   const { supabase, published } = await getPublishedSlug(slug);
   if (!published) return NextResponse.json({ data: [] });
 
@@ -95,7 +103,9 @@ export async function GET(request: Request, context: RouteContext) {
   });
 
   if (error) {
-    if (isMissingFeature(error)) return NextResponse.json({ data: [] });
+    if (isMissingFeature(error)) {
+      return NextResponse.json({ error: MISSING_FEATURE_ERROR }, { status: 503 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

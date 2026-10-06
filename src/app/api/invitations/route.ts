@@ -5,8 +5,16 @@ import { invitationCreateSchema } from "@/lib/schemas";
 import { isTemplateId } from "@/components/invitation/template-registry";
 import { defaultPreset } from "@/lib/font-library";
 
+/**
+ * Escape nilai untuk filter `.or(...)` PostgREST.
+ *
+ * Selain `%`/`_` (wildcard `ilike`), karakter ter-reserved PostgREST —
+ * `(`, `)`, `,` pemisah filter, `:` pemisah `field.op.value`, plus
+ * `. @ ~ | * # \` — harus di-escape kalau ingin dicari harfiah. Tanpa ini,
+ * mencari "Rina (Pradipta)" membuat query `.or()` gagal dan membalas 500.
+ */
 function sanitizeSearch(input: string): string {
-  return input.replace(/[%_,]/g, (char) => `\\${char}`);
+  return input.replace(/[\\%_(),:.@~|*#]/g, (char) => `\\${char}`);
 }
 
 export async function GET(request: Request) {
@@ -15,21 +23,34 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const { page, limit, from, to } = parsePagination(searchParams);
-  const search = sanitizeSearch(searchParams.get("search")?.trim() || "");
+  const rawSearch = searchParams.get("search")?.trim() || "";
 
-  let query = auth.supabase
-    .from("invitations")
-    .select("*", { count: "exact" })
-    .eq("user_id", auth.user!.id)
-    .order("updated_at", { ascending: false });
+  const run = async (search: string) => {
+    let query = auth.supabase
+      .from("invitations")
+      .select("*", { count: "exact" })
+      .eq("user_id", auth.user!.id)
+      .order("updated_at", { ascending: false });
 
-  if (search) {
-    query = query.or(
-      `slug.ilike.%${search}%,event_title.ilike.%${search}%,bride_name.ilike.%${search}%,groom_name.ilike.%${search}%`,
-    );
+    if (search) {
+      query = query.or(
+        `slug.ilike.%${search}%,event_title.ilike.%${search}%,bride_name.ilike.%${search}%,groom_name.ilike.%${search}%`,
+      );
+    }
+    return query.range(from, to);
+  };
+
+  let result = await run(rawSearch ? sanitizeSearch(rawSearch) : "");
+
+  // Jaring pengaman: kalau istilah yang di-escape tetap ditolak PostgREST,
+  // ulangi dengan istilah yang sudah disaring hanya huruf/angka supaya
+  // pencarian tidak pernah membalas 500 ke pengguna.
+  if (result.error && rawSearch) {
+    const fallback = rawSearch.replace(/[^\p{L}\p{N}\s]+/gu, " ").replace(/\s+/g, " ").trim();
+    if (fallback) result = await run(sanitizeSearch(fallback));
   }
 
-  const { data, error, count } = await query.range(from, to);
+  const { data, error, count } = result;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

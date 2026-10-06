@@ -202,13 +202,45 @@ export function defaultCustomSettings(): CustomSettings {
   };
 }
 
+/** Angka yang boleh 0 — `Number(x) || fallback` akan mengubah 0 jadi fallback. */
+function num(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Merge `custom_settings` dengan default per-section (bukan hanya shallow di
+ * top-level): kolom jsonb `DEFAULT '{}'` / baris lama bisa punya section yang
+ * hilang, `null`, atau hanya sebagian — semuanya harus tetap terisi supaya
+ * panel pengaturan tidak melempar saat membaca `value.visible`.
+ */
+function mergeCustomSettings(raw: unknown): CustomSettings {
+  const defaults = defaultCustomSettings();
+  const source = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = { ...source };
+
+  for (const key of Object.keys(defaults)) {
+    const fallback = defaults[key as SectionKey] as unknown as Record<string, unknown>;
+    const value = merged[key];
+    const section =
+      value && typeof value === "object" && !Array.isArray(value)
+        ? { ...(value as Record<string, unknown>) }
+        : {};
+    for (const [field, fallbackValue] of Object.entries(fallback)) {
+      if (section[field] === undefined || section[field] === null) {
+        section[field] = fallbackValue;
+      }
+    }
+    merged[key] = section;
+  }
+
+  return merged as unknown as CustomSettings;
+}
+
 export function normalizeInvitation(row: Record<string, unknown>): Invitation {
   const gallery = Array.isArray(row.gallery_images) ? row.gallery_images : [];
   const gifts = Array.isArray(row.gift_accounts) ? row.gift_accounts : [];
-  const settings = {
-    ...defaultCustomSettings(),
-    ...((row.custom_settings as CustomSettings | null) ?? {}),
-  };
+  const settings = mergeCustomSettings(row.custom_settings);
   const milestones = Array.isArray(row.story_milestones) ? row.story_milestones : [];
   const facts = Array.isArray(row.fun_facts) ? row.fun_facts : [];
   const events = Array.isArray(row.events)
@@ -223,20 +255,30 @@ export function normalizeInvitation(row: Record<string, unknown>): Invitation {
     ...(row as unknown as Invitation),
     slug: typeof row.slug === "string" ? row.slug : "",
     user_id: (row.user_id as string) ?? null,
-    gallery_images: gallery as GalleryImage[],
-    gift_accounts: gifts as GiftAccount[],
+    // id deterministik — dipakai sebagai React key supaya tidak pernah `undefined`.
+    gallery_images: (gallery as GalleryImage[]).map((image, index) => ({
+      ...image,
+      id: image?.id || `img-${index}`,
+    })),
+    gift_accounts: (gifts as GiftAccount[]).map((gift, index) => ({
+      ...gift,
+      id: gift?.id || `gift-${index}`,
+    })),
     custom_settings: settings,
-    groom_image_position_x: Number(row.groom_image_position_x) || 50,
-    groom_image_position_y: Number(row.groom_image_position_y) || 50,
-    groom_image_zoom: Number(row.groom_image_zoom) || 100,
-    groom_image_rotate: Number(row.groom_image_rotate) || 0,
+    groom_image_position_x: num(row.groom_image_position_x, 50),
+    groom_image_position_y: num(row.groom_image_position_y, 50),
+    groom_image_zoom: num(row.groom_image_zoom, 100),
+    groom_image_rotate: num(row.groom_image_rotate, 0),
     greeting_text: (row.greeting_text as string) ?? null,
     recipient_name: (row.recipient_name as string) ?? null,
     groom_parents: (row.groom_parents as string) ?? null,
     bride_parents: (row.bride_parents as string) ?? null,
     groom_social: (row.groom_social as SocialLinks) ?? null,
     bride_social: (row.bride_social as SocialLinks) ?? null,
-    story_milestones: milestones as StoryMilestone[],
+    story_milestones: (milestones as StoryMilestone[]).map((milestone, index) => ({
+      ...milestone,
+      id: milestone?.id || `ms-${index}`,
+    })),
     events,
     google_maps_url: safeHttpUrl(row.google_maps_url),
     music_url: safeHttpUrl(row.music_url),
@@ -295,6 +337,42 @@ function pad(value: number) {
 }
 
 /**
+ * Zona waktu acara. Dipakai untuk link Google Calendar (`ctz`) DAN hitung mundur
+ * supaya keduanya selalu sepakat — kalau perlu diganti (mis. klien di WIB/WIT),
+ * cukup ganti satu konstanta ini.
+ */
+export const EVENT_TIMEZONE = "Asia/Makassar";
+/** Offset `EVENT_TIMEZONE` dari UTC, dalam milidetik (Asia/Makassar = WITA = UTC+8). */
+export const EVENT_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Epoch ms (UTC) kapan acara dimulai, ditafsirkan sebagai jam lokal di
+ * `EVENT_TIMEZONE`.
+ *
+ * - Tanpa jam → tengah malam di tanggal acara (bukan tengah malam UTC, yang
+ *   jatuhnya 07:00 WITA sehingga hitung mundur nol jauh sebelum acara).
+ * - Jam bisa format bebas ("15.00 WITA – Selesai", "15:00").
+ * - Tanggal tidak valid → `null` (pemanggil wajib menangani, jangan sampai
+ *   `Math.max(0, NaN)` berujung tampilan "NaN").
+ */
+export function eventTargetTime(
+  date?: string | null,
+  time?: string | null,
+): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec((date ?? "").trim());
+  if (!match) return null;
+  const start = parseTimes(time)[0] ?? { hours: 0, minutes: 0 };
+  const asUtc = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    start.hours,
+    start.minutes,
+  );
+  return asUtc - EVENT_TIMEZONE_OFFSET_MS;
+}
+
+/**
  * Link "Tambahkan ke Google Calendar".
  * `time` didukung format bebas seperti "15.00 WITA – Selesai".
  */
@@ -326,7 +404,7 @@ export function googleCalendarLink({
       "dates",
       `${date}T${pad(start.hours)}${pad(start.minutes)}00/${date}T${pad(finish.hours)}${pad(finish.minutes)}00`,
     );
-    params.set("ctz", "Asia/Makassar");
+    params.set("ctz", EVENT_TIMEZONE);
   } else {
     const next = new Date(`${date}T00:00:00`);
     next.setDate(next.getDate() + 1);

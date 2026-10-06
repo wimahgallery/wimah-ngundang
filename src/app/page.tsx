@@ -13,6 +13,12 @@ import { PageBackground } from "@/components/home/page-background";
 const title = "Undangan Digital Premium untuk Pernikahan & Acara Spesial";
 const ogImageUrl = `${siteConfig.siteUrl}/wimah.png`;
 
+/**
+ * Regenerasi per jam supaya `new Date().getFullYear()` di SiteFooter tidak
+ * membeku di tahun build (landing tidak pakai API dinamis sama sekali).
+ */
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title,
   description: siteConfig.description,

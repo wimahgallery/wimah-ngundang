@@ -42,7 +42,11 @@ function FaqItem({
     const element = bodyRef.current;
     if (!element) return;
     const observer = new ResizeObserver(([entry]) => {
-      setHeight(entry.contentRect.height);
+      // `contentRect.height` adalah konten saja — padding-bottom `pb-6` tidak
+      // ikut, sehingga animasi berhenti 1,5rem sebelum konten habis dan baris
+      // terakhir terpotong. Pakai tinggi border-box.
+      const block = entry.borderBoxSize?.[0]?.blockSize;
+      setHeight(block ?? element.getBoundingClientRect().height);
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -97,6 +101,8 @@ function FaqItem({
         id={`faq-panel-${index}`}
         role="region"
         aria-labelledby={`faq-trigger-${index}`}
+        aria-hidden={!open}
+        inert={!open}
         className="overflow-hidden"
       >
         <div ref={bodyRef} className="pb-6 pr-[clamp(1rem,6vw,4rem)] text-sm leading-relaxed text-text-secondary">

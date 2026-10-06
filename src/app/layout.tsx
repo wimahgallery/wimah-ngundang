@@ -49,6 +49,12 @@ export default function RootLayout({ children }: PropsWithChildren) {
       className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, sora.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full bg-background text-text-primary font-body">
+        {/* Fallback tanpa JS: komponen client di-SSR dengan `opacity` awal dari
+            react-spring (0) dan intro pembuka belum pernah di-"skip" — tanpa
+            override ini halaman terbaca kosong/tutup. */}
+        <noscript>
+          <style>{`.opening{display:none!important}[style*="opacity:0"],[style*="opacity: 0"]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
         <a
           href="#main"
           className="sr-only rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100]"

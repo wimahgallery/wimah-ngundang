@@ -25,7 +25,8 @@ import {
   Star,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
-import { LazyMount, useInViewOnce } from "@/components/lazy";
+import { dispatchInvitationOpen } from "../shared";
+import { useInViewOnce } from "@/components/lazy";
 import {
   agendaEvents,
   coupleLabel,
@@ -413,7 +414,7 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
           >
             {photos.map((src, index) => (
               <InvitationPhoto
-                key={`${src}-${index}`}
+                key={`opening-photo-${index}`}
                 src={src}
                 alt={`Momen ${index + 1}`}
                 className={cn(
@@ -627,7 +628,10 @@ function CountdownSection({ invitation }: { invitation: Invitation }) {
         </SectionHeading>
 
         <div className="mt-9 md:mt-11 desk:[&_>div>div>span:first-child]:text-6xl">
-          <CountdownTimer eventDate={invitation.event_date} />
+          <CountdownTimer
+            eventDate={first?.date || invitation.event_date}
+            eventTime={first?.time || invitation.event_time}
+          />
         </div>
 
         {calendarLink && (
@@ -733,9 +737,13 @@ function AgendaCard({
                 className="mt-0.5 h-4 w-4 shrink-0 text-accent"
                 aria-hidden="true"
               />
-              <span className="min-w-0 break-words">{event.location}</span>
+              {/* `location` dan `address` adalah field terpisah — hanya salah satu
+                  yang terisi tidak boleh menghasilkan ikon mengambang tanpa teks. */}
+              <span className="min-w-0 break-words">
+                {event.location || event.address}
+              </span>
             </p>
-            {event.address && (
+            {event.location && event.address && (
               <p className="mt-1.5 pl-6 text-xs leading-relaxed text-text-secondary md:text-[13px]">
                 {event.address}
               </p>
@@ -767,15 +775,77 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
   const [active, setActive] = useState<number | null>(null);
   const images = invitation.gallery_images;
   const { layout } = useLumeTheme();
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const isOpen = active !== null;
+  const imageCount = images.length;
 
+  // Lifecycle dialog: kunci scroll + pindahkan fokus ke lightbox, lalu
+  // kembalikan fokus ke thumbnail yang membukanya saat ditutup.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const { body } = document;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = "hidden";
+    const focusFrame = requestAnimationFrame(() => {
+      dialogContentRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      body.style.overflow = previousOverflow;
+      const trigger = triggerRef.current;
+      triggerRef.current = null;
+      if (trigger && document.contains(trigger)) trigger.focus();
+    };
+  }, [isOpen]);
+
+  // Keyboard: Escape tutup, ← → pindah foto, Tab diputar di dalam dialog.
   useEffect(() => {
     if (active === null) return;
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActive(null);
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setActive(null);
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setActive((prev) =>
+          prev === null ? prev : prev === 0 ? imageCount - 1 : prev - 1,
+        );
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setActive((prev) =>
+          prev === null ? prev : prev === imageCount - 1 ? 0 : prev + 1,
+        );
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const root = dialogContentRef.current;
+      const nodes = Array.from(root?.querySelectorAll<HTMLElement>("button") ?? []);
+      if (nodes.length === 0) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const current = document.activeElement;
+      const inside = Boolean(current && root?.contains(current));
+      if (e.shiftKey && (!inside || current === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!inside || current === last)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active]);
+  }, [active, imageCount]);
 
   if (!settings.visible || images.length === 0) return null;
 
@@ -796,7 +866,10 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
           <button
             key={img.id}
             type="button"
-            onClick={() => setActive(i)}
+            onClick={(e) => {
+              triggerRef.current = e.currentTarget;
+              setActive(i);
+            }}
             className="overflow-hidden rounded-lg transition active:scale-[0.98] md:rounded-xl"
             aria-label={`Buka foto ${i + 1}`}
           >
@@ -816,6 +889,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
 
       {active !== null && (
         <div
+          ref={dialogContentRef}
           role="dialog"
           aria-modal="true"
           aria-label="Galeri foto"
@@ -949,7 +1023,12 @@ function VideoSection({ invitation }: { invitation: Invitation }) {
 */
 function GiftSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.gift;
-  const hasGift = invitation.gift_accounts.length > 0 || invitation.qris_image;
+  // Baris rekening kosong (editor mengizinkan "Tambah rekening" yang belum diisi)
+  // tidak boleh dirender — kartu tanpa nomor + tombol salin yang menyalin "null".
+  const accounts = invitation.gift_accounts.filter((gift) =>
+    (gift.accountNumber ?? "").trim().length > 0,
+  );
+  const hasGift = accounts.length > 0 || Boolean(invitation.qris_image);
   const tone = useLumeTheme().layout.tones.gift;
 
   if (!settings.visible || !hasGift) return null;
@@ -984,9 +1063,9 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
           )}
         </div>
 
-        {invitation.gift_accounts.length > 0 && (
+        {accounts.length > 0 && (
           <div className="grid gap-3 md:grid-cols-2 md:gap-4 desk:col-span-7 desk:gap-5">
-            {invitation.gift_accounts.map((gift) => (
+            {accounts.map((gift) => (
               <article
                 key={gift.id}
                 className="dna-card flex min-w-0 flex-col items-center rounded-2xl border border-border bg-background/85 p-6 text-center shadow-[0_14px_44px_rgba(84,82,77,0.06)] md:p-7"
@@ -1142,7 +1221,10 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
               >
                 <Icon className="h-5 w-5" />
               </span>
-              <p className="mt-3.5 w-full truncate text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-[11px]">
+              <p
+                className="mt-3.5 w-full truncate text-[10px] uppercase tracking-[0.18em] text-text-secondary md:text-[11px]"
+                title={fact.label}
+              >
                 {fact.label}
               </p>
               <p className="mt-1.5 w-full break-words font-heading text-base text-text-primary md:text-lg">
@@ -1386,6 +1468,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [mine, setMine] = useState<WishRow | null>(null);
 
   const visible = settings.visible;
@@ -1405,8 +1488,12 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
           setMessage(own.message ?? "");
         }
       })
-      .catch(() => {
-        if (!cancelled) setWishes([]);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setWishes([]);
+        setLoadError(
+          err instanceof Error ? err.message : "Gagal memuat ucapan tamu.",
+        );
       });
     return () => {
       cancelled = true;
@@ -1538,6 +1625,13 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
         <div className="mt-10 text-left">
           {wishes === null ? null : list.length > 0 ? (
             <GuestWishesList wishes={list} />
+          ) : loadError ? (
+            <p
+              role="alert"
+              className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-text-secondary"
+            >
+              {loadError}
+            </p>
           ) : (
             <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-text-secondary">
               Belum ada ucapan. Jadilah yang pertama mengirim doa!
@@ -1683,6 +1777,7 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
         src={src}
         title="Pratinjau undangan versi mobile"
         loading="lazy"
+        allow="autoplay; encrypted-media; picture-in-picture"
       />
     </div>
   );
@@ -1929,6 +2024,9 @@ function LumeTemplate({
   const handleOpen = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     document.documentElement.removeAttribute("data-invitation-locked");
     setOpened(true);
+    // Masih synchronous dengan klik tamu → `MusicDock` boleh memutar lagu
+    // (izin autoplay browser melekat pada gesture ini).
+    dispatchInvitationOpen();
     const href = e.currentTarget.getAttribute("href");
     if (!href?.startsWith("#")) return;
     const target = document.getElementById(href.slice(1));
@@ -1946,22 +2044,53 @@ function LumeTemplate({
   // Desktop (≥1200px): halaman luar tidak menggulir (galeri + frame HP, isi
   // undangan ada di dalam iframe) — jadi klik tombol diteruskan ke tombol
   // "Buka Undangan" di dalam frame HP supaya undangan terbuka di sana.
+  const forwardTimerRef = useRef<number | null>(null);
+  const forwardTriesRef = useRef(0);
+
+  const stopForwarding = useCallback(() => {
+    if (forwardTimerRef.current !== null) {
+      window.clearInterval(forwardTimerRef.current);
+      forwardTimerRef.current = null;
+    }
+    forwardTriesRef.current = 0;
+  }, []);
+
+  useEffect(() => stopForwarding, [stopForwarding]);
+
   const handleDesktopOpen = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
       e.preventDefault();
+      // Selalu tandai terbuka lebih dulu. `btn` bisa null (iframe masih lazy-load
+      // atau React di dalamnya belum hydrate); tanpa langkah ini klik terasa mati —
+      // CTA tidak hilang dan blokir scroll tidak terbuka.
+      setOpened(true);
+
       const frame = document.querySelector<HTMLIFrameElement>(
         "iframe.lume-stage__frame",
       );
-      const btn =
-        frame?.contentDocument?.querySelector<HTMLAnchorElement>(
+      if (!frame) return;
+
+      stopForwarding();
+      let forwarded = false;
+      const tryForward = () => {
+        const btn = frame.contentDocument?.querySelector<HTMLAnchorElement>(
           'a[href="#greeting"]',
         );
-      if (btn) {
-        btn.click();
-        setOpened(true);
-      }
+        if (btn) {
+          btn.click();
+          forwarded = true;
+          stopForwarding();
+          return;
+        }
+        forwardTriesRef.current += 1;
+        // ±10 detik: kalau sampai habis, biarkan — CTA sudah hilang.
+        if (forwardTriesRef.current >= 40) stopForwarding();
+      };
+
+      tryForward();
+      if (!forwarded) forwardTimerRef.current = window.setInterval(tryForward, 250);
     },
-    [],
+    [stopForwarding],
   );
 
   useEffect(() => {

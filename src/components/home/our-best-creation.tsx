@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 function CreationCard({ item, muted }: { item: BestCreation; muted: boolean }) {
   return (
     <figure
-      className="group w-[56vw] max-w-[220px] shrink-0 md:w-[268px] md:max-w-none desk:w-[330px]"
+      className="group me-3 w-[56vw] max-w-[220px] shrink-0 md:me-4 md:w-[268px] md:max-w-none desk:me-5 desk:w-[330px]"
       aria-hidden={muted || undefined}
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-border bg-surface md:rounded-xl">
@@ -36,10 +36,13 @@ function MarqueeRow({ items, direction }: { items: BestCreation[]; direction: "r
   const copies = [...items, ...items];
 
   return (
-    <div className="marquee-row relative overflow-hidden">
+    // `marquee-fade` ada di viewport (bukan di track yang digeser): mask yang
+    // menempel di elemen ber-transform ikut bergeser sehingga fade-nya tidak
+    // pernah terlihat di tepi layar.
+    <div className="marquee-row marquee-fade relative overflow-hidden">
       <div
         className={cn(
-          "marquee-fade flex w-max gap-3 will-change-transform md:gap-4 desk:gap-5",
+          "flex w-max will-change-transform",
           direction === "right" ? "marquee-right" : "marquee-left",
         )}
       >

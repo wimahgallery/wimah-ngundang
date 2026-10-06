@@ -1,5 +1,6 @@
 import { invitationCreateSchema, type InvitationCreateInput } from "@/lib/schemas";
 import { getDeviceId } from "@/lib/device-id";
+import { normalizeInvitation, type Invitation } from "@/lib/invitation";
 
 const BASE = "/api/invitations";
 
@@ -53,18 +54,54 @@ export type InvitationRow = {
   qris_image?: string | null;
 };
 
-export async function fetchInvitations(limit = 20) {
-  const res = await fetch(`${BASE}?limit=${limit}`);
+export type InvitationListPage = {
+  items: InvitationRow[];
+  total: number;
+  totalPages: number;
+  page: number;
+};
+
+export async function fetchInvitations(
+  { page = 1, limit = 20, search = "" }: { page?: number; limit?: number; search?: string } = {},
+): Promise<InvitationListPage> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const term = search.trim();
+  if (term) params.set("search", term);
+  const res = await fetch(`${BASE}?${params.toString()}`);
   if (!res.ok) throw new Error("Gagal memuat data undangan");
   const json = await res.json();
-  return json.data;
+  return {
+    items: Array.isArray(json.data) ? json.data : [],
+    total: Number(json.total) || 0,
+    totalPages: Math.max(1, Number(json.totalPages) || 1),
+    page: Number(json.page) || page,
+  };
 }
 
-export async function fetchInvitation(slug: string) {
+export async function fetchInvitation(slug: string): Promise<Invitation> {
   const res = await fetch(`${BASE}/${slug}`);
   if (!res.ok) throw new Error("Undangan tidak ditemukan");
   const json = await res.json();
-  return json.data;
+  // Normalisasi di sini juga (bukan hanya di server) supaya `custom_settings`
+  // yang tidak lengkap tidak membuat editor melempar saat membaca section.
+  return normalizeInvitation(json.data as Record<string, unknown>);
+}
+
+/**
+ * Simpan terakhir saat tab ditutup — `keepalive` membuat browser tetap
+ * mengirim request walaupun halaman sudah pergi.
+ */
+export function flushInvitation(slug: string, data: Record<string, unknown>) {
+  try {
+    void fetch(`${BASE}/${slug}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 export type WishRow = {
@@ -90,14 +127,20 @@ function deviceHeaders(): Record<string, string> {
 }
 
 export async function fetchWishes(slug: string): Promise<WishRow[]> {
+  // Sengaja melempar error: membalas `[]` untuk gagal memuat membuat section
+  // ucapan menampilkan "Belum ada ucapan" yang menyesatkan. Yang kosong hanya
+  // terjadi kalau server benar-benar menjawab `data: []`.
+  let res: Response;
   try {
-    const res = await fetch(`/api/invitations/${slug}/wishes`, { headers: deviceHeaders() });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return Array.isArray(json.data) ? json.data : [];
+    res = await fetch(`/api/invitations/${slug}/wishes`, { headers: deviceHeaders() });
   } catch {
-    return [];
+    throw new Error("Tidak bisa terhubung ke server. Periksa koneksi lalu coba lagi.");
   }
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(json?.error || "Gagal memuat ucapan. Coba lagi sebentar lagi.");
+  }
+  return Array.isArray(json?.data) ? (json.data as WishRow[]) : [];
 }
 
 export async function submitGuestWish(

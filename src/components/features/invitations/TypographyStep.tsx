@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, Sparkles, X } from "lucide-react";
 import {
-  FONT_LIBRARY,
   PERSONALITY_LABELS,
   TEMPLATE_TYPOGRAPHY,
   rankFontsForTemplate,
@@ -360,8 +359,6 @@ export function TypographyStep({
   const dna = TEMPLATE_TYPOGRAPHY[templateId];
   const [advanced, setAdvanced] = useState(false);
 
-  const heading = findOption(font.heading) ?? DEFAULT_HEADING;
-  const body = findOption(font.body) ?? DEFAULT_BODY;
   const accent = findFont(font.accent);
   useSpecimenLoader([findFont(font.heading), findFont(font.body), accent]);
 
