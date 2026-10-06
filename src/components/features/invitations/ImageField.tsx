@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import { ImageIcon, RotateCw, Scan, X } from "lucide-react";
 import { getCroppedBlob, uploadBlob, uploadFile } from "@/lib/crop-image";
+import { previewImageSrc } from "@/lib/utils";
 
 interface ImageFieldProps {
   label: string;
@@ -126,7 +127,7 @@ export default function ImageField({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={value}
+              src={previewImageSrc(value)}
               alt={label}
               className="h-full w-full object-cover"
               style={{
@@ -168,7 +169,7 @@ export default function ImageField({
             <button
               type="button"
               onClick={() => {
-                setCropSrc(value);
+                setCropSrc(previewImageSrc(value, 3840));
                 setCropZoom(1);
                 setCropRotate(rotate);
                 setCropOpen(true);

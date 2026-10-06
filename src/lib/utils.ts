@@ -51,3 +51,28 @@ export function safeHttpUrl(value: unknown): string | null {
   }
   return null;
 }
+
+/**
+ * Host remote yang terdaftar di `images.remotePatterns` (next.config.ts).
+ * Sinkronkan keduanya bila daftar host berubah.
+ */
+const OPTIMIZER_HOSTS = new Set(["ik.imagekit.io", "images.unsplash.com"]);
+
+/**
+ * Alihkan gambar remote lewat optimizer Next (`/_next/image`).
+ *
+ * Halaman undangan memakai `next/image`, sedangkan preview di editor memakai
+ * `<img>` biasa. Jika DNS/jaringan klien membajak host CDN (kasus `ik.imagekit.io`
+ * yang diarahkan ke node filter lokal → `ERR_SSL_PROTOCOL_ERROR`), gambar langsung
+ * rusak. Lewat asal domain sendiri, filenya diambil server Vercel sehingga tetap
+ * termuat. URL di luar daftar dibiarkan apa adanya.
+ */
+export function previewImageSrc(src: string, width = 640): string {
+  if (!/^https?:\/\//i.test(src)) return src;
+  try {
+    if (!OPTIMIZER_HOSTS.has(new URL(src).host)) return src;
+  } catch {
+    return src;
+  }
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=75`;
+}

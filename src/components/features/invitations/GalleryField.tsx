@@ -16,6 +16,7 @@ import { GripVertical, Scan, Trash2, X } from "lucide-react";
 import { v4 as uuid } from "uuid";
 import type { GalleryImage } from "@/lib/invitation";
 import { getCroppedBlob, uploadBlob, uploadFile } from "@/lib/crop-image";
+import { previewImageSrc } from "@/lib/utils";
 
 function SortableItem({
   image,
@@ -36,7 +37,7 @@ function SortableItem({
       <div className="relative h-36">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={image.url}
+          src={previewImageSrc(image.url)}
           alt={image.alt || ""}
           className="h-full w-full object-cover"
           style={{ objectPosition: `${image.positionX}% ${image.positionY}%` }}
@@ -174,7 +175,7 @@ export default function GalleryField({
     setBusy(true);
     setError("");
     try {
-      const blob = await getCroppedBlob(cropImage.url, croppedArea, cropRotate);
+      const blob = await getCroppedBlob(previewImageSrc(cropImage.url, 3840), croppedArea, cropRotate);
       const url = await uploadBlob(blob, `gallery-${cropImage.id}.jpg`, folder);
       onChange(images.map((i) => (i.id === cropImage.id ? { ...i, url } : i)));
       setCropImage(null);
@@ -260,7 +261,7 @@ export default function GalleryField({
             </div>
             <div className="relative h-[clamp(12rem,40dvh,20rem)] bg-black">
               <Cropper
-                image={cropImage.url}
+                image={previewImageSrc(cropImage.url, 3840)}
                 crop={crop}
                 zoom={cropZoom}
                 rotation={cropRotate}
