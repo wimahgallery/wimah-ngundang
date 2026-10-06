@@ -14,7 +14,7 @@ import {
   type Invitation,
   type SectionSettings,
 } from "@/lib/invitation";
-import { formatDate, safeHttpUrl } from "@/lib/utils";
+import { formatDate, previewImageSrc, proxiedMediaSrc, safeHttpUrl } from "@/lib/utils";
 
 export function InvitationPhoto({
   src,
@@ -242,11 +242,30 @@ export function MusicDock({ url }: { url: string }) {
   /** True setelah audio benar-benar pernah berbunyi — dipakai supaya lagu yang
    *  sengaja dijeda tamu tidak "hidup lagi" saat klik CTA kedua kali. */
   const startedRef = useRef(false);
+  /** True bila URL asli gagal dimuat dan sudah dialihkan ke proxy `/api/media`
+   *  — dipakai saat jaringan memblokir host CDN supaya lagu tetap bisa diputar. */
+  const [proxyFallback, setProxyFallback] = useState(false);
+  /** True selama pemutaran diminta (CTA/tombol) — dipakai untuk melanjutkan
+   *  pemutaran setelah `src` berganti akibat fallback. */
+  const wantPlayRef = useRef(false);
+  // Sinkronkan state turunan saat prop `url` berpindah (pola "adjust during render").
+  const [prevUrl, setPrevUrl] = useState(url);
+  if (prevUrl !== url) {
+    setPrevUrl(url);
+    setProxyFallback(false);
+  }
+  const src = proxyFallback ? proxiedMediaSrc(url) : url;
+
+  useEffect(() => {
+    startedRef.current = false;
+    wantPlayRef.current = false;
+  }, [url]);
 
   const play = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !audio.paused) return;
     audio.volume = 0.5;
+    wantPlayRef.current = true;
     void audio.play().then(
       () => {
         startedRef.current = true;
@@ -257,6 +276,30 @@ export function MusicDock({ url }: { url: string }) {
       },
     );
   }, []);
+
+  // URL asli gagal dimuat (diblokir jaringan) → coba lewat proxy sekali.
+  const handleError = useCallback(() => {
+    const proxied = proxiedMediaSrc(url);
+    if (!proxyFallback && proxied !== url) {
+      setProxyFallback(true);
+      return;
+    }
+    wantPlayRef.current = false;
+    setPlaying(false);
+  }, [proxyFallback, url]);
+
+  // Setelah src berganti karena fallback, lanjutkan pemutaran yang diminta.
+  useEffect(() => {
+    if (!wantPlayRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    void audio.play().then(
+      () => {
+        startedRef.current = true;
+      },
+      () => {},
+    );
+  }, [src]);
 
   /** Auto-start dari CTA "Buka Undangan": hanya sekali, supaya lagu yang sudah
    *  sengaja dijeda tamu tidak kembali hidup saat CTA diklik lagi. */
@@ -289,7 +332,10 @@ export function MusicDock({ url }: { url: string }) {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) play();
-    else audio.pause();
+    else {
+      wantPlayRef.current = false;
+      audio.pause();
+    }
   };
 
   return (
@@ -304,10 +350,11 @@ export function MusicDock({ url }: { url: string }) {
     >
       <audio
         ref={audioRef}
-        src={url}
+        src={src}
         loop
         preload="metadata"
         aria-label="Musik undangan"
+        onError={handleError}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
@@ -464,7 +511,7 @@ export function VideoPlayer({
         <video
           controls
           preload="none"
-          poster={poster ?? undefined}
+          poster={poster ? previewImageSrc(poster) : undefined}
           src={url}
           className="aspect-video w-full object-cover"
         />

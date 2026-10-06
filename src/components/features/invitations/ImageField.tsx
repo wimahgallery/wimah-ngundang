@@ -152,7 +152,7 @@ export default function ImageField({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/gif"
         className="hidden"
         onChange={(e) => void handleFiles(e.target.files)}
       />

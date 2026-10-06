@@ -20,6 +20,7 @@ import {
   useMusicTracks,
 } from "@/features/music/hooks";
 import { formatDuration, type MusicTrack } from "@/features/music/services/musicApi";
+import { proxiedMediaSrc } from "@/lib/utils";
 
 /** Durasi dari berkas lokal — hanya pelengkap, boleh gagal tanpa membatalkan upload. */
 function readDuration(file: File): Promise<number | null> {
@@ -55,6 +56,8 @@ export default function MusicDashboard() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  /** Lagu yang sedang diminta pemutarannya — dipakai saat perlu fallback proxy. */
+  const currentTrackRef = useRef<MusicTrack | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.files?.[0] ?? null;
@@ -107,14 +110,36 @@ export default function MusicDashboard() {
     if (playingId === track.id) {
       audio.pause();
       audio.removeAttribute("src");
+      currentTrackRef.current = null;
       setPlayingId(null);
       return;
     }
-    audio.src = track.url;
+    startTrack(track);
+  };
+
+  const startTrack = (track: MusicTrack, forceProxy = false) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    currentTrackRef.current = track;
+    audio.src = forceProxy ? proxiedMediaSrc(track.url) : track.url;
     void audio.play().then(
       () => setPlayingId(track.id),
       () => setPlayingId(null),
     );
+  };
+
+  /** URL asli gagal dimuat (diblokir jaringan) → coba sekali lewat proxy. */
+  const handleAudioError = () => {
+    const audio = audioRef.current;
+    const track = currentTrackRef.current;
+    if (!audio || !track) return;
+    const proxied = proxiedMediaSrc(track.url);
+    if (proxied === track.url || audio.src === new URL(proxied, window.location.origin).href) {
+      currentTrackRef.current = null;
+      setPlayingId(null);
+      return;
+    }
+    startTrack(track, true);
   };
 
   const handleDelete = async (track: MusicTrack) => {
@@ -334,7 +359,7 @@ export default function MusicDashboard() {
         — satu lagu bisa dipakai banyak undangan.
       </p>
 
-      <audio ref={audioRef} className="hidden" onEnded={() => setPlayingId(null)} />
+      <audio ref={audioRef} className="hidden" onError={handleAudioError} onEnded={() => setPlayingId(null)} />
       <span className="sr-only" aria-live="polite">
         {playingId ? "Musik diputar" : ""}
       </span>

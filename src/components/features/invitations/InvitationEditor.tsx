@@ -29,7 +29,7 @@ import { uploadFolders } from "@/lib/upload-folders";
 import { useMusicTracks } from "@/features/music/hooks";
 import { formatDuration } from "@/features/music/services/musicApi";
 import { TemplatePicker } from "./TemplatePicker";
-import { cn } from "@/lib/utils";
+import { cn, proxiedMediaSrc } from "@/lib/utils";
 import ImageField from "./ImageField";
 import GalleryField from "./GalleryField";
 import SectionSettingsPanel from "./SectionSettingsPanel";
@@ -845,6 +845,14 @@ function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invit
   const list = tracks ?? [];
   const current = invitation.music_url || "";
   const currentMissing = current !== "" && !list.some((track) => track.url === current);
+  // Pratinjau: URL asli dulu, jatuh ke proxy `/api/media` bila diblokir jaringan.
+  const [audioProxy, setAudioProxy] = useState(false);
+  const [prevMusicUrl, setPrevMusicUrl] = useState(current);
+  if (prevMusicUrl !== current) {
+    setPrevMusicUrl(current);
+    setAudioProxy(false);
+  }
+  const audioSrc = audioProxy ? proxiedMediaSrc(current) : current;
 
   return (
     <>
@@ -896,7 +904,15 @@ function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invit
         )}
 
         {current && (
-          <audio controls src={current} className="w-full text-xs" aria-label="Pratinjau musik terpilih" />
+          <audio
+            controls
+            src={audioSrc}
+            onError={() => {
+              if (!audioProxy && proxiedMediaSrc(current) !== current) setAudioProxy(true);
+            }}
+            className="w-full text-xs"
+            aria-label="Pratinjau musik terpilih"
+          />
         )}
       </div>
     </>

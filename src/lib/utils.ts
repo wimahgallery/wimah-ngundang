@@ -76,3 +76,24 @@ export function previewImageSrc(src: string, width = 640): string {
   }
   return `/_next/image?url=${encodeURIComponent(src)}&w=${width}&q=75`;
 }
+
+/** Host yang boleh dilayani proxy media `/api/media`. */
+const MEDIA_PROXY_HOSTS = new Set(["ik.imagekit.io"]);
+
+/**
+ * URL alternatif untuk berkas yang dimuat langsung oleh browser (`<audio>`,
+ * `<video poster>`) — optimizer `next/image` tidak bisa memproses media.
+ *
+ * Pemanggil sebaiknya mencoba URL asli dulu, lalu beralih ke sini saat `error`,
+ * supaya trafik normal tetap langsung ke CDN dan hanya jaringan yang memblokir
+ * host-nya yang lewat origin sendiri. URL di luar daftar dibiarkan apa adanya.
+ */
+export function proxiedMediaSrc(src: string): string {
+  if (!/^https?:\/\//i.test(src)) return src;
+  try {
+    if (!MEDIA_PROXY_HOSTS.has(new URL(src).host)) return src;
+  } catch {
+    return src;
+  }
+  return `/api/media?url=${encodeURIComponent(src)}`;
+}

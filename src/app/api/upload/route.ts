@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       : defaultUploadFolder;
 
   if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "File is required" }, { status: 400 });
+    return NextResponse.json({ error: "File wajib dipilih" }, { status: 400 });
   }
 
   const validated = validateMediaFile(file);
