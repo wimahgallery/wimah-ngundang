@@ -70,8 +70,19 @@ export function SectionShell({
 }) {
   if (!settings.visible) return null;
   return (
-    <section className={cn("relative px-6", spacingClass(settings.sectionSpacing), className)}>
-      <div className={cn("mx-auto flex max-w-5xl flex-col gap-4", alignClass(settings.align))}>
+    <section
+      className={cn(
+        "relative px-6",
+        spacingClass(settings.sectionSpacing),
+        className,
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto flex max-w-5xl flex-col gap-4",
+          alignClass(settings.align),
+        )}
+      >
         {children}
       </div>
     </section>
@@ -96,7 +107,13 @@ export function SectionHeading({
   children: React.ReactNode;
 }) {
   return (
-    <h2 className={cn("font-heading font-normal leading-[1.1]", headingClass(settings.headingSize), className)}>
+    <h2
+      className={cn(
+        "font-heading font-normal leading-[1.1]",
+        headingClass(settings.headingSize),
+        className,
+      )}
+    >
       {children}
     </h2>
   );
@@ -112,18 +129,31 @@ export function SectionCopy({
   children: React.ReactNode;
 }) {
   return (
-    <p className={cn("max-w-2xl text-text-secondary leading-relaxed", paragraphClass(settings.paragraphSize), className)}>
+    <p
+      className={cn(
+        "max-w-2xl text-text-secondary leading-relaxed",
+        paragraphClass(settings.paragraphSize),
+        className,
+      )}
+    >
       {children}
     </p>
   );
 }
 
-export function CoupleNames({ invitation, className }: { invitation: Invitation; className?: string }) {
+export function CoupleNames({
+  invitation,
+  className,
+}: {
+  invitation: Invitation;
+  className?: string;
+}) {
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
   return (
     <span className={className}>
-      {bride} <span className="font-accent italic text-accent-light">&</span> {groom}
+      {bride} <span className="font-accent italic text-accent-light">&</span>{" "}
+      {groom}
     </span>
   );
 }
@@ -133,7 +163,9 @@ export function EventMeta({ invitation }: { invitation: Invitation }) {
     <div className="space-y-1 text-text-secondary">
       {invitation.event_date && <p>{formatDate(invitation.event_date)}</p>}
       {invitation.event_time && <p>{invitation.event_time}</p>}
-      {invitation.venue_name && <p className="text-text-primary">{invitation.venue_name}</p>}
+      {invitation.venue_name && (
+        <p className="text-text-primary">{invitation.venue_name}</p>
+      )}
       {invitation.venue_address && <p>{invitation.venue_address}</p>}
     </div>
   );
@@ -144,8 +176,13 @@ export function GiftList({ invitation }: { invitation: Invitation }) {
   return (
     <div className="grid w-full gap-3 sm:grid-cols-2">
       {invitation.gift_accounts.map((gift) => (
-        <article key={gift.id} className="dna-card rounded-xl border border-border bg-surface/80 p-5 text-left">
-          <p className="text-xs uppercase tracking-[0.16em] text-accent">{gift.bank}</p>
+        <article
+          key={gift.id}
+          className="dna-card rounded-xl border border-border bg-surface/80 p-5 text-left"
+        >
+          <p className="text-xs uppercase tracking-[0.16em] text-accent">
+            {gift.bank}
+          </p>
           <p className="mt-2 font-heading text-xl">{gift.accountNumber}</p>
           <p className="mt-1 text-sm text-text-secondary">{gift.accountName}</p>
         </article>
@@ -309,7 +346,12 @@ export function CountdownTimer({
   eventTime?: string | null;
 }) {
   const target = eventTargetTime(eventDate, eventTime);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
   // Acara sudah lewat: jangan menampilkan "00 Hari 00 Detik" selamanya.
   const [passed, setPassed] = useState(
     () => target !== null && Date.now() >= target,
@@ -376,7 +418,9 @@ export function CountdownTimer({
 
 /** Deteksi YouTube / Vimeo supaya link video bisa langsung di-embed. */
 export function videoEmbedUrl(url: string): string | null {
-  const youtube = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  const youtube = url.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/,
+  );
   if (youtube) return `https://www.youtube.com/embed/${youtube[1]}?rel=0`;
   const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
@@ -401,7 +445,12 @@ export function VideoPlayer({
   const directMedia = /\.(mp4|webm|ogg|ogv|m4v|mov|m3u8)([?#].*)?$/i.test(url);
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border bg-black", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border border-border bg-black",
+        className,
+      )}
+    >
       {embed ? (
         <iframe
           src={embed}
@@ -440,7 +489,13 @@ export function VideoPlayer({
   );
 }
 
-export function CopyButton({ text, className }: { text: string; className?: string }) {
+export function CopyButton({
+  text,
+  className,
+}: {
+  text: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout>>(null);
@@ -485,10 +540,9 @@ export function CopyButton({ text, className }: { text: string; className?: stri
     };
 
     if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text).then(
-        () => showResult(true),
-        legacyCopy,
-      );
+      navigator.clipboard
+        .writeText(text)
+        .then(() => showResult(true), legacyCopy);
     } else {
       legacyCopy();
     }
@@ -501,28 +555,59 @@ export function CopyButton({ text, className }: { text: string; className?: stri
       aria-live="polite"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-accent/40 hover:text-accent",
-        failed && "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700",
+        failed &&
+          "border-red-300 text-red-600 hover:border-red-400 hover:text-red-700",
         className,
       )}
     >
       {copied ? (
         <>
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4.5 12.75l6 6 9-13.5"
+            />
           </svg>
           Tersalin
         </>
       ) : failed ? (
         <>
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
           Gagal — salin manual
         </>
       ) : (
         <>
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+          <svg
+            className="h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+            />
           </svg>
           Salin
         </>
@@ -533,9 +618,15 @@ export function CopyButton({ text, className }: { text: string; className?: stri
 
 export function DecorativeDivider({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-center gap-3 py-2", className)}>
+    <div
+      className={cn("flex items-center justify-center gap-3 py-2", className)}
+    >
       <span className="h-px w-12 bg-accent/30" />
-      <svg className="h-4 w-4 text-accent/50" viewBox="0 0 24 24" fill="currentColor">
+      <svg
+        className="h-4 w-4 text-accent/50"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
         <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.4 7.4-6.4-4.8-6.4 4.8 2.4-7.4-6-4.6h7.6z" />
       </svg>
       <span className="h-px w-12 bg-accent/30" />
@@ -543,7 +634,11 @@ export function DecorativeDivider({ className }: { className?: string }) {
   );
 }
 
-export function GuestWishesList({ wishes }: { wishes: Array<{ name: string; message: string; created_at: string }> }) {
+export function GuestWishesList({
+  wishes,
+}: {
+  wishes: Array<{ name: string; message: string; created_at: string }>;
+}) {
   if (!wishes.length) return null;
   return (
     <div className="grid gap-3">
@@ -557,11 +652,17 @@ export function GuestWishesList({ wishes }: { wishes: Array<{ name: string; mess
               {wish.name.charAt(0).toUpperCase()}
             </span>
             <div>
-              <p className="text-sm font-medium text-text-primary">{wish.name}</p>
-              <p className="text-[10px] text-text-secondary">{formatDate(wish.created_at)}</p>
+              <p className="text-sm font-medium text-text-primary">
+                {wish.name}
+              </p>
+              <p className="text-[10px] text-text-secondary">
+                {formatDate(wish.created_at)}
+              </p>
             </div>
           </div>
-          <p className="mt-2.5 text-sm leading-relaxed text-text-secondary">{wish.message}</p>
+          <p className="mt-2.5 text-sm leading-relaxed text-text-secondary">
+            {wish.message}
+          </p>
         </article>
       ))}
     </div>
