@@ -34,6 +34,10 @@ const EXTENSION_BY_TYPE: Record<string, string> = {
   "audio/ogg": "ogg",
 };
 
+/** Host penyimpanan media yang diizinkan (ImageKit) — dipakai oleh
+ *  validasi URL hasil unggahan maupun proxy media. */
+export const ALLOWED_MEDIA_HOSTS = new Set(["ik.imagekit.io"]);
+
 const HINT: Record<MediaKind, string> = {
   image: "Pakai JPG, PNG, WEBP, atau GIF.",
   audio: "Pakai MP3, WAV, AAC, OGG, atau M4A.",
@@ -112,4 +116,24 @@ export function validateMediaFile(file: File): MediaValidation {
   }
 
   return { kind, extension };
+}
+
+/**
+ * Validasi URL musik hasil unggahan langsung ke ImageKit — file-nya sudah
+ * berada di penyimpanan, jadi server hanya memastikan host dan jenisnya benar.
+ */
+export function validateAudioUrl(rawUrl: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return "URL musik tidak valid";
+  }
+  if (parsed.protocol !== "https:") return "URL musik harus memakai https";
+  if (!ALLOWED_MEDIA_HOSTS.has(parsed.hostname)) return "Host musik tidak diizinkan";
+  const ext = (parsed.pathname.split(".").pop() || "").toLowerCase();
+  if (!ALLOWED_EXTENSIONS.audio.includes(ext)) {
+    return `Ekstensi .${ext || "?"} tidak didukung. ${HINT.audio}`;
+  }
+  return null;
 }

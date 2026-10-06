@@ -1,3 +1,6 @@
+import { assertValidUpload, uploadDirect, type UploadedMedia } from "@/lib/media-upload";
+import { uploadFolders } from "@/lib/upload-folders";
+
 export type MusicTrack = {
   id: string;
   name: string;
@@ -24,6 +27,33 @@ export async function createMusicTrack(input: {
   name: string;
   durationSeconds?: number | null;
 }): Promise<MusicTrack> {
+  // File besar tidak boleh lewat server (Vercel menolak body > ±4,5 MB),
+  // jadi unggahkan langsung ke ImageKit, lalu daftarkan URL-nya.
+  assertValidUpload(input.file, "audio");
+  let uploaded: UploadedMedia | null = null;
+  try {
+    uploaded = await uploadDirect(input.file, uploadFolders.music);
+  } catch {
+    uploaded = null;
+  }
+
+  if (uploaded) {
+    const res = await fetch(BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: input.name,
+        url: uploaded.url,
+        file_id: uploaded.fileId,
+        duration_seconds: input.durationSeconds ?? null,
+      }),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(json?.error || "Gagal menyimpan musik");
+    return json.data as MusicTrack;
+  }
+
+  // Unggahan langsung gagal → kirim file lewat server (hanya untuk file kecil).
   const body = new FormData();
   body.append("file", input.file);
   body.append("name", input.name);
