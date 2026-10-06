@@ -37,6 +37,32 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   return true;
 }
 
+/** Masih di bawah batas untuk `key`? — hanya membaca, tidak menambah hitungan. */
+export function checkRateLimit(key: string, limit: number): boolean {
+  const entry = buckets.get(key);
+  if (!entry || Date.now() > entry.resetAt) return true;
+  return entry.count < limit;
+}
+
+/** Catat satu percobaan pada `key` (jendela mulai dihitung dari percobaan pertama). */
+export function hitRateLimit(key: string, limit: number, windowMs: number): void {
+  const now = Date.now();
+  prune(now);
+  if (buckets.size >= MAX_BUCKETS) evictOldest();
+
+  const entry = buckets.get(key);
+  if (!entry || now > entry.resetAt) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  if (entry.count < limit) entry.count += 1;
+}
+
+/** Lepaskan hitungan `key` — dipakai saat percobaan akhirnya berhasil. */
+export function resetRateLimit(key: string): void {
+  buckets.delete(key);
+}
+
 /**
  * IP klien asli.
  *
