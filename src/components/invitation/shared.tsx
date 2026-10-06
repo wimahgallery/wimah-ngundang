@@ -261,6 +261,16 @@ export function MusicDock({ url }: { url: string }) {
     wantPlayRef.current = false;
   }, [url]);
 
+  // `src` dipasang secara imperatif, bukan lewat JSX: <audio> lalu ikut ter-SSR
+  // tanpa URL, sehingga request (dan kegagalannya) baru dimulai setelah listener
+  // `onError` React terpasang — fallback tidak lagi meleset saat jaringan
+  // membajak host CDN sebelum hydrate.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || audio.getAttribute("src") === src) return;
+    audio.src = src;
+  }, [src]);
+
   const play = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !audio.paused) return;
@@ -350,7 +360,6 @@ export function MusicDock({ url }: { url: string }) {
     >
       <audio
         ref={audioRef}
-        src={src}
         loop
         preload="metadata"
         aria-label="Musik undangan"
