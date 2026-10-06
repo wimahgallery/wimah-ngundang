@@ -33,7 +33,7 @@ import { invitationCreateSchema, type InvitationCreateInput } from "@/lib/schema
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { EVENT_TYPES } from "@/lib/invitation";
-import { cn } from "@/lib/utils";
+import { cn, previewImageSrc } from "@/lib/utils";
 import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
 import { TemplatePicker } from "./TemplatePicker";
 import { useInvitations, useCreateInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
@@ -54,6 +54,44 @@ function TemplateBadge({ id }: { id: string }) {
       {meta.name}
     </Badge>
   );
+}
+
+/** Tanggal pendek ("14 Feb 2026"). Tanggal `YYYY-MM-DD` sengaja diparse lokal. */
+function shortDate(value?: string | null): string | null {
+  if (!value) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  const d = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** "14 Feb 2026, 14.30" — untuk baris "Diperbarui". */
+function updatedLabel(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return `${date}, ${time}`;
+}
+
+function coupleOf(item: InvitationRow): string | null {
+  const parts = [item.bride_name?.trim(), item.groom_name?.trim()].filter((p): p is string => Boolean(p));
+  return parts.length > 0 ? parts.join(" & ") : null;
+}
+
+/** Isi undangan yang sudah terisi — dipakai sebagai chip "Kelengkapan". */
+function contentChips(item: InvitationRow): string[] {
+  const chips: string[] = [];
+  const photos = Array.isArray(item.gallery_images) ? item.gallery_images.length : 0;
+  if (photos > 0) chips.push(`${photos} foto`);
+  if (item.music_url) chips.push("Musik");
+  if (item.rsvp_enabled) chips.push("RSVP");
+  if (item.video_url) chips.push("Video");
+  if ((item.gift_accounts?.length ?? 0) > 0 || item.qris_image) chips.push("Hadiah");
+  return chips;
 }
 
 export default function InvitationDashboard() {
@@ -269,72 +307,138 @@ export default function InvitationDashboard() {
       {error && <p className="text-sm text-red-500">{(error as Error).message}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white">
-        <Table className="min-w-[34rem]">
+        <Table className="min-w-[64rem]">
           <TableHeader className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <TableRow className="border-b border-border/60 hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Acara</TableHead>
+              <TableHead className="text-muted-foreground">Undangan</TableHead>
+              <TableHead className="text-muted-foreground">Mempelai</TableHead>
+              <TableHead className="text-muted-foreground">Jadwal &amp; Lokasi</TableHead>
+              <TableHead className="text-muted-foreground">Kelengkapan</TableHead>
               <TableHead className="text-muted-foreground">Template</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-right text-muted-foreground">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item: InvitationRow) => (
-              <TableRow key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40">
-                <TableCell>
-                  <p className="font-medium text-foreground">{item.event_title || item.slug}</p>
-                  <p className="text-[11px] text-muted-foreground">/{item.slug}</p>
-                </TableCell>
-                <TableCell>
-                  <TemplateBadge id={item.template_id} />
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "border-transparent font-normal",
-                      item.is_published
-                        ? "bg-primary/15 text-accent-dark"
-                        : "bg-background text-muted-foreground",
+            {items.map((item: InvitationRow) => {
+              const cover = item.cover_image || item.bride_photo || item.groom_photo || null;
+              const couple = coupleOf(item);
+              const eventDate = shortDate(item.event_date);
+              const eventTime = item.event_time?.trim() || "";
+              const venue = item.venue_name?.trim() || item.venue_address?.trim() || "";
+              const chips = contentChips(item);
+
+              return (
+                <TableRow key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40">
+                  <TableCell className="align-top whitespace-normal">
+                    <div className="flex items-start gap-2.5">
+                      {cover && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={previewImageSrc(cover, 128)}
+                          alt=""
+                          width={44}
+                          height={44}
+                          loading="lazy"
+                          className="h-11 w-11 shrink-0 rounded-lg border border-border bg-background object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="break-words font-medium text-foreground">{item.event_title || item.slug}</p>
+                        <p className="break-words text-[11px] text-muted-foreground">/{item.slug}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Diperbarui {updatedLabel(item.updated_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top whitespace-normal">
+                    <p className="max-w-[13rem] text-foreground">{couple || "—"}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {item.event_type || "Tipe acara belum diisi"}
+                    </p>
+                  </TableCell>
+                  <TableCell className="align-top whitespace-normal">
+                    <p className="text-foreground">
+                      {eventDate
+                        ? `${eventDate}${eventTime ? ` · ${eventTime}` : ""}`
+                        : "Tanggal belum diatur"}
+                    </p>
+                    <p className="line-clamp-2 max-w-[13rem] text-[11px] text-muted-foreground">
+                      {venue || "Lokasi belum diatur"}
+                    </p>
+                  </TableCell>
+                  <TableCell className="align-top whitespace-normal">
+                    {chips.length > 0 ? (
+                      <div className="flex max-w-[14rem] flex-wrap gap-1">
+                        {chips.map((chip) => (
+                          <Badge
+                            key={chip}
+                            variant="outline"
+                            className="bg-background font-normal text-muted-foreground"
+                          >
+                            {chip}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Belum ada isi</span>
                     )}
-                  >
-                    {item.is_published ? "Published" : "Draft"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 w-11"
-                      onClick={() => router.push(`/dashboard/invitations/${item.slug}`)}
-                      aria-label={`Edit ${item.event_title || item.slug}`}
+                  </TableCell>
+                  <TableCell>
+                    <TemplateBadge id={item.template_id} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "border-transparent font-normal",
+                        item.is_published
+                          ? "bg-primary/15 text-accent-dark"
+                          : "bg-background text-muted-foreground",
+                      )}
                     >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 w-11"
-                      onClick={() => router.push(`/preview/invitation/${item.slug}`)}
-                      aria-label={`Preview ${item.event_title || item.slug}`}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 w-11 text-red-500 hover:bg-red-50 hover:text-red-600"
-                      onClick={() => setConfirmDelete(item.slug)}
-                      disabled={deleting === item.slug || deleteMutation.isPending}
-                      aria-label={`Hapus ${item.event_title || item.slug}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      {item.is_published ? "Published" : "Draft"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 w-11"
+                        onClick={() => router.push(`/dashboard/invitations/${item.slug}`)}
+                        aria-label={`Edit ${item.event_title || item.slug}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 w-11"
+                        onClick={() => router.push(`/preview/invitation/${item.slug}`)}
+                        aria-label={`Preview ${item.event_title || item.slug}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 w-11 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => setConfirmDelete(item.slug)}
+                        disabled={deleting === item.slug || deleteMutation.isPending}
+                        aria-label={`Hapus ${item.event_title || item.slug}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
 
