@@ -4,10 +4,24 @@ import { Mail, MessageCircle } from "lucide-react";
 import {
   navigationLinks,
   siteConfig,
+  socials,
   waMessages,
   whatsappDisplay,
   whatsappLink,
 } from "@/lib/site-config";
+import {
+  FacebookIcon,
+  InstagramIcon,
+  ThreadsIcon,
+  TikTokIcon,
+} from "@/components/home/social-icons";
+
+const socialIcons = {
+  instagram: InstagramIcon,
+  tiktok: TikTokIcon,
+  facebook: FacebookIcon,
+  threads: ThreadsIcon,
+} as const;
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -64,6 +78,22 @@ export function SiteFooter() {
                 {siteConfig.email}
               </a>
             </li>
+            {socials.map((item) => {
+              const Icon = socialIcons[item.id];
+              return (
+                <li key={item.id}>
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-2 text-sm text-text-secondary transition-colors duration-300 hover:text-accent"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {item.label}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

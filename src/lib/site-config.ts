@@ -26,6 +26,17 @@ export const waMessages = {
   footer: "Halo Wimah Ngundang, saya ingin bertanya tentang layanan undangan digital.",
 } as const;
 
+/** Sosial media resmi Wimah — dipakai di footer dan tombol mengambang. */
+export const socials = [
+  { id: "instagram", label: "Instagram", href: "https://www.instagram.com/wimah.photobooth" },
+  { id: "tiktok", label: "TikTok", href: "https://www.tiktok.com/@wimah.photobooth" },
+  { id: "facebook", label: "Facebook", href: "https://www.facebook.com/share/1ErSHgv2nu/" },
+  { id: "threads", label: "Threads", href: "https://www.threads.com/@wimah.photobooth" },
+] as const;
+
+/** Tautan WhatsApp tanpa pesan — dipakai tombol mengambang. */
+export const whatsappChatUrl = `https://wa.me/${whatsappNumber}`;
+
 export const navigationLinks = [
   { href: "#creation", label: "Best Creation" },
   { href: "#template", label: "Template" },

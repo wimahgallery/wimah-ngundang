@@ -9,6 +9,7 @@ import { HomeFaq } from "@/components/home/home-faq";
 import { HomeFinalCta } from "@/components/home/home-final-cta";
 import { SiteFooter } from "@/components/home/site-footer";
 import { PageBackground } from "@/components/home/page-background";
+import { WhatsAppFab } from "@/components/home/whatsapp-fab";
 
 const title = "Undangan Digital Premium untuk Pernikahan & Acara Spesial";
 const ogImageUrl = `${siteConfig.siteUrl}/wimah.png`;
@@ -96,6 +97,7 @@ export default function HomePage() {
         <HomeFinalCta />
       </main>
       <SiteFooter />
+      <WhatsAppFab />
     </>
   );
 }
