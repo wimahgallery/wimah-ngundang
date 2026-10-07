@@ -1,5 +1,11 @@
-const rawWhatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6287740812765";
-
+/**
+ * Nomor WhatsApp resmi Wimah.
+ *
+ * Sengaja tidak dibaca dari `NEXT_PUBLIC_WHATSAPP_NUMBER`: variabel itu di
+ * proyek Vercel masih menyimpan angka contoh (`6281234567890`), sehingga nomor
+ * placeholder bocor ke production (footer, CTA, dan tombol mengambang).
+ * Ubah di sini bila nomor berganti.
+ */
 export const siteConfig = {
   name: "Wimah Ngundang",
   shortName: "Wimah",
@@ -10,7 +16,7 @@ export const siteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
 } as const;
 
-export const whatsappNumber = rawWhatsappNumber.replace(/\D/g, "");
+export const whatsappNumber = "6287740812765";
 
 export const whatsappDisplay = `+${whatsappNumber}`;
 
