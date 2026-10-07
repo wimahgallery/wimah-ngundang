@@ -208,3 +208,32 @@ export async function deleteInvitation(slug: string) {
   if (!res.ok) throw new Error("Gagal menghapus undangan");
   return res.json();
 }
+
+export type GuestStats = {
+  /** Jumlah ucapan/konfirmasi yang masuk. */
+  wishes: number;
+  /** Jumlah tamu yang memilih "hadir". */
+  attending: number;
+  /** Total orang dari yang konfirmasi hadir. */
+  guests: number;
+};
+
+/**
+ * Statistik tamu untuk daftar slug sekaligus.
+ *
+ * Bersifat pelengkap: kalau endpoint-nya gagal (mis. RPC ucapan belum
+ * dibuat), daftar undangan tetap tampil dan kolom tamu dikosongkan.
+ */
+export async function fetchInvitationStats(slugs: string[]): Promise<Record<string, GuestStats>> {
+  if (slugs.length === 0) return {};
+  const params = new URLSearchParams({ slugs: slugs.join(",") });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/stats?${params.toString()}`);
+  } catch {
+    throw new Error("Tidak bisa terhubung ke server. Periksa koneksi lalu coba lagi.");
+  }
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.error || "Gagal memuat statistik tamu");
+  return (json?.data ?? {}) as Record<string, GuestStats>;
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Eye, LogOut, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, LogOut, Search, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,8 +36,9 @@ import { EVENT_TYPES } from "@/lib/invitation";
 import { cn, previewImageSrc } from "@/lib/utils";
 import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
 import { TemplatePicker } from "./TemplatePicker";
-import { useInvitations, useCreateInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
-import type { InvitationRow } from "@/features/invitations/services/invitationApi";
+import ShareInvitationDialog from "./ShareInvitationDialog";
+import { useInvitations, useCreateInvitation, useDeleteInvitation, useInvitationStats } from "@/features/invitations/hooks";
+import type { InvitationRow, GuestStats } from "@/features/invitations/services/invitationApi";
 
 function TemplateBadge({ id }: { id: string }) {
   if (!isTemplateId(id)) {
@@ -94,6 +95,26 @@ function contentChips(item: InvitationRow): string[] {
   return chips;
 }
 
+/** Statistik tamu per baris — "—" selama data belum tersedia. */
+function GuestStatsCell({ stats }: { stats?: GuestStats }) {
+  if (!stats) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  if (stats.wishes === 0) {
+    return <span className="text-xs text-muted-foreground">Belum ada tamu</span>;
+  }
+  return (
+    <div className="min-w-0">
+      <p className="text-foreground">
+        <span className="font-medium">{stats.guests}</span> tamu
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        {stats.wishes} ucapan · {stats.attending} hadir
+      </p>
+    </div>
+  );
+}
+
 export default function InvitationDashboard() {
   const router = useRouter();
   const createMutation = useCreateInvitation();
@@ -125,6 +146,7 @@ export default function InvitationDashboard() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<InvitationRow | null>(null);
 
   // Pencarian & paginasi dilakukan di server (API mendukung `search` + `range`)
   // supaya undangan ke-21 ke atas tetap terjangkau.
@@ -139,6 +161,10 @@ export default function InvitationDashboard() {
   const { data, isLoading, error } = useInvitations({ page, search: debouncedSearch });
   const items: InvitationRow[] = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  // Statistik tamu diambil terpisah supaya daftar tetap tampil cepat walau
+  // endpoint statistik lambat atau gagal.
+  const { stats } = useInvitationStats(items.map((item) => item.slug));
 
   // Hapus item terakhir di halaman terakhir → jangan sampai berhenti di halaman kosong.
   useEffect(() => {
@@ -307,13 +333,14 @@ export default function InvitationDashboard() {
       {error && <p className="text-sm text-red-500">{(error as Error).message}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white">
-        <Table className="min-w-[64rem]">
+        <Table className="min-w-[72rem]">
           <TableHeader className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <TableRow className="border-b border-border/60 hover:bg-transparent">
               <TableHead className="text-muted-foreground">Undangan</TableHead>
               <TableHead className="text-muted-foreground">Mempelai</TableHead>
               <TableHead className="text-muted-foreground">Jadwal &amp; Lokasi</TableHead>
               <TableHead className="text-muted-foreground">Kelengkapan</TableHead>
+              <TableHead className="text-muted-foreground">Tamu</TableHead>
               <TableHead className="text-muted-foreground">Template</TableHead>
               <TableHead className="text-muted-foreground">Status</TableHead>
               <TableHead className="text-right text-muted-foreground">Aksi</TableHead>
@@ -388,6 +415,9 @@ export default function InvitationDashboard() {
                       <span className="text-xs text-muted-foreground">Belum ada isi</span>
                     )}
                   </TableCell>
+                  <TableCell className="align-top whitespace-normal">
+                    <GuestStatsCell stats={stats?.[item.slug]} />
+                  </TableCell>
                   <TableCell>
                     <TemplateBadge id={item.template_id} />
                   </TableCell>
@@ -423,6 +453,15 @@ export default function InvitationDashboard() {
                         aria-label={`Preview ${item.event_title || item.slug}`}
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 w-11"
+                        onClick={() => setSharing(item)}
+                        aria-label={`Bagikan ${item.event_title || item.slug}`}
+                      >
+                        <Share2 className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -519,6 +558,14 @@ export default function InvitationDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ShareInvitationDialog
+        open={sharing !== null}
+        onOpenChange={(o) => {
+          if (!o) setSharing(null);
+        }}
+        invitation={sharing}
+      />
     </div>
   );
 }
