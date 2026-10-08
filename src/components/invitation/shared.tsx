@@ -376,19 +376,19 @@ export function MusicDock({ url }: { url: string }) {
         onClick={toggle}
         aria-label={playing ? "Jeda musik undangan" : "Putar musik undangan"}
         title={playing ? "Jeda musik" : "Putar musik"}
-        className="relative flex h-12 w-12 items-center justify-center rounded-full border border-border bg-glass/95 shadow-[0_12px_40px_rgba(84,82,77,0.18)] backdrop-blur transition hover:bg-glass focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:scale-95 sm:h-14 sm:w-14"
+        className="relative flex h-9 w-9 items-center justify-center rounded-full transition after:absolute after:-inset-1.5 after:rounded-full after:content-[''] hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:scale-95 motion-reduce:active:scale-100 sm:h-10 sm:w-10"
       >
         {playing && (
           <span
             aria-hidden
-            className="absolute inset-0 animate-ping rounded-full bg-accent/25 motion-reduce:animate-none"
+            className="absolute inset-0 animate-ping rounded-full border border-accent/60 motion-reduce:animate-none"
           />
         )}
-        <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-accent text-background sm:h-10 sm:w-10">
+        <span className="relative flex h-full w-full items-center justify-center rounded-full border border-accent/70 text-accent [text-shadow:0_1px_3px_rgba(0,0,0,0.45)]">
           {playing ? (
-            <Pause className="h-4 w-4" fill="currentColor" />
+            <Pause className="h-3.5 w-3.5" fill="currentColor" />
           ) : (
-            <Play className="h-4 w-4 translate-x-[1px]" fill="currentColor" />
+            <Play className="h-3.5 w-3.5 translate-x-[1px]" fill="currentColor" />
           )}
         </span>
       </button>

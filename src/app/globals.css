@@ -343,12 +343,12 @@
       (#f5f3ee) — strip putih kosong di bawah undangan berlatar gelap.
       Ditaruh di root, gradien/latar template ikut menutupinya. ── */
 .invitation-shell--music [data-template] {
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
 }
 
 /* Template fallback tidak punya [data-template] — ruang FAB tetap disediakan. */
 .invitation-shell--music:not(:has([data-template])) {
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
 }
 
 /* ── Dock musik + padding bawah hanya untuk halaman yang benar-benar

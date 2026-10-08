@@ -197,11 +197,6 @@ function LoadingScreen({
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-hero px-6 text-center text-hero-ink">
-      <div
-        aria-hidden
-        className="texture-noise pointer-events-none absolute inset-0"
-      />
-
       <p className="relative text-[10px] uppercase tracking-[0.34em] text-gold md:text-xs desk:text-sm">
         {invitation.hero_title || "The Wedding of"}
       </p>
@@ -386,7 +381,6 @@ function HeroCover({
     >
       <CoverBackdrop invitation={invitation} />
       <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: COVER_VEIL }} />
-      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
 
       <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
         <CoverTop invitation={invitation} />
@@ -491,12 +485,7 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band
       id="pembuka"
-      backdrop={
-        <>
-          <div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/30 to-surface/70" />
-          <div className="texture-noise absolute inset-0" />
-        </>
-      }
+      backdrop={<div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/30 to-surface/70" />}
     >
       {(text || description) && (
         <div className="mx-auto max-w-2xl text-center">
@@ -2049,7 +2038,7 @@ function DesktopStageCta({
       className="lume-stage__cta"
       style={
         hasMusic
-          ? { paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))" }
+          ? { paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))" }
           : undefined
       }
     >
@@ -2124,7 +2113,6 @@ function MobileStageCover({
         className="pointer-events-none absolute inset-0"
         style={{ background: COVER_VEIL }}
       />
-      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
 
       <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
         {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
@@ -2356,10 +2344,6 @@ function LumeTemplate({
         } as CSSProperties
       }
     >
-      <div
-        aria-hidden
-        className="lume-page-texture pointer-events-none absolute inset-0"
-      />
       <GoogleFontLink font={invitation.custom_settings.font} />
       {!ready && !embed && (
         <LoadingScreen invitation={invitation} onDone={handleReady} />
