@@ -24,13 +24,14 @@ import {
   Sparkles,
   Star,
 } from "lucide-react";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatDate, previewImageSrc } from "@/lib/utils";
 import { dispatchInvitationOpen } from "../shared";
 import { useInViewOnce } from "@/components/lazy";
 import {
   agendaEvents,
   coupleLabel,
   googleCalendarLink,
+  paragraphClass,
   type Invitation,
 } from "@/lib/invitation";
 import {
@@ -74,18 +75,40 @@ import {
  *  desktop 1200+    : komposisi asimetris, overlap, skala editorial (breakpoint `desk`)
  */
 
+/* ─── penyambung antar section: benang cerita + simpul di batas scene ─── */
+function SectionConnector() {
+  return (
+    <div
+      aria-hidden
+      className="lume-band-connector pointer-events-none absolute inset-x-0 top-0 z-[5] flex -translate-y-1/2 justify-center"
+    >
+      <span className="flex h-20 w-8 flex-col items-center md:h-24">
+        <span className="w-px flex-1 bg-gradient-to-b from-transparent to-accent-dark/55" />
+        <span className="my-1.5 size-1.5 rotate-45 border border-accent-dark/75" />
+        <span className="w-px flex-1 bg-gradient-to-b from-accent-dark/55 to-transparent" />
+      </span>
+    </div>
+  );
+}
+
 /* ─── band: section penuh-lebar + container responsif ─── */
 function Band({
   id,
   visible = true,
   tone = "plain",
   wide = false,
+  full = false,
+  connector = true,
+  backdrop,
   children,
 }: {
   id?: string;
   visible?: boolean;
   tone?: "plain" | "soft" | "dark";
   wide?: boolean;
+  full?: boolean;
+  connector?: boolean;
+  backdrop?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLElement | null>(null);
@@ -119,12 +142,25 @@ function Band({
       className={cn(
         "relative lume-reveal",
         revealed && "is-revealed",
-        "py-[clamp(4rem,10vw,10rem)]",
+        full
+          ? "flex min-h-[100svh] flex-col justify-center py-[clamp(3rem,8vw,7rem)]"
+          : "py-[clamp(4rem,10vw,10rem)]",
         tone === "soft" && "bg-surface/40",
         tone === "dark" && "bg-hero text-hero-ink",
       )}
     >
-      <div className={wide ? "invite-wrap-wide" : "invite-wrap"}>
+      {backdrop && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          {backdrop}
+        </div>
+      )}
+      {connector && <SectionConnector />}
+      <div
+        className={cn(wide ? "invite-wrap-wide" : "invite-wrap", "relative z-10")}
+      >
         {children}
       </div>
     </section>
@@ -240,194 +276,295 @@ function useGuestName(): string | null {
   return value ? value.trim().slice(0, 80) : null;
 }
 
-function HeroCover({
+/* ─── 2. Sampul bersama — dipakai semua template.
+   Layout mengikuti sampul referensi: foto full-bleed + veil gelap,
+   blok atas (kicker · nama pasangan · tanggal), blok bawah
+   (sapaan tamu · catatan penulisan nama · tombol "Buka Undangan"). ─── */
+
+const COVER_BG = "bg-[#0c0d0b]";
+
+const COVER_VEIL =
+  "linear-gradient(180deg, rgba(12,13,11,0.6) 0%, rgba(12,13,11,0.45) 38%, rgba(12,13,11,0.5) 62%, rgba(12,13,11,0.78) 100%)";
+
+const COVER_BUTTON_CLASS =
+  "inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/15 px-8 py-3 text-sm font-medium tracking-wide text-white backdrop-blur-md transition-all duration-300 hover:bg-white/25 active:scale-[0.97]";
+
+/** Latar sampul: foto undangan full-bleed; kalau belum ada foto, bidang gelap
+ *  netral supaya teks putih tetap terbaca di semua tema (terang maupun gelap). */
+function CoverBackdrop({ invitation }: { invitation: Invitation }) {
+  const hero = invitation.custom_settings.hero;
+  if (!invitation.cover_image) {
+    return <div aria-hidden className={`absolute inset-0 ${COVER_BG}`} />;
+  }
+  return (
+    <InvitationPhoto
+      src={invitation.cover_image}
+      alt={invitation.event_title || "Cover"}
+      className="absolute inset-0"
+      positionX={hero.imagePositionX}
+      positionY={hero.imagePositionY}
+      zoom={hero.zoom}
+      rotate={hero.rotate}
+      priority
+      sizes="100vw"
+    />
+  );
+}
+
+/** Blok atas sampul: kicker, nama pasangan satu baris, dan tanggal. */
+function CoverTop({
+  invitation,
+  children,
+}: {
+  invitation: Invitation;
+  children?: React.ReactNode;
+}) {
+  const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
+  const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
+
+  return (
+    <div
+      className="lume-fade-up relative z-10 w-full px-6 text-center"
+      style={{ animationDelay: "150ms" }}
+    >
+      <p className="text-[13px] tracking-[0.1em] text-white/75 md:text-sm md:tracking-[0.14em]">
+        {invitation.hero_title || "The Wedding of"}
+      </p>
+
+      <h1 className="mx-auto mt-3 max-w-[22rem] text-balance font-heading text-[clamp(1.9rem,1.1rem+4.5vw,3.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em] text-white md:mt-4 md:max-w-[34rem] md:text-[clamp(2.75rem,1.2rem+4vw,5rem)]">
+        {bride}
+        <span aria-hidden className="mx-2 align-middle font-normal text-white/60">
+          •
+        </span>
+        {groom}
+      </h1>
+
+      {invitation.event_date && (
+        <p className="mt-3 text-[15px] tracking-wide text-white/85 md:mt-4 md:text-base">
+          {formatDate(invitation.event_date)}
+        </p>
+      )}
+
+      {children}
+    </div>
+  );
+}
+
+/** Blok bawah sampul: sapaan tamu, catatan, dan tombol pembuka. */
+function CoverBottom({
   invitation,
   onOpen,
 }: {
   invitation: Invitation;
   onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const hero = invitation.custom_settings.hero;
-  const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
-  const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
-  const photoLeft = useLumeTheme().layout.heroPhoto === "left";
   const guestName = useGuestName();
 
   return (
-    <section className="relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-hero py-[clamp(4.5rem,10vw,7rem)] text-hero-ink">
-      <div
-        aria-hidden
-        className="texture-noise pointer-events-none absolute inset-0"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-20 top-[16%] h-56 w-56 rounded-full bg-gold/10 blur-3xl md:h-72 md:w-72"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 bottom-[10%] h-64 w-64 rounded-full bg-accent/15 blur-3xl md:h-80 md:w-80"
-      />
+    <div
+      className="lume-fade-up relative z-10 w-full px-6 text-center"
+      style={{ animationDelay: "350ms" }}
+    >
+      <p className="text-[13px] tracking-[0.06em] text-white/75 md:text-sm">
+        {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
+      </p>
+      <p className="mt-2 font-heading text-[clamp(1.6rem,1.2rem+1.8vw,2.5rem)] font-semibold leading-tight text-white">
+        {guestName || "Tamu Undangan"}
+      </p>
+      <p className="mx-auto mt-2 max-w-[24rem] text-[13px] italic leading-relaxed text-white/60">
+        Mohon maaf untuk kesalahan penulisan nama/gelar
+      </p>
 
-      <div className="invite-wrap relative z-10 grid grid-cols-1 gap-7 md:grid-cols-2 md:grid-rows-[auto_auto] md:gap-x-10 md:gap-y-4 desk:grid-cols-12 desk:gap-x-14 desk:gap-y-0">
-        {/* 1 · nama mempelai */}
-        <div
-          className={cn(
-            "lume-fade-up text-center md:col-start-1 md:row-start-1 md:self-end md:pb-3 md:text-left desk:col-span-7 desk:row-start-1 desk:self-end desk:pb-6",
-            photoLeft ? "desk:col-start-6" : "desk:col-start-1",
-          )}
-          style={{ animationDelay: "100ms" }}
-        >
-          <p className="text-[10px] uppercase tracking-[0.3em] text-gold md:text-xs desk:text-[13px]">
-            {invitation.hero_title || "The Wedding of"}
-          </p>
+      <a href="#greeting" onClick={onOpen} className={cn("mx-auto mt-5 w-full max-w-[17rem]", COVER_BUTTON_CLASS)}>
+        Buka Undangan
+      </a>
+    </div>
+  );
+}
 
-          <h1 className="mt-4 font-heading text-[clamp(2.75rem,1.4rem+8vw,4rem)] leading-[1.02] md:mt-5 md:text-[clamp(3rem,1rem+4.4vw,4.75rem)] desk:text-[clamp(4rem,0.5rem+5vw,7rem)]">
-            <span className="block">{bride}</span>
-            <span className="my-1 block font-elegant text-[0.5em] italic leading-none text-gold md:my-2">
-              &amp;
-            </span>
-            <span className="block">{groom}</span>
-          </h1>
-        </div>
+function HeroCover({
+  invitation,
+  onOpen,
+  exiting = false,
+}: {
+  invitation: Invitation;
+  onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  exiting?: boolean;
+}) {
+  return (
+    <section
+      aria-label="Sampul undangan"
+      aria-hidden={exiting || undefined}
+      className={cn(
+        "relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden text-white",
+        COVER_BG,
+        exiting &&
+          "pointer-events-none fixed inset-0 z-50 transition-all duration-700 ease-out",
+        exiting && "scale-[1.04] opacity-0 blur-[20px]",
+      )}
+    >
+      <CoverBackdrop invitation={invitation} />
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: COVER_VEIL }} />
+      <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
 
-        {/* 2 · foto */}
-        <figure
-          className={cn(
-            "lume-fade-up relative mx-auto w-full max-w-[24rem] md:col-start-2 md:row-start-1 md:row-span-2 md:max-w-none md:self-center desk:col-span-5 desk:row-start-1 desk:row-span-2 desk:max-w-[34rem]",
-            photoLeft
-              ? "desk:col-start-1 desk:-mr-6"
-              : "desk:col-start-8 desk:-ml-6",
-          )}
-          style={{ animationDelay: "250ms" }}
-        >
-          <span
-            aria-hidden
-            className="absolute -inset-3 hidden rounded-2xl border border-gold/30 md:block desk:-inset-4"
-          />
-          <InvitationPhoto
-            src={invitation.cover_image}
-            alt={invitation.event_title || "Cover"}
-            className="aspect-[3/4] w-full md:aspect-[4/5] md:rounded-2xl desk:rounded-3xl"
-            positionX={hero.imagePositionX}
-            positionY={hero.imagePositionY}
-            zoom={hero.zoom}
-            rotate={hero.rotate}
-            priority
-            sizes="(min-width: 1200px) 40vw, (min-width: 768px) 45vw, 100vw"
-          />
-        </figure>
-
-        {/* 3 · tanggal, tamu, tombol */}
-        <div
-          className={cn(
-            "lume-fade-up text-center md:col-start-1 md:row-start-2 md:self-start md:text-left desk:col-span-6 desk:row-start-2 desk:self-start desk:pt-8",
-            photoLeft ? "desk:col-start-6" : "desk:col-start-1",
-          )}
-          style={{ animationDelay: "400ms" }}
-        >
-          {invitation.event_date && (
-            <p className="font-heading text-[clamp(1rem,0.8rem+1vw,1.25rem)] tracking-wide text-hero-ink/90 md:text-[clamp(1.1rem,0.8rem+0.6vw,1.5rem)]">
-              {formatDate(invitation.event_date)}
-            </p>
-          )}
-
-          <div className="mx-auto my-6 h-px w-16 bg-gold/40 md:mx-0 desk:my-7" />
-
-          <div className="border-y border-white/10 py-5 md:border-0 md:py-0 desk:border-l desk:border-gold/30 desk:py-0 desk:pl-5">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-hero-ink/65 md:text-[11px]">
-              {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
-            </p>
-            <p className="mt-2 font-heading text-xl italic md:text-2xl desk:text-[1.75rem]">
-              {guestName || "Tamu Undangan"}
-            </p>
-          </div>
-
-          <a
-            href="#greeting"
-            onClick={onOpen}
-            className="mt-7 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97] md:w-auto md:max-w-none md:px-9"
-          >
-            Buka Undangan
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
-              />
-            </svg>
-          </a>
-        </div>
+      <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
+        <CoverTop invitation={invitation} />
+        <CoverBottom invitation={invitation} onOpen={onOpen} />
       </div>
     </section>
   );
 }
 
-/* ─── 3. Pembuka: deskripsi + foto ───
-   mobile  : teks center, dua foto berdampingan
-   tablet  : teks kiri · dua foto kanan (offset)
-   desktop : teks kolom sempit kiri · foto besar kanan, saling menjorok
+/* ─── 3. Kartu judul satu layar penuh: kicker + nama pasangan + tanggal ───
+   Tampil tepat setelah sampul dibuka; jadi layar pertama saat scroll.
 */
 function OpeningSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.greeting;
-  const photos = OpeningPhotos(invitation);
-  const description = invitation.hero_subtitle || invitation.greeting_text;
+  const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
+  const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
+  const gallery = invitation.gallery_images
+    .map((g) => g?.url)
+    .filter((u): u is string => Boolean(u))
+    .slice(0, 6);
+  const [active, setActive] = useState(0);
+
+  // Crossfade latar galeri tiap 5 detik (berhenti kalau user minta reduced motion).
+  useEffect(() => {
+    if (gallery.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(
+      () => setActive((i) => (i + 1) % gallery.length),
+      5000,
+    );
+    return () => window.clearInterval(timer);
+  }, [gallery.length]);
+
+  const activeIndex = Math.min(active, Math.max(gallery.length - 1, 0));
+
+  return (
+    <Band
+      id="greeting"
+      visible={settings.visible}
+      full
+      connector={false}
+      backdrop={
+        gallery.length > 0 ? (
+          <>
+            {gallery.map((src, index) => (
+              <div
+                key={`title-bg-${index}`}
+                className={cn(
+                  "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-out",
+                  index === activeIndex ? "opacity-100" : "opacity-0",
+                )}
+                style={{
+                  backgroundImage: `url(${JSON.stringify(previewImageSrc(src, 1200))})`,
+                  filter: "blur(4px)",
+                  transform: "scale(1.06)",
+                }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-black/35" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/50" />
+          </>
+        ) : undefined
+      }
+    >
+      <div className="relative z-10 text-center text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.5),0_2px_32px_rgba(0,0,0,0.35)] [&_.dna-kicker]:text-white/85">
+        <SectionKicker>
+          {invitation.hero_title || "The Wedding of"}
+        </SectionKicker>
+        <h2 className="mt-4 text-balance font-heading text-[clamp(2.2rem,1.3rem+4vw,4.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em]">
+          {bride}
+          <span aria-hidden className="mx-2 align-middle font-normal text-accent-light">
+            •
+          </span>
+          {groom}
+        </h2>
+        {invitation.event_date && (
+          <p className="mt-5 text-sm tracking-wide text-white/85 md:text-base">
+            {formatDate(invitation.event_date)}
+          </p>
+        )}
+        <DecorativeDivider className="mx-auto mt-8 [&>span]:bg-white/50" />
+      </div>
+    </Band>
+  );
+}
+
+/* ─── 3b. Kata pembuka + deskripsi + foto couple ───
+   Teks pembuka di-edit per undangan (`custom_settings.preamble.text`) —
+   tanpa teks, foto tetap tampil (selama section nama+foto tidak disembunyikan). ─── */
+function PreambleSection({ invitation }: { invitation: Invitation }) {
+  const greeting = invitation.custom_settings.greeting;
+  const settings = invitation.custom_settings.preamble;
+  const text = settings.visible ? settings.text?.trim() : undefined;
+  const description = greeting.visible
+    ? invitation.hero_subtitle || undefined
+    : undefined;
+  const photos = greeting.visible ? OpeningPhotos(invitation) : [];
   const { layout } = useLumeTheme();
-  const photoRight = layout.openingPhoto === "right";
   const tallIndex = layout.openingStagger === "first" ? 0 : 1;
   const lowIndex = layout.openingStagger === "first" ? 1 : 0;
 
+  if (!text && !description && photos.length === 0) return null;
+
   return (
-    <Band id="greeting" visible={settings.visible}>
-      <div className="grid gap-9 md:gap-12 desk:grid-cols-12 desk:items-center desk:gap-16">
-        <div
-          className={cn(
-            "text-center md:mx-auto md:max-w-2xl md:text-center desk:col-span-5 desk:mx-0 desk:max-w-md desk:text-left",
-            photoRight ? "desk:col-start-1" : "desk:col-start-6",
+    <Band
+      id="pembuka"
+      backdrop={
+        <>
+          <div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/30 to-surface/70" />
+          <div className="texture-noise absolute inset-0" />
+        </>
+      }
+    >
+      {(text || description) && (
+        <div className="mx-auto max-w-2xl text-center">
+          {text && (
+            <>
+              <SectionKicker>Kata Pembuka</SectionKicker>
+              <DecorativeDivider className="mt-5" />
+              <p
+                className={cn(
+                  "mt-6 whitespace-pre-line text-text-secondary leading-[2]",
+                  paragraphClass(settings.paragraphSize),
+                )}
+              >
+                {text}
+              </p>
+            </>
           )}
-        >
-          <SectionKicker>
-            {invitation.hero_title || "The Wedding of"}
-          </SectionKicker>
-          <h2 className="mt-3 font-heading text-[clamp(1.75rem,1.2rem+2.4vw,2.5rem)] md:text-[clamp(2rem,1.2rem+2vw,3rem)] leading-[1.15]">
-            <CoupleNames invitation={invitation} />
-          </h2>
           {description && (
-            <p className="mx-auto mt-6 text-sm leading-[1.9] text-text-secondary md:mx-0 md:text-base desk:text-[1.0625rem]">
+            <p
+              className={cn(
+                "text-sm leading-[1.9] text-text-secondary md:text-base",
+                text && "mt-6",
+              )}
+            >
               {description}
             </p>
           )}
-          <DecorativeDivider className="mt-7 desk:justify-start" />
         </div>
+      )}
 
-        {photos.length > 0 && (
-          <div
-            className={cn(
-              "grid grid-cols-2 gap-3 md:gap-5 desk:col-span-7 desk:gap-7",
-              photoRight ? "desk:col-start-6" : "desk:col-start-1",
-            )}
-          >
-            {photos.map((src, index) => (
-              <InvitationPhoto
-                key={`opening-photo-${index}`}
-                src={src}
-                alt={`Momen ${index + 1}`}
-                className={cn(
-                  "aspect-[3/4] w-full overflow-hidden rounded-xl shadow-[0_18px_50px_rgba(84,82,77,0.12)] md:rounded-2xl",
-                  index === tallIndex && "md:mt-10 desk:mt-20",
-                  index === lowIndex && "desk:mb-16",
-                )}
-                sizes="(min-width: 1200px) 30vw, (min-width: 768px) 40vw, 45vw"
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {photos.length > 0 && (
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-3 md:mt-14 md:gap-5">
+          {photos.map((src, index) => (
+            <InvitationPhoto
+              key={`opening-photo-${index}`}
+              src={src}
+              alt={`Momen ${index + 1}`}
+              className={cn(
+                "aspect-[3/4] w-full overflow-hidden rounded-xl shadow-[0_18px_50px_rgba(84,82,77,0.12)] md:rounded-2xl",
+                index === tallIndex && "md:mt-10",
+                index === lowIndex && "md:mb-10",
+              )}
+              sizes="(min-width: 768px) 40vw, 45vw"
+            />
+          ))}
+        </div>
+      )}
     </Band>
   );
 }
@@ -1729,7 +1866,6 @@ function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
           src={img.url}
           alt={img.alt || `Galeri ${i + 1}`}
           fill
-          priority={i === 0}
           sizes="(min-width: 1200px) 65vw"
           className={cn("lume-stage__shot", i === active && "is-active")}
         />
@@ -1806,22 +1942,9 @@ function DesktopStageCta({
       <a
         href="#greeting"
         onClick={onOpen}
-        className="inline-flex min-h-12 items-center gap-2 rounded-full border border-gold/50 bg-black/45 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-md transition-all duration-300 hover:bg-gold/20 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97]"
+        className={cn("w-full max-w-[17rem]", COVER_BUTTON_CLASS)}
       >
         Buka Undangan
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
-          />
-        </svg>
       </a>
     </div>
   );
@@ -1834,14 +1957,12 @@ function DesktopStageCta({
 function MobileStageCover({
   invitation,
   onOpen,
+  exiting = false,
 }: {
   invitation: Invitation;
   onOpen?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  exiting?: boolean;
 }) {
-  const hero = invitation.custom_settings.hero;
-  const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
-  const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
-  const guestName = useGuestName();
   const images = invitation.gallery_images;
   const [active, setActive] = useState(0);
 
@@ -1859,8 +1980,15 @@ function MobileStageCover({
 
   return (
     <section
-      className="lume-stage__cover relative isolate flex min-h-[100svh] flex-col justify-between overflow-hidden bg-[#0c0d0b] text-white"
+      className={cn(
+        "lume-stage__cover relative isolate flex min-h-[100svh] flex-col items-center justify-center overflow-hidden text-white",
+        COVER_BG,
+        exiting &&
+          "pointer-events-none fixed inset-0 z-50 transition-all duration-700 ease-out",
+        exiting && "scale-[1.04] opacity-0 blur-[20px]",
+      )}
       aria-label="Sampul undangan"
+      aria-hidden={exiting || undefined}
     >
       {images.length > 0 ? (
         images.map((img, i) => (
@@ -1875,49 +2003,18 @@ function MobileStageCover({
           />
         ))
       ) : (
-        <InvitationPhoto
-          src={invitation.cover_image}
-          alt={invitation.event_title || "Cover"}
-          className="absolute inset-0"
-          positionX={hero.imagePositionX}
-          positionY={hero.imagePositionY}
-          zoom={hero.zoom}
-          rotate={hero.rotate}
-          priority
-          sizes="100vw"
-        />
+        <CoverBackdrop invitation={invitation} />
       )}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(12,13,11,0.72) 0%, rgba(12,13,11,0.2) 32%, rgba(12,13,11,0.3) 58%, rgba(12,13,11,0.9) 100%)",
-        }}
+        style={{ background: COVER_VEIL }}
       />
       <div aria-hidden className="texture-noise pointer-events-none absolute inset-0 opacity-40" />
 
-      {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
-      <div
-        className="lume-fade-up relative z-10 px-6 pt-[max(clamp(2rem,7vh,4rem),env(safe-area-inset-top))] text-center"
-        style={{ animationDelay: "150ms" }}
-      >
-        <p className="text-[10px] uppercase tracking-[0.3em] text-white/75">
-          {invitation.hero_title || "The Wedding of"}
-        </p>
-        <h1 className="mt-3 font-heading text-[clamp(2.5rem,1.4rem+7vw,3.75rem)] leading-[1.05]">
-          <span className="block">{bride}</span>
-          <span className="my-0.5 block font-elegant text-[0.5em] italic leading-none text-gold">
-            &amp;
-          </span>
-          <span className="block">{groom}</span>
-        </h1>
-        {invitation.event_date && (
-          <p className="mt-3 font-heading text-sm tracking-wide text-white/85 md:text-base">
-            {formatDate(invitation.event_date)}
-          </p>
-        )}
-
+      <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
+        {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
+        <CoverTop invitation={invitation}>
         {images.length > 1 && (
           <div className="mt-4 flex items-center justify-center gap-4">
             <span className="lume-stage__count" aria-live="off">
@@ -1945,39 +2042,10 @@ function MobileStageCover({
             </div>
           </div>
         )}
-      </div>
+        </CoverTop>
 
-      {/* bawah: sapaan tamu + tombol */}
-      <div
-        className="lume-fade-up relative z-10 px-6 pb-[max(clamp(2rem,6vh,3.5rem),env(safe-area-inset-bottom))] text-center"
-        style={{ animationDelay: "350ms" }}
-      >
-        <p className="text-[10px] uppercase tracking-[0.24em] text-white/70">
-          {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
-        </p>
-        <p className="mt-2 font-heading text-2xl italic md:text-3xl">
-          {guestName || "Tamu Undangan"}
-        </p>
-        <a
-          href="#greeting"
-          onClick={onOpen}
-          className="mx-auto mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full border border-gold/50 bg-gold/15 px-8 py-3.5 text-sm font-medium tracking-wide text-gold backdrop-blur-sm transition-all duration-300 hover:bg-gold/25 hover:shadow-[0_10px_40px_rgba(212,168,83,0.25)] active:scale-[0.97]"
-        >
-          Buka Undangan
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"
-            />
-          </svg>
-        </a>
+        {/* bawah: sapaan tamu + catatan + tombol */}
+        <CoverBottom invitation={invitation} onOpen={onOpen} />
       </div>
     </section>
   );
@@ -2016,30 +2084,43 @@ function LumeTemplate({
   const { id: templateId, css, pageGradient } = useLumeTheme();
   const [ready, setReady] = useState(embed);
   const [opened, setOpened] = useState(false);
+  // Transisi sampul → konten utama: sampul keluar dari alur dokumen (fixed)
+  // lalu blur+fade, sehingga section pembuka di belakangnya tersingkap.
+  const [coverExiting, setCoverExiting] = useState(false);
+  const [coverGone, setCoverGone] = useState(false);
+  const coverTimerRef = useRef<number | null>(null);
   const handleReady = useCallback(() => setReady(true), []);
 
-  // Buka kunci scroll + gulir ke section pembuka secara sinkron sebelum
-  // navigasi anchor default berjalan. Posisi target dihitung tanpa transform
-  // reveal (translateY) supaya mendarat pas di tepi viewport.
+  useEffect(
+    () => () => {
+      if (coverTimerRef.current !== null) window.clearTimeout(coverTimerRef.current);
+    },
+    [],
+  );
+
+  // Buka kunci scroll + mulai transisi sampul. Gulir tidak diperlukan:
+  // saat sampul berpindah ke position:fixed, section pembuka otomatis naik
+  // ke posisi paling atas di belakangnya (opacity cover masih 1 → tidak
+  // terlihat patah), lalu cover meluruh dan section itu tersingkap.
+  // Masih synchronous dengan klik tamu → `MusicDock` boleh memutar lagu
+  // (izin autoplay browser melekat pada gesture ini).
   const handleOpen = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     document.documentElement.removeAttribute("data-invitation-locked");
     setOpened(true);
-    // Masih synchronous dengan klik tamu → `MusicDock` boleh memutar lagu
-    // (izin autoplay browser melekat pada gesture ini).
     dispatchInvitationOpen();
     const href = e.currentTarget.getAttribute("href");
-    if (!href?.startsWith("#")) return;
-    const target = document.getElementById(href.slice(1));
-    if (!target) return;
-    e.preventDefault();
-    history.replaceState(null, "", href);
-    const ty = new DOMMatrixReadOnly(getComputedStyle(target).transform).m42;
-    window.scrollTo({
-      top: target.getBoundingClientRect().top + window.scrollY - ty,
-      // "auto" mengikuti css scroll-behavior (smooth; instant saat reduced-motion)
-      behavior: "auto",
-    });
-  }, []);
+    if (href?.startsWith("#")) {
+      e.preventDefault();
+      history.replaceState(null, "", href);
+    }
+    if (coverGone) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setCoverGone(true);
+      return;
+    }
+    setCoverExiting(true);
+    coverTimerRef.current = window.setTimeout(() => setCoverGone(true), 750);
+  }, [coverGone]);
 
   // Desktop (≥1200px): halaman luar tidak menggulir (galeri + frame HP, isi
   // undangan ada di dalam iframe) — jadi klik tombol diteruskan ke tombol
@@ -2150,6 +2231,10 @@ function LumeTemplate({
         } as CSSProperties
       }
     >
+      <div
+        aria-hidden
+        className="lume-page-texture pointer-events-none absolute inset-0"
+      />
       <GoogleFontLink font={invitation.custom_settings.font} />
       {!ready && !embed && (
         <LoadingScreen invitation={invitation} onDone={handleReady} />
@@ -2157,7 +2242,13 @@ function LumeTemplate({
 
       {stage && (
         <>
-          <MobileStageCover invitation={invitation} onOpen={handleOpen} />
+          {!coverGone && (
+            <MobileStageCover
+              invitation={invitation}
+              onOpen={handleOpen}
+              exiting={coverExiting}
+            />
+          )}
           <DesktopGalleryPanel invitation={invitation} />
           <DesktopPhoneFrame src={frameSrc} />
           {!opened && (
@@ -2173,8 +2264,11 @@ function LumeTemplate({
       )}
 
       <div className={cn(stage && "lume-stage__body")}>
-        {!stage && <HeroCover invitation={invitation} onOpen={handleOpen} />}
+        {!stage && !coverGone && (
+          <HeroCover invitation={invitation} onOpen={handleOpen} exiting={coverExiting} />
+        )}
         <OpeningSection invitation={invitation} />
+        <PreambleSection invitation={invitation} />
         <CoupleSection invitation={invitation} />
         <LoveStorySection invitation={invitation} />
         <CountdownSection invitation={invitation} />

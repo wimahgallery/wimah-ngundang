@@ -171,6 +171,12 @@
 
   /* ── Lume desktop stage: galeri full-screen (kiri) + kolom mobile (kanan).
         Aktif hanya ≥1200px; di bawah itu tampilan undangan tetap seperti biasa. ── */
+  /* Panel galeri stage: relative sejak dasar supaya <Image fill> tidak
+     kena warning "invalid position" saat display:none (mobile). */
+  .lume-stage__panel {
+    position: relative;
+  }
+
   .lume-stage__panel,
   .lume-stage__phone {
     display: none;
@@ -317,7 +323,6 @@
 
     .lume-stage__frame {
       max-width: 440px;
-      border-radius: clamp(0.875rem, 1.2vw, 1.25rem);
       box-shadow:
         0 0 0 1px var(--stage-ring),
         0 40px 90px rgba(0, 0, 0, 0.5);

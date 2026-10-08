@@ -395,7 +395,7 @@ const [activeStep, setActiveStep] = useState(0);
       case "font": return <TypographyStep templateId={resolvedTemplateId} font={invitation.custom_settings.font ?? { heading: null, body: null, accent: null }} onChange={onChangeFont} />;
       case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} />;
-      case "greeting": return <StepGreeting invitation={invitation!} onChange={onChangeField} />;
+      case "greeting": return <StepGreeting invitation={invitation!} settings={s.preamble} greetingSettings={s.greeting} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "story": return <StepStory invitation={invitation!} settings={s.story} onChangeSettings={patchSettings} onChange={onChangeField} onChangeMilestones={onChangeMilestones} />;
       case "schedule": return <StepSchedule invitation={invitation!} settings={s.schedule} onChangeSettings={patchSettings} onChange={onChangeField} onChangeEvents={onChangeEvents} />;
       case "venue": return <StepVenue invitation={invitation!} settings={s.venue} onChangeSettings={patchSettings} onChange={onChangeField} />;
@@ -679,10 +679,50 @@ function StepHero({ invitation, settings, onChangeSettings, onChange }: { invita
   );
 }
 
-function StepGreeting({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
+function StepGreeting({
+  invitation,
+  settings,
+  greetingSettings,
+  onChangeSettings,
+  onChange,
+}: {
+  invitation: Invitation;
+  settings: CustomSettings["preamble"];
+  greetingSettings: CustomSettings["greeting"];
+  onChangeSettings: (key: SectionKey, next: CustomSettings[SectionKey]) => void;
+  onChange: FieldChange;
+}) {
   return (
     <div className="grid gap-3">
       <Field label="Teks sapaan"><Textarea className={inputClass} rows={3} value={invitation.greeting_text || ""} onChange={(e) => onChange("greeting_text", e.target.value)} /></Field>
+      <Field label="Kata pembuka (sebelum detail mempelai)">
+        <Textarea
+          className={inputClass}
+          rows={4}
+          placeholder="Dengan penuh rasa syukur ke hadirat Tuhan Yang Maha Esa, kami bermaksud menyelenggarakan pernikahan anak-anak kami…"
+          value={settings.text || ""}
+          onChange={(e) =>
+            onChangeSettings("preamble", {
+              ...settings,
+              text: e.target.value.trim() ? e.target.value : null,
+            })
+          }
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">
+        Diisi = tampil setelah kartu judul (nama + tanggal), tepat di atas foto couple. Dikosongkan = teksnya dilepas,
+        foto couple tetap tampil.
+      </p>
+      <SectionSettingsPanel
+        label="Section kartu judul & foto (layar pertama setelah sampul)"
+        value={greetingSettings}
+        onChange={(next) => onChangeSettings("greeting", next)}
+      />
+      <SectionSettingsPanel
+        label="Paragraf kata pembuka"
+        value={settings}
+        onChange={(next) => onChangeSettings("preamble", next)}
+      />
       <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2.5">
         <p className="text-xs text-muted-foreground">
           Nama penerima tampil otomatis dari link tamu — tambahkan{" "}

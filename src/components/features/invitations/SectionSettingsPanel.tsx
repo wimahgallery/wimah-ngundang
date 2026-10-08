@@ -9,12 +9,19 @@ const spacings: SectionSettings["sectionSpacing"][] = ["sm", "md", "lg"];
 export default function SectionSettingsPanel({
   value,
   onChange,
+  label,
 }: {
   value: SectionSettings;
   onChange: (next: SectionSettings) => void;
+  label?: string;
 }) {
   return (
     <div className="grid gap-2 rounded-xl bg-background p-3 sm:grid-cols-2">
+      {label && (
+        <p className="text-xs font-medium text-foreground sm:col-span-2">
+          {label}
+        </p>
+      )}
       <label className="flex min-h-10 items-center gap-2 text-xs text-foreground">
         <input
           type="checkbox"

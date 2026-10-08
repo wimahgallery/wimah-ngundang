@@ -37,6 +37,7 @@ export type SectionKey =
   | "info"
   | "hero"
   | "greeting"
+  | "preamble"
   | "couple"
   | "story"
   | "countdown"
@@ -58,7 +59,16 @@ export interface FontSettings {
   accent?: string | null;
 }
 
-export type CustomSettings = Record<SectionKey, SectionSettings> & { font?: FontSettings };
+export type CustomSettings = Record<SectionKey, SectionSettings> & {
+  preamble: PreambleSettings;
+  font?: FontSettings;
+};
+
+/** Setelan section kata pembuka — teksnya ikut disimpan di jsonb
+ *  `custom_settings` supaya tidak butuh kolom/migrasi database. */
+export interface PreambleSettings extends SectionSettings {
+  text?: string | null;
+}
 
 export interface GalleryImage {
   id: string;
@@ -185,6 +195,7 @@ export function defaultCustomSettings(): CustomSettings {
     info: defaultSection(),
     hero: defaultSection({ headingSize: "xl", imagePositionY: 40 }),
     greeting: defaultSection(),
+    preamble: defaultSection(),
     couple: defaultSection(),
     story: defaultSection({ align: "left" }),
     countdown: defaultSection(),

@@ -675,17 +675,9 @@ export function CopyButton({
 export function DecorativeDivider({ className }: { className?: string }) {
   return (
     <div
-      className={cn("flex items-center justify-center gap-3 py-2", className)}
+      className={cn("flex items-center justify-center py-2", className)}
     >
-      <span className="h-px w-12 bg-accent/30" />
-      <svg
-        className="h-4 w-4 text-accent/50"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-      >
-        <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.4 7.4-6.4-4.8-6.4 4.8 2.4-7.4-6-4.6h7.6z" />
-      </svg>
-      <span className="h-px w-12 bg-accent/30" />
+      <span className="h-px w-24 bg-accent/30" />
     </div>
   );
 }
