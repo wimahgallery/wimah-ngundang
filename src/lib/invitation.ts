@@ -21,6 +21,12 @@ export const EVENT_TYPES = [
 export type Align = "left" | "center" | "right";
 export type SizeToken = "sm" | "md" | "lg" | "xl";
 
+/** Tata letak grid galeri di halaman undangan:
+ *  `grid`   — semua foto bentuk sama (kolom & rasio bebas diatur)
+ *  `hero`   — foto pertama bentuk bebas melintang penuh, sisanya kolom biasa
+ *  `mosaic` — kolom dengan tinggi berselang-seling (rasio dasar diatur) */
+export type GalleryLayout = "grid" | "hero" | "mosaic";
+
 export interface SectionSettings {
   visible: boolean;
   align: Align;
@@ -61,6 +67,7 @@ export interface FontSettings {
 
 export type CustomSettings = Record<SectionKey, SectionSettings> & {
   preamble: PreambleSettings;
+  gallery: GallerySettings;
   font?: FontSettings;
 };
 
@@ -68,6 +75,23 @@ export type CustomSettings = Record<SectionKey, SectionSettings> & {
  *  `custom_settings` supaya tidak butuh kolom/migrasi database. */
 export interface PreambleSettings extends SectionSettings {
   text?: string | null;
+}
+
+/** Setelan section galeri — tata letak grid sepenuhnya diatur dari editor:
+ *  `layout` mode (seragam/hero/mozaik), kolom per breakpoint (responsif),
+ *  dan rasio bentuk foto dalam format CSS (`"1/1"`, `"16/9"`, bebas). */
+export interface GallerySettings extends SectionSettings {
+  layout: GalleryLayout;
+  /** Jumlah kolom di layar ponsel (1–8). */
+  columnsMobile: number;
+  /** Jumlah kolom di layar tablet ≥768px (1–8). */
+  columnsTablet: number;
+  /** Jumlah kolom di layar desktop ≥1200px (1–8). */
+  columnsDesktop: number;
+  /** Rasio bentuk foto pada sel (mode seragam & mozaik; sisanya di mode hero). */
+  aspect: string;
+  /** Rasio bentuk foto pertama pada mode hero. */
+  heroAspect: string;
 }
 
 export interface GalleryImage {
@@ -201,7 +225,15 @@ export function defaultCustomSettings(): CustomSettings {
     countdown: defaultSection(),
     schedule: defaultSection(),
     venue: defaultSection(),
-    gallery: defaultSection(),
+    gallery: {
+      ...defaultSection(),
+      layout: "grid",
+      columnsMobile: 2,
+      columnsTablet: 3,
+      columnsDesktop: 4,
+      aspect: "1/1",
+      heroAspect: "16/9",
+    },
     video: defaultSection(),
     gift: defaultSection(),
     rsvp: defaultSection(),

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings } from "@/lib/invitation";
+import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings, type GalleryLayout } from "@/lib/invitation";
 import { TypographyStep } from "./TypographyStep";
 import { defaultPreset } from "@/lib/font-library";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
@@ -636,12 +636,12 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
         </select>
       </Field>
       <Field label="Judul acara" className="sm:col-span-2"><input className={inputClass} value={invitation.event_title || ""} onChange={(e) => onChange("event_title", e.target.value)} /></Field>
-      <Field label="Nama mempelai wanita"><input className={inputClass} value={invitation.bride_name || ""} onChange={(e) => onChange("bride_name", e.target.value)} /></Field>
       <Field label="Nama mempelai pria"><input className={inputClass} value={invitation.groom_name || ""} onChange={(e) => onChange("groom_name", e.target.value)} /></Field>
-      <Field label="Panggilan wanita"><input className={inputClass} value={invitation.bride_nickname || ""} onChange={(e) => onChange("bride_nickname", e.target.value)} /></Field>
+      <Field label="Nama mempelai wanita"><input className={inputClass} value={invitation.bride_name || ""} onChange={(e) => onChange("bride_name", e.target.value)} /></Field>
       <Field label="Panggilan pria"><input className={inputClass} value={invitation.groom_nickname || ""} onChange={(e) => onChange("groom_nickname", e.target.value)} /></Field>
-      <Field label="Nama orang tua wanita"><input className={inputClass} value={invitation.bride_parents || ""} onChange={(e) => onChange("bride_parents", e.target.value)} /></Field>
+      <Field label="Panggilan wanita"><input className={inputClass} value={invitation.bride_nickname || ""} onChange={(e) => onChange("bride_nickname", e.target.value)} /></Field>
       <Field label="Nama orang tua pria"><input className={inputClass} value={invitation.groom_parents || ""} onChange={(e) => onChange("groom_parents", e.target.value)} /></Field>
+      <Field label="Nama orang tua wanita"><input className={inputClass} value={invitation.bride_parents || ""} onChange={(e) => onChange("bride_parents", e.target.value)} /></Field>
     </div>
   );
 }
@@ -653,11 +653,11 @@ function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invi
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("couple", next)} />
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <Field label="Foto mempelai wanita">
-          <ImageField label="Foto mempelai wanita" folder={uploadFolders.couple} value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", (prev) => ({ ...prev, imagePositionX: x, imagePositionY: y }))} onZoomChange={(z) => onChangeSettings("couple", (prev) => ({ ...prev, zoom: z }))} onRotateChange={(r) => onChangeSettings("couple", (prev) => ({ ...prev, rotate: r }))} />
-        </Field>
         <Field label="Foto mempelai pria">
           <ImageField label="Foto mempelai pria" folder={uploadFolders.couple} value={invitation.groom_photo} onChange={(url) => onChange("groom_photo", url ?? "")} positionX={invitation.groom_image_position_x} positionY={invitation.groom_image_position_y} zoom={invitation.groom_image_zoom} rotate={invitation.groom_image_rotate} onPositionChange={(x, y) => { onChange("groom_image_position_x", x); onChange("groom_image_position_y", y); }} onZoomChange={(z) => onChange("groom_image_zoom", z)} onRotateChange={(r) => onChange("groom_image_rotate", r)} />
+        </Field>
+        <Field label="Foto mempelai wanita">
+          <ImageField label="Foto mempelai wanita" folder={uploadFolders.couple} value={invitation.bride_photo} onChange={(url) => onChange("bride_photo", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("couple", (prev) => ({ ...prev, imagePositionX: x, imagePositionY: y }))} onZoomChange={(z) => onChangeSettings("couple", (prev) => ({ ...prev, zoom: z }))} onRotateChange={(r) => onChangeSettings("couple", (prev) => ({ ...prev, rotate: r }))} />
         </Field>
       </div>
     </>
@@ -842,10 +842,215 @@ function StepVenue({ invitation, settings, onChangeSettings, onChange }: { invit
   );
 }
 
+const GALLERY_LAYOUTS: { value: GalleryLayout; label: string; hint: string }[] = [
+  { value: "grid", label: "Grid seragam", hint: "Semua foto bentuk sama — kolom & rasio bebas diatur" },
+  { value: "hero", label: "Hero landscape", hint: "Foto pertama melintang penuh, sisanya tersusun di bawah" },
+  { value: "mosaic", label: "Mozaik", hint: "Tinggi berselang-seling, kesan masonry" },
+];
+
+function GalleryLayoutWireframe({ value }: { value: GalleryLayout }) {
+  const cell = "rounded-[2px] bg-current opacity-45";
+  if (value === "hero") {
+    return (
+      <span className="flex w-full flex-col gap-1" aria-hidden>
+        <span className={cn("h-4 w-full", cell)} />
+        <span className="grid grid-cols-3 gap-1">
+          <span className={cn("h-3", cell)} />
+          <span className={cn("h-3", cell)} />
+          <span className={cn("h-3", cell)} />
+        </span>
+      </span>
+    );
+  }
+  if (value === "mosaic") {
+    return (
+      <span className="flex w-full gap-1" aria-hidden>
+        <span className="flex flex-1 flex-col gap-1">
+          <span className={cn("h-5", cell)} />
+          <span className={cn("h-3", cell)} />
+        </span>
+        <span className="flex flex-1 flex-col gap-1">
+          <span className={cn("h-3", cell)} />
+          <span className={cn("h-5", cell)} />
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="grid w-full grid-cols-3 gap-1" aria-hidden>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <span key={i} className={cn("h-3", cell)} />
+      ))}
+    </span>
+  );
+}
+
+const GALLERY_ASPECTS: { value: string; label: string }[] = [
+  { value: "1/1", label: "1:1" },
+  { value: "4/5", label: "4:5" },
+  { value: "3/4", label: "3:4" },
+  { value: "4/3", label: "4:3" },
+  { value: "3/2", label: "3:2" },
+  { value: "16/9", label: "16:9" },
+  { value: "9/16", label: "9:16" },
+];
+
+const clampColumns = (value: unknown, fallback: number) => {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(8, Math.max(1, n)) : fallback;
+};
+
+function parseAspectInput(value: string): [string, string] {
+  const match = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(String(value).trim());
+  return match ? [match[1], match[2]] : ["1", "1"];
+}
+
+function ColumnStepper({ label, value, onDecrement, onIncrement }: { label: string; value: number; onDecrement: () => void; onIncrement: () => void }) {
+  const btnClass = "grid h-7 w-7 place-items-center rounded border border-border text-muted-foreground transition hover:text-foreground disabled:opacity-40";
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border bg-white px-2 py-1.5">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="flex items-center gap-1">
+        <button type="button" onClick={onDecrement} disabled={value <= 1} aria-label={`Kurangi kolom ${label}`} className={btnClass}>−</button>
+        <span className="w-6 text-center text-xs font-semibold tabular-nums text-foreground">{value}</span>
+        <button type="button" onClick={onIncrement} disabled={value >= 8} aria-label={`Tambah kolom ${label}`} className={btnClass}>+</button>
+      </span>
+    </div>
+  );
+}
+
+function AspectField({ label, value, onCommit }: { label: string; value: string; onCommit: (value: string) => void }) {
+  const [w, h] = parseAspectInput(value);
+  const commit = (nw: string, nh: string) => {
+    const a = Number(nw);
+    const b = Number(nh);
+    if (Number.isFinite(a) && Number.isFinite(b) && a > 0 && b > 0 && a <= 100 && b <= 100) {
+      onCommit(`${a}/${b}`);
+    }
+  };
+  const inputClass = "h-7 w-14 rounded-md border border-border bg-white px-1.5 text-center text-[11px] tabular-nums";
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {GALLERY_ASPECTS.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onCommit(opt.value)}
+              className={cn(
+                "rounded-md border px-2 py-1 text-[11px] font-medium transition",
+                active
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border bg-white text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <input type="number" min={1} max={100} step={0.1} aria-label={`${label} — lebar rasio`} value={w} onChange={(e) => commit(e.target.value, h)} onBlur={(e) => { if (!(Number(e.currentTarget.value) > 0)) e.currentTarget.value = w; }} className={inputClass} />
+          <span>:</span>
+          <input type="number" min={1} max={100} step={0.1} aria-label={`${label} — tinggi rasio`} value={h} onChange={(e) => commit(w, e.target.value)} onBlur={(e) => { if (!(Number(e.currentTarget.value) > 0)) e.currentTarget.value = h; }} className={inputClass} />
+        </span>
+        <span className="text-[11px] text-muted-foreground/70">atau tulis rasio sendiri</span>
+      </div>
+    </div>
+  );
+}
+
 function StepGallery({ invitation, settings, onChangeSettings, onChangeGallery }: { invitation: Invitation; settings: CustomSettings["gallery"]; onChangeSettings: (key: SectionKey, next: CustomSettings["gallery"]) => void; onChangeGallery: (images: Invitation["gallery_images"]) => void }) {
+  const layout = settings.layout ?? "grid";
+  const setLayout = (next: GalleryLayout) =>
+    onChangeSettings("gallery", { ...settings, layout: next });
+  const setNumber = (key: "columnsMobile" | "columnsTablet" | "columnsDesktop", value: number) =>
+    onChangeSettings("gallery", { ...settings, [key]: value });
+  const columns: { key: "columnsMobile" | "columnsTablet" | "columnsDesktop"; label: string; fallback: number }[] = [
+    { key: "columnsMobile", label: "Ponsel", fallback: 2 },
+    { key: "columnsTablet", label: "Tablet ≥768px", fallback: 3 },
+    { key: "columnsDesktop", label: "Desktop ≥1200px", fallback: 4 },
+  ];
   return (
     <>
-      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("gallery", next)} />
+      <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("gallery", { ...settings, ...next })} />
+      <div className="mt-3 grid gap-3 rounded-xl bg-background p-3">
+        <p className="text-xs font-medium text-foreground">Tata letak galeri</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {GALLERY_LAYOUTS.map((opt) => {
+            const active = layout === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setLayout(opt.value)}
+                aria-pressed={active}
+                className={cn(
+                  "flex flex-col gap-2 rounded-lg border p-3 text-left transition",
+                  active
+                    ? "border-primary bg-primary/5 text-primary shadow-sm"
+                    : "border-border bg-white text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                )}
+              >
+                <GalleryLayoutWireframe value={opt.value} />
+                <span className={cn("text-xs font-medium", active && "text-foreground")}>
+                  {opt.label}
+                </span>
+                <span className="text-[11px] leading-snug text-muted-foreground">{opt.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid gap-2 border-t border-border pt-3">
+          <div>
+            <p className="text-xs font-medium text-foreground">Jumlah kolom</p>
+            <p className="text-[11px] text-muted-foreground">Bebas 1–8 kolom, diatur terpisah per ukuran layar (responsif).</p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {columns.map(({ key, label, fallback }) => {
+              const value = clampColumns(settings[key], fallback);
+              return (
+                <ColumnStepper
+                  key={key}
+                  label={label}
+                  value={value}
+                  onDecrement={() => setNumber(key, Math.max(1, value - 1))}
+                  onIncrement={() => setNumber(key, Math.min(8, value + 1))}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid gap-3 border-t border-border pt-3">
+          <div>
+            <p className="text-xs font-medium text-foreground">Bentuk foto</p>
+            <p className="text-[11px] text-muted-foreground">Pilih rasio cepat atau tulis rasio bebas (lebar:tinggi).</p>
+          </div>
+          {layout === "hero" && (
+            <AspectField
+              label="Foto pertama (hero)"
+              value={settings.heroAspect ?? "16/9"}
+              onCommit={(v) => onChangeSettings("gallery", { ...settings, heroAspect: v })}
+            />
+          )}
+          <AspectField
+            label={
+              layout === "mosaic"
+                ? "Rasio dasar (sel berselang-seling)"
+                : layout === "hero"
+                  ? "Foto sisanya"
+                  : "Semua foto"
+            }
+            value={settings.aspect ?? "1/1"}
+            onCommit={(v) => onChangeSettings("gallery", { ...settings, aspect: v })}
+          />
+        </div>
+      </div>
       <div className="mt-3"><GalleryField folder={uploadFolders.gallery} images={invitation.gallery_images} onChange={onChangeGallery} /></div>
     </>
   );

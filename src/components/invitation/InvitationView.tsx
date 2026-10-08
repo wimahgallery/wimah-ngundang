@@ -57,8 +57,10 @@ export async function InvitationView({
       {gated ? (
         <script
           dangerouslySetInnerHTML={{
-            __html:
-              'if(!location.hash)document.documentElement.setAttribute("data-invitation-locked","")',
+            // Selalu kunci sebelum hydration — tanpa syarat hash, supaya setiap
+            // kunjungan (termasuk tautan lama dengan #greeting) tetap menampilkan
+            // sampul dan tamu wajib menekan "Buka Undangan".
+            __html: 'document.documentElement.setAttribute("data-invitation-locked","")',
           }}
         />
       ) : null}

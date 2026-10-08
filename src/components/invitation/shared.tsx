@@ -20,6 +20,7 @@ export function InvitationPhoto({
   src,
   alt,
   className,
+  style,
   positionX = 50,
   positionY = 50,
   zoom = 100,
@@ -30,6 +31,7 @@ export function InvitationPhoto({
   src?: string | null;
   alt: string;
   className?: string;
+  style?: React.CSSProperties;
   positionX?: number;
   positionY?: number;
   zoom?: number;
@@ -38,7 +40,7 @@ export function InvitationPhoto({
   priority?: boolean;
 }) {
   return (
-    <div className={cn("relative overflow-hidden bg-surface", className)}>
+    <div className={cn("relative overflow-hidden bg-surface", className)} style={style}>
       {src ? (
         <Image
           src={src}
@@ -152,8 +154,8 @@ export function CoupleNames({
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
   return (
     <span className={className}>
-      {bride} <span className="font-accent italic text-accent-light">&</span>{" "}
-      {groom}
+      {groom} <span className="font-accent italic text-accent-light">&</span>{" "}
+      {bride}
     </span>
   );
 }
@@ -669,16 +671,6 @@ export function CopyButton({
         </>
       )}
     </button>
-  );
-}
-
-export function DecorativeDivider({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn("flex items-center justify-center py-2", className)}
-    >
-      <span className="h-px w-24 bg-accent/30" />
-    </div>
   );
 }
 

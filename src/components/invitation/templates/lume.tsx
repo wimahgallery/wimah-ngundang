@@ -32,6 +32,7 @@ import {
   coupleLabel,
   googleCalendarLink,
   paragraphClass,
+  type GalleryImage,
   type Invitation,
 } from "@/lib/invitation";
 import {
@@ -58,7 +59,6 @@ import {
   CopyButton,
   CoupleNames,
   CountdownTimer,
-  DecorativeDivider,
   GuestWishesList,
   InvitationPhoto,
   SectionCopy,
@@ -75,22 +75,6 @@ import {
  *  desktop 1200+    : komposisi asimetris, overlap, skala editorial (breakpoint `desk`)
  */
 
-/* ─── penyambung antar section: benang cerita + simpul di batas scene ─── */
-function SectionConnector() {
-  return (
-    <div
-      aria-hidden
-      className="lume-band-connector pointer-events-none absolute inset-x-0 top-0 z-[5] flex -translate-y-1/2 justify-center"
-    >
-      <span className="flex h-20 w-8 flex-col items-center md:h-24">
-        <span className="w-px flex-1 bg-gradient-to-b from-transparent to-accent-dark/55" />
-        <span className="my-1.5 size-1.5 rotate-45 border border-accent-dark/75" />
-        <span className="w-px flex-1 bg-gradient-to-b from-accent-dark/55 to-transparent" />
-      </span>
-    </div>
-  );
-}
-
 /* ─── band: section penuh-lebar + container responsif ─── */
 function Band({
   id,
@@ -98,7 +82,6 @@ function Band({
   tone = "plain",
   wide = false,
   full = false,
-  connector = true,
   backdrop,
   children,
 }: {
@@ -107,7 +90,6 @@ function Band({
   tone?: "plain" | "soft" | "dark";
   wide?: boolean;
   full?: boolean;
-  connector?: boolean;
   backdrop?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -157,7 +139,6 @@ function Band({
           {backdrop}
         </div>
       )}
-      {connector && <SectionConnector />}
       <div
         className={cn(wide ? "invite-wrap-wide" : "invite-wrap", "relative z-10")}
       >
@@ -226,9 +207,9 @@ function LoadingScreen({
       </p>
 
       <p className="relative mt-5 font-heading text-[clamp(1.75rem,1rem+5vw,3rem)] md:text-[clamp(2.25rem,1rem+4vw,3.75rem)] desk:text-[clamp(3rem,1rem+4vw,4.5rem)] leading-[1.15]">
-        {bride}
-        <span className="mx-2 font-elegant italic text-gold">&amp;</span>
         {groom}
+        <span className="mx-2 font-elegant italic text-gold">&amp;</span>
+        {bride}
       </p>
 
       <div className="relative mt-8 w-[min(16rem,70vw)]">
@@ -332,11 +313,11 @@ function CoverTop({
       </p>
 
       <h1 className="mx-auto mt-3 max-w-[22rem] text-balance font-heading text-[clamp(1.9rem,1.1rem+4.5vw,3.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em] text-white md:mt-4 md:max-w-[34rem] md:text-[clamp(2.75rem,1.2rem+4vw,5rem)]">
-        {bride}
+        {groom}
         <span aria-hidden className="mx-2 align-middle font-normal text-white/60">
           •
         </span>
-        {groom}
+        {bride}
       </h1>
 
       {invitation.event_date && (
@@ -446,7 +427,6 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
       id="greeting"
       visible={settings.visible}
       full
-      connector={false}
       backdrop={
         gallery.length > 0 ? (
           <>
@@ -475,18 +455,17 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
           {invitation.hero_title || "The Wedding of"}
         </SectionKicker>
         <h2 className="mt-4 text-balance font-heading text-[clamp(2.2rem,1.3rem+4vw,4.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em]">
-          {bride}
+          {groom}
           <span aria-hidden className="mx-2 align-middle font-normal text-accent-light">
             •
           </span>
-          {groom}
+          {bride}
         </h2>
         {invitation.event_date && (
           <p className="mt-5 text-sm tracking-wide text-white/85 md:text-base">
             {formatDate(invitation.event_date)}
           </p>
         )}
-        <DecorativeDivider className="mx-auto mt-8 [&>span]:bg-white/50" />
       </div>
     </Band>
   );
@@ -524,7 +503,6 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
           {text && (
             <>
               <SectionKicker>Kata Pembuka</SectionKicker>
-              <DecorativeDivider className="mt-5" />
               <p
                 className={cn(
                   "mt-6 whitespace-pre-line text-text-secondary leading-[2]",
@@ -609,26 +587,29 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band tone={layout.tones.couple}>
-      <div className="text-center desk:max-w-2xl desk:text-left">
+      <div className="max-w-2xl">
         <SectionKicker>Mempelai</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Insan yang Berbahagia
         </SectionHeading>
       </div>
 
+      {/* Mempelai pria di kiri, mempelai wanita di kanan — teks menempel ke
+          sisi fotonya (kiri/kanan), tidak center, supaya komposisi asimetris. */}
       <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-8 desk:mt-14 desk:gap-16">
         {people.map((person, index) => (
           <article
             key={person.role}
             className={cn(
-              "flex flex-col items-center text-center",
+              "flex flex-col",
+              index === 0 ? "items-start text-left" : "items-end text-right",
               index === staggerIndex && "md:mt-14 desk:mt-24",
             )}
           >
             <InvitationPhoto
               src={person.photo}
               alt={person.name || person.role}
-              className="aspect-[3/4] w-full max-w-[19rem] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none md:rounded-2xl desk:rounded-3xl"
+              className="aspect-[3/4] w-full max-w-[21.5rem] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none md:rounded-2xl desk:rounded-3xl"
               {...person.position}
               sizes="(min-width: 1200px) 40vw, (min-width: 768px) 45vw, 80vw"
             />
@@ -986,6 +967,139 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
 
   if (!settings.visible || images.length === 0) return null;
 
+  const gridMode = settings.layout ?? "grid";
+
+  // --- Kolom responsif 1–8 per breakpoint. String statis agar ter-scan JIT Tailwind. ---
+  const GRID_COLS: Record<number, string> = {
+    1: "grid-cols-1",
+    2: "grid-cols-2",
+    3: "grid-cols-3",
+    4: "grid-cols-4",
+    5: "grid-cols-5",
+    6: "grid-cols-6",
+    7: "grid-cols-7",
+    8: "grid-cols-8",
+  };
+  const GRID_COLS_MD: Record<number, string> = {
+    1: "md:grid-cols-1",
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+    4: "md:grid-cols-4",
+    5: "md:grid-cols-5",
+    6: "md:grid-cols-6",
+    7: "md:grid-cols-7",
+    8: "md:grid-cols-8",
+  };
+  const GRID_COLS_DESK: Record<number, string> = {
+    1: "desk:grid-cols-1",
+    2: "desk:grid-cols-2",
+    3: "desk:grid-cols-3",
+    4: "desk:grid-cols-4",
+    5: "desk:grid-cols-5",
+    6: "desk:grid-cols-6",
+    7: "desk:grid-cols-7",
+    8: "desk:grid-cols-8",
+  };
+  const COLUMNS_N: Record<number, string> = {
+    1: "columns-1",
+    2: "columns-2",
+    3: "columns-3",
+    4: "columns-4",
+    5: "columns-5",
+    6: "columns-6",
+    7: "columns-7",
+    8: "columns-8",
+  };
+  const COLUMNS_MD: Record<number, string> = {
+    1: "md:columns-1",
+    2: "md:columns-2",
+    3: "md:columns-3",
+    4: "md:columns-4",
+    5: "md:columns-5",
+    6: "md:columns-6",
+    7: "md:columns-7",
+    8: "md:columns-8",
+  };
+  const COLUMNS_DESK: Record<number, string> = {
+    1: "desk:columns-1",
+    2: "desk:columns-2",
+    3: "desk:columns-3",
+    4: "desk:columns-4",
+    5: "desk:columns-5",
+    6: "desk:columns-6",
+    7: "desk:columns-7",
+    8: "desk:columns-8",
+  };
+  const clampInt = (value: unknown, min: number, max: number, fallback: number) => {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+  const mCols = clampInt(settings.columnsMobile, 1, 8, 2);
+  const tCols = clampInt(settings.columnsTablet, 1, 8, 3);
+  const dCols = clampInt(settings.columnsDesktop, 1, 8, 4);
+  const gridClass = cn(
+    GRID_COLS[mCols],
+    GRID_COLS_MD[tCols],
+    GRID_COLS_DESK[dCols],
+    "gap-2.5 md:gap-4 desk:gap-5",
+  );
+  const columnsClass = cn(
+    COLUMNS_N[mCols],
+    COLUMNS_MD[tCols],
+    COLUMNS_DESK[dCols],
+    "gap-2.5 md:gap-4 desk:gap-5",
+  );
+
+  // --- Bentuk foto bebas: rasio CSS apa pun ("1/1", "16/9", angka kustom). ---
+  const parseRatio = (value: unknown, fallback: number): number => {
+    const raw = String(value ?? "").trim();
+    const match = /^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/.exec(raw);
+    if (match) {
+      const r = Number(match[1]) / Number(match[2]);
+      if (Number.isFinite(r) && r > 0) return r;
+    }
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  };
+  const ratioStyle = (r: number) => ({
+    aspectRatio: String(Math.round(r * 1000) / 1000),
+  });
+  const cellRatio = parseRatio(settings.aspect, 1);
+  const heroRatio = parseRatio(settings.heroAspect, 16 / 9);
+  const cellSizes = `(min-width: 1200px) ${(100 / dCols).toFixed(1)}vw, (min-width: 768px) ${(100 / tCols).toFixed(1)}vw, ${(100 / mCols).toFixed(1)}vw`;
+
+  const thumb = (
+    img: GalleryImage,
+    i: number,
+    opts: { ratio: number; sizes: string; extra?: string },
+  ) => (
+    <button
+      key={img.id}
+      type="button"
+      onClick={(e) => {
+        triggerRef.current = e.currentTarget;
+        setActive(i);
+      }}
+      className={cn(
+        "block w-full overflow-hidden rounded-lg transition active:scale-[0.98] md:rounded-xl",
+        opts.extra,
+      )}
+      aria-label={`Buka foto ${i + 1}`}
+    >
+      <InvitationPhoto
+        src={img.url}
+        alt={img.alt || `Galeri ${i + 1}`}
+        className="w-full rounded-lg transition-transform duration-500 hover:scale-[1.04] md:rounded-xl"
+        style={ratioStyle(opts.ratio)}
+        positionX={img.positionX}
+        positionY={img.positionY}
+        zoom={img.zoom}
+        rotate={img.rotate}
+        sizes={opts.sizes}
+      />
+    </button>
+  );
+
   return (
     <Band tone={layout.tones.gallery} wide={layout.galleryWide} visible>
       <div className="text-center">
@@ -998,31 +1112,34 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
         </SectionHeading>
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4 desk:grid-cols-4 desk:gap-5">
-        {images.map((img, i) => (
-          <button
-            key={img.id}
-            type="button"
-            onClick={(e) => {
-              triggerRef.current = e.currentTarget;
-              setActive(i);
-            }}
-            className="overflow-hidden rounded-lg transition active:scale-[0.98] md:rounded-xl"
-            aria-label={`Buka foto ${i + 1}`}
-          >
-            <InvitationPhoto
-              src={img.url}
-              alt={img.alt || `Galeri ${i + 1}`}
-              className="w-full rounded-lg transition-transform duration-500 hover:scale-[1.04] md:rounded-xl aspect-square"
-              positionX={img.positionX}
-              positionY={img.positionY}
-              zoom={img.zoom}
-              rotate={img.rotate}
-              sizes="(min-width: 1200px) 25vw, (min-width: 768px) 33vw, 50vw"
-            />
-          </button>
-        ))}
-      </div>
+      {gridMode === "hero" ? (
+        <div className={cn("mt-10 grid", gridClass)}>
+          {thumb(images[0], 0, {
+            ratio: heroRatio,
+            sizes: "(min-width: 1200px) 1100px, 100vw",
+            extra: "col-span-full",
+          })}
+          {images.slice(1).map((img, idx) =>
+            thumb(img, idx + 1, { ratio: cellRatio, sizes: cellSizes }),
+          )}
+        </div>
+      ) : gridMode === "mosaic" ? (
+        <div className={cn("mt-10", columnsClass)}>
+          {images.map((img, i) =>
+            thumb(img, i, {
+              ratio: cellRatio * [0.8, 1, 4 / 3][i % 3],
+              sizes: cellSizes,
+              extra: "mb-2.5 break-inside-avoid md:mb-4",
+            }),
+          )}
+        </div>
+      ) : (
+        <div className={cn("mt-10 grid", gridClass)}>
+          {images.map((img, i) =>
+            thumb(img, i, { ratio: cellRatio, sizes: cellSizes }),
+          )}
+        </div>
+      )}
 
       {active !== null && (
         <div
@@ -1813,8 +1930,6 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
             photoRight ? "desk:col-start-1" : "desk:col-start-6",
           )}
         >
-          <DecorativeDivider className="mb-7 desk:justify-start" />
-
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent md:text-[11px]">
             Thank You
           </p>
@@ -1833,7 +1948,6 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
             />
           </div>
 
-          <DecorativeDivider className="mt-7 desk:justify-start" />
           <p className="mt-3 text-[10px] uppercase tracking-[0.24em] text-text-secondary">
             Dengan cinta, {coupleLabel(invitation)}
           </p>
@@ -2108,11 +2222,10 @@ function LumeTemplate({
     document.documentElement.removeAttribute("data-invitation-locked");
     setOpened(true);
     dispatchInvitationOpen();
-    const href = e.currentTarget.getAttribute("href");
-    if (href?.startsWith("#")) {
-      e.preventDefault();
-      history.replaceState(null, "", href);
-    }
+    // Cukup cegah lompatan anchor — URL sengaja tidak pernah diberi hash
+    // `#greeting`, supaya setiap kunjungan (termasuk muat ulang) selalu
+    // menampilkan sampul dan tamu wajib menekan "Buka Undangan".
+    if (e.currentTarget.hash) e.preventDefault();
     if (coverGone) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setCoverGone(true);
@@ -2201,16 +2314,28 @@ function LumeTemplate({
       root.removeAttribute("data-invitation-locked");
       return;
     }
-    if (opened || window.location.hash) {
+    if (opened) {
       root.removeAttribute("data-invitation-locked");
       return;
     }
     root.setAttribute("data-invitation-locked", "");
+    // Selama terkunci, tamu harus berada tepat di sampul: buang sisa tautan
+    // `#greeting` dari tautan lama dan kunci guliran ke atas — mencegah
+    // lompatan anchor serta pemulihan posisi guliran saat muat ulang.
+    if (window.location.hash === "#greeting") {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    const pinTop = () => {
+      if (window.scrollY > 0) window.scrollTo(0, 0);
+    };
+    pinTop();
+    window.addEventListener("scroll", pinTop, { passive: true });
     // Pengaman iOS: cegah scroll sentuh selama terkunci.
     const preventTouch = (e: TouchEvent) => e.preventDefault();
     document.addEventListener("touchmove", preventTouch, { passive: false });
     return () => {
       root.removeAttribute("data-invitation-locked");
+      window.removeEventListener("scroll", pinTop);
       document.removeEventListener("touchmove", preventTouch);
     };
   }, [gated, opened]);
@@ -2281,7 +2406,6 @@ function LumeTemplate({
         <RsvpSection invitation={invitation} />
         <WishesSection invitation={invitation} />
         <ThankYouSection invitation={invitation} />
-        <div className="h-px bg-gradient-to-r from-transparent via-accent/25 to-transparent" />
         <div className="invite-wrap py-10 text-center">
           <p className="text-[10px] uppercase tracking-[0.24em] text-text-secondary">
             {sections.music.visible
