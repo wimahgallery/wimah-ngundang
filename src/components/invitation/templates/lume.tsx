@@ -132,14 +132,16 @@ function Band({
         tone === "dark" && "bg-hero text-hero-ink",
       )}
     >
-      {backdrop && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          {backdrop}
-        </div>
-      )}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      >
+        {backdrop}
+        {/* Lapisan foto blur untuk band berselang-seling. Diam secara default;
+            CSS di globals.css yang menyalakannya (section genap dalam
+            .lume-sections), sehingga ritme tetap foto → polos → foto → polos. */}
+        <div className="lume-band__photo" />
+      </div>
       <div
         className={cn(wide ? "invite-wrap-wide" : "invite-wrap", "relative z-10")}
       >
@@ -521,7 +523,7 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
               src={src}
               alt={`Momen ${index + 1}`}
               className={cn(
-                "aspect-[3/4] w-full overflow-hidden rounded-xl shadow-[0_18px_50px_rgba(84,82,77,0.12)] md:rounded-2xl",
+                "photo-garden aspect-[3/4] w-full overflow-hidden shadow-[0_18px_50px_rgba(84,82,77,0.12)]",
                 index === tallIndex && "md:mt-10",
                 index === lowIndex && "md:mb-10",
               )}
@@ -596,7 +598,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
             <InvitationPhoto
               src={person.photo}
               alt={person.name || person.role}
-              className="aspect-[3/4] w-full max-w-[21.5rem] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none desk:rounded-3xl"
+              className="photo-garden aspect-[3/4] w-full max-w-[21.5rem] shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none"
               {...person.position}
               sizes="(min-width: 768px) 40vw, 80vw"
             />
@@ -1908,7 +1910,7 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
             <InvitationPhoto
               src={invitation.closing_image}
               alt="Terima kasih"
-              className="mx-auto aspect-[3/4] w-[min(20rem,80vw)] rounded-xl shadow-[0_22px_60px_rgba(84,82,77,0.14)] desk:mx-0 desk:w-full desk:rounded-3xl"
+              className="photo-garden mx-auto aspect-[3/4] w-[min(20rem,80vw)] shadow-[0_22px_60px_rgba(84,82,77,0.14)] desk:mx-0 desk:w-full"
               sizes="(min-width: 768px) 35vw, 80vw"
             />
           </figure>
@@ -2286,6 +2288,14 @@ function LumeTemplate({
     };
   }, [gated, opened]);
 
+  // Foto sumber untuk band berselang-seling: sampul → galeri → foto penutup.
+  // Tanpa foto pun band tetap tampil (latar gelap polos dari CSS).
+  const bandPhoto =
+    invitation.cover_image ||
+    invitation.gallery_images?.map((img) => img?.url).find(Boolean) ||
+    invitation.closing_image ||
+    undefined;
+
   return (
     <div
       data-template={templateId}
@@ -2298,6 +2308,11 @@ function LumeTemplate({
         {
           ...css,
           ...resolveFontVars(invitation.custom_settings.font),
+          ...(bandPhoto
+            ? {
+                "--band-photo": `url(${JSON.stringify(previewImageSrc(bandPhoto, 1200))})`,
+              }
+            : null),
           background: pageGradient,
         } as CSSProperties
       }
@@ -2334,26 +2349,35 @@ function LumeTemplate({
         {!stage && !coverGone && (
           <HeroCover invitation={invitation} onOpen={handleOpen} exiting={coverExiting} />
         )}
+        {/* Section pembuka di LUAR .lume-sections: ia sudah punya latar foto
+            crossfade sendiri, dan penempatannya di luar membuat ritme band
+            di dalam pembungkus selalu berpasangan polos → foto. */}
         <OpeningSection invitation={invitation} />
-        <PreambleSection invitation={invitation} />
-        <CoupleSection invitation={invitation} />
-        <LoveStorySection invitation={invitation} />
-        <CountdownSection invitation={invitation} />
-        <AgendaSection invitation={invitation} />
-        <VenueSection invitation={invitation} />
-        <GallerySection invitation={invitation} />
-        <FunFactsSection invitation={invitation} />
-        <VideoSection invitation={invitation} />
-        <GiftSection invitation={invitation} />
-        <RsvpSection invitation={invitation} />
-        <WishesSection invitation={invitation} />
-        <ThankYouSection invitation={invitation} />
-        <div className="invite-wrap py-10 text-center">
-          <p className="text-[10px] uppercase tracking-[0.24em] text-text-secondary">
-            {sections.music.visible
-              ? "Terima kasih atas doa restunya"
-              : "Dengan cinta"}
-          </p>
+        {/* Pembungkus band berselang-seling: section genap tampil di atas foto
+            blur gelap, section ganjil tetap polos di latar halaman. Section
+            yang disembunyikan user menggeser pasangannya, tapi selalu
+            selang-seling. */}
+        <div className="lume-sections">
+          <PreambleSection invitation={invitation} />
+          <CoupleSection invitation={invitation} />
+          <LoveStorySection invitation={invitation} />
+          <CountdownSection invitation={invitation} />
+          <AgendaSection invitation={invitation} />
+          <VenueSection invitation={invitation} />
+          <GallerySection invitation={invitation} />
+          <FunFactsSection invitation={invitation} />
+          <VideoSection invitation={invitation} />
+          <GiftSection invitation={invitation} />
+          <RsvpSection invitation={invitation} />
+          <WishesSection invitation={invitation} />
+          <ThankYouSection invitation={invitation} />
+          <div className="invite-wrap py-10 text-center">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-text-secondary">
+              {sections.music.visible
+                ? "Terima kasih atas doa restunya"
+                : "Dengan cinta"}
+            </p>
+          </div>
         </div>
       </div>
     </div>

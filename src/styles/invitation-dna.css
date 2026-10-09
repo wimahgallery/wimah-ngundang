@@ -22,6 +22,13 @@
   /* Treatment foto */
   --dna-photo-filter: none;
   --dna-photo-saturate: 1;
+  /* Lapisan ambience (pseudo ::before/::after) dianimasikan scale >1 di atas
+     kotak setinggi halaman → tepinya menembus dokumen, scrollHeight halaman
+     ikut membesar lalu kembali saat animasi napas (±200px). overflow: clip
+     memotong tepi lapisan tanpa membuat scroll container; elemen position:
+     fixed (lightbox, dock musik, sampul) tidak terpengaruh. */
+  overflow: hidden;
+  overflow: clip;
 }
 
 [data-template] .dna-card {

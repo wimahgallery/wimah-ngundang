@@ -426,6 +426,108 @@ html[data-invitation-locked] body {
   animation: lume-zoom-in 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Bentuk garden setengah (daun lembut) untuk foto: sudut kiri-atas &
+   kanan-bawah lebih membulat, sudut lain rapat — organik, tidak kaku,
+   tidak sealami blob penuh. Nilai % membuat lengkungan mengikuti rasio
+   foto di semua ukuran layar. ── */
+.photo-garden {
+  border-radius: 30% 6% 30% 6% / 24% 6% 24% 6%;
+}
+
+/* ── Band berselang-seling (Lume): section genap dalam .lume-sections tampil
+   di atas foto blur gelap dengan teks terang, section ganjil tetap polos
+   mengikuti latar halaman. OpeningSection (#greeting) sengaja di luar
+   pembungkus karena sudah punya latar foto crossfade sendiri — jadi ritme
+   halaman selalu foto → polos → foto → polos. Section yang disembunyikan
+   user menggeser pasangannya, tapi tetap selalu selang-seling. ── */
+.lume-sections {
+  /* Simpan var asli tema sebelum band foto me-flip nilainya:
+     --band-bg-ink = latar terang asli (jadi tinta tombol aksen),
+     --band-accent-dark-ink = aksen gelap sebelum dicerahkan. */
+  --band-bg-ink: var(--background);
+  --band-accent-dark-ink: var(--accent-dark);
+}
+
+/* Lapisan foto blur — diam secara default, hanya band foto yang menyalakannya.
+   inset -10% menghindari tepi blur transparan (pembungkusnya overflow:hidden,
+   jadi aman terpotong rapi). */
+.lume-band__photo {
+  position: absolute;
+  inset: -10%;
+  opacity: 0;
+  background-color: #101013;
+  background-image: linear-gradient(
+      180deg,
+      rgba(12, 13, 15, 0.62) 0%,
+      rgba(12, 13, 15, 0.5) 45%,
+      rgba(12, 13, 15, 0.7) 100%
+    ),
+    var(--band-photo, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(4px) brightness(0.9) saturate(1.05);
+}
+
+.lume-sections > section:nth-of-type(even) .lume-band__photo {
+  opacity: 1;
+}
+
+/* Flip var di band foto: teks terang, kartu & pil gelap-translusen menempel
+   di atas foto, aksen gelap dicerahkan supaya tetap terbaca. */
+.lume-sections > section:nth-of-type(even) {
+  --text-primary: #f6f3ec;
+  --text-secondary: rgba(246, 243, 236, 0.74);
+  --border: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --background: rgba(14, 14, 16, 0.58);
+  --surface: rgba(255, 255, 255, 0.08);
+  --surface-secondary: rgba(255, 255, 255, 0.13);
+  --glass: rgba(14, 14, 16, 0.66);
+  --accent-dark: color-mix(in oklab, var(--band-accent-dark-ink) 55%, #ffffff);
+  color: var(--text-primary);
+}
+
+/* Kicker di band foto: putih lembut (sama perlakuan seperti section
+   pembuka). elegant-black kembalikan kilau emas DNA-nya. */
+.lume-sections > section:nth-of-type(even) .dna-kicker {
+  color: rgba(255, 255, 255, 0.88);
+}
+[data-template="elegant-black"]
+  .lume-sections
+  > section:nth-of-type(even)
+  .dna-kicker {
+  color: transparent;
+}
+
+/* Kartu DNA yang berlatar putih keras (per template) ikut gelap di band foto. */
+.lume-sections > section:nth-of-type(even) .dna-card {
+  background: var(--background);
+}
+
+/* Label teks aksen dicerahkan di atas foto (latar aksen TIDAK diubah —
+   tombol bg-accent harus tetap memakai tinta terang seperti aslinya). */
+.lume-sections > section:nth-of-type(even) .text-accent {
+  color: color-mix(in oklab, var(--accent) 60%, #ffffff);
+}
+
+/* Tombol berlatar aksen: teksnya latar terang tema ASLI — --background sudah
+   di-flip gelap, jadi pakai salinan yang disimpan .lume-sections. */
+.lume-sections
+  > section:nth-of-type(even)
+  :is(.bg-accent, .bg-accent-dark, .bg-accent-light, .bg-gold) {
+  color: var(--band-bg-ink);
+}
+
+/* Input tamu berlatar putih — tinta dipaksa gelap supaya tetap terbaca. */
+.lume-sections > section:nth-of-type(even) :is(input, textarea, select) {
+  color: #1f2328;
+}
+.lume-sections
+  > section:nth-of-type(even)
+  :is(input, textarea, select)::placeholder {
+  color: rgba(31, 35, 40, 0.55);
+}
+
 /* kolom mobile: sembunyikan scrollbar agar terasa seperti layar ponsel */
 html[data-embed] {
   scrollbar-width: none;
