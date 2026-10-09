@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { fetchInvitation } from "../services/invitationApi";
 import type { Invitation } from "@/lib/invitation";
 
 export function useInvitation(slug: string) {
   return useQuery<Invitation>({
-    queryKey: ["invitation", slug],
+    queryKey: queryKeys.invitation.detail(slug),
     queryFn: () => fetchInvitation(slug),
     enabled: !!slug,
     retry: 1,

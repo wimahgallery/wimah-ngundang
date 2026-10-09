@@ -1,11 +1,15 @@
 "use client";
 
-import type { Align, SectionSettings, SizeToken } from "@/lib/invitation";
+import type { SectionSettings } from "@/lib/invitation";
 
-const aligns: Align[] = ["left", "center", "right"];
-const sizes: SizeToken[] = ["sm", "md", "lg", "xl"];
-const spacings: SectionSettings["sectionSpacing"][] = ["sm", "md", "lg"];
-
+/**
+ * Pengaturan tampilan section — hanya sakelar "Tampilkan section".
+ *
+ * Pengaturan tipografi/ruang yang dulu ada di panel ini (alignment, ukuran
+ * heading/paragraf, jarak section) dihapus dari form sesuai permintaan;
+ * nilai lama di `custom_settings` tetap dipakai renderer sehingga undangan
+ * yang sudah dibuat tidak berubah tampilannya.
+ */
 export default function SectionSettingsPanel({
   value,
   onChange,
@@ -16,75 +20,18 @@ export default function SectionSettingsPanel({
   label?: string;
 }) {
   return (
-    <div className="grid gap-2 rounded-xl bg-background p-3 sm:grid-cols-2">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border border-border/60 bg-muted/40 px-3 py-2">
       {label && (
-        <p className="text-xs font-medium text-foreground sm:col-span-2">
-          {label}
-        </p>
+        <p className="text-xs font-medium text-foreground">{label}</p>
       )}
-      <label className="flex min-h-10 items-center gap-2 text-xs text-foreground">
+      <label className="flex min-h-8 cursor-pointer items-center gap-2 text-xs text-foreground">
         <input
           type="checkbox"
           checked={value.visible}
           onChange={(e) => onChange({ ...value, visible: e.target.checked })}
+          className="h-4 w-4 accent-primary"
         />
         Tampilkan section
-      </label>
-      <label className="text-xs text-muted-foreground">
-        Alignment
-        <select
-          value={value.align}
-          onChange={(e) => onChange({ ...value, align: e.target.value as Align })}
-          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
-        >
-          {aligns.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="text-xs text-muted-foreground">
-        Heading size
-        <select
-          value={value.headingSize}
-          onChange={(e) => onChange({ ...value, headingSize: e.target.value as SizeToken })}
-          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
-        >
-          {sizes.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="text-xs text-muted-foreground">
-        Paragraph size
-        <select
-          value={value.paragraphSize}
-          onChange={(e) => onChange({ ...value, paragraphSize: e.target.value as SizeToken })}
-          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
-        >
-          {sizes.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="text-xs text-muted-foreground">
-        Section spacing
-        <select
-          value={value.sectionSpacing}
-          onChange={(e) => onChange({ ...value, sectionSpacing: e.target.value as SectionSettings["sectionSpacing"] })}
-          className="mt-0.5 w-full rounded-md border border-border bg-white px-2 py-2 text-base md:py-1.5 md:text-sm"
-        >
-          {spacings.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
       </label>
     </div>
   );

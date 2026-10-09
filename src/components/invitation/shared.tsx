@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RichText } from "./rich-text";
 import {
   alignClass,
   eventTargetTime,
@@ -168,7 +169,7 @@ export function EventMeta({ invitation }: { invitation: Invitation }) {
       {invitation.venue_name && (
         <p className="text-text-primary">{invitation.venue_name}</p>
       )}
-      {invitation.venue_address && <p>{invitation.venue_address}</p>}
+      <RichText text={invitation.venue_address} />
     </div>
   );
 }
@@ -205,22 +206,6 @@ export function MapsButton({ invitation }: { invitation: Invitation }) {
     >
       Buka di Google Maps
     </a>
-  );
-}
-
-export function StoryParagraphs({ content }: { content?: string | null }) {
-  if (!content) return null;
-  return (
-    <div className="space-y-4">
-      {content
-        .split(/\n\n+/)
-        .filter(Boolean)
-        .map((p, i) => (
-          <p key={i} className="text-text-secondary leading-relaxed">
-            {p}
-          </p>
-        ))}
-    </div>
   );
 }
 

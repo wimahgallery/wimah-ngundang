@@ -24,7 +24,7 @@ export function TemplatePicker({ value, onChange, className, name = "template-pi
           <label
             key={t.id}
             className={cn(
-              "group relative flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-2.5 transition-all duration-200 hover:border-accent/60 hover:bg-accent/5",
+              "group relative flex cursor-pointer flex-col gap-2 rounded-lg border border-border bg-card p-2.5 transition-all duration-200 hover:border-accent/60 hover:bg-accent/5",
               "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
               selected && "border-primary bg-primary/5 ring-2 ring-primary/40",
             )}

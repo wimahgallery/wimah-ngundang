@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-helpers";
 import { defaultCustomSettings, RESERVED_SLUGS } from "@/lib/invitation";
+import { INVITATION_PATCH_KEYS, invitationPatchSchema } from "@/lib/schemas";
 import { isTemplateId } from "@/components/invitation/template-registry";
 import { safeHttpUrl } from "@/lib/utils";
 
@@ -37,58 +38,24 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const allowed = [
-    "slug",
-    "template_id",
-    "event_type",
-    "event_title",
-    "groom_name",
-    "bride_name",
-    "groom_nickname",
-    "bride_nickname",
-    "groom_photo",
-    "bride_photo",
-    "cover_image",
-    "hero_title",
-    "hero_subtitle",
-    "event_date",
-    "event_time",
-    "venue_name",
-    "venue_address",
-    "google_maps_url",
-    "story_title",
-    "story_content",
-    "music_url",
-    "gallery_images",
-    "gift_accounts",
-    "custom_settings",
-    "is_published",
-    "groom_image_position_x",
-    "groom_image_position_y",
-    "groom_image_zoom",
-    "groom_image_rotate",
-    "greeting_text",
-    "recipient_name",
-    "groom_parents",
-    "bride_parents",
-    "groom_social",
-    "bride_social",
-    "story_milestones",
-    "events",
-    "video_url",
-    "video_poster",
-    "rsvp_enabled",
-    "fun_facts",
-    "closing_message",
-    "closing_image",
-    "qris_image",
-  ] as const;
-
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-
-  for (const key of allowed) {
-    if (key in body) patch[key] = body[key];
+  /** Daftar field yang boleh ditimpa = key skema Zod (bukan daftar terpisah). */
+  const candidate: Record<string, unknown> = {};
+  for (const key of INVITATION_PATCH_KEYS) {
+    if (key in body) candidate[key] = body[key];
   }
+
+  const parsed = invitationPatchSchema.safeParse(candidate);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Payload tidak valid", details: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const patch: Record<string, unknown> = {
+    ...parsed.data,
+    updated_at: new Date().toISOString(),
+  };
 
   if (typeof patch.slug === "string") {
     const nextSlug = patch.slug.trim();

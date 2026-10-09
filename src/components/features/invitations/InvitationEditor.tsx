@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, type Invitation, type CustomSettings, type SectionKey, type FontSettings, type GalleryLayout } from "@/lib/invitation";
+import { RichTextEditor } from "./rich-text-editor";
+import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, textGapFor, type Invitation, type CustomSettings, type SectionKey, type FontSettings, type GalleryLayout, type RichTextFieldKey, type TextAlign, type TextAlignMap } from "@/lib/invitation";
+import { queryKeys } from "@/lib/query-keys";
 import { TypographyStep } from "./TypographyStep";
 import { defaultPreset } from "@/lib/font-library";
 import { useInvitation, useSaveInvitation, useDeleteInvitation } from "@/features/invitations/hooks";
 import { fetchWishes, flushInvitation } from "@/features/invitations/services/invitationApi";
-import { LazyFrame } from "@/components/lazy";
 import { GuestWishesList } from "@/components/invitation/shared";
 import { isTemplateId, templateMetaById, type TemplateId } from "@/components/invitation/template-registry";
 import { uploadFolders } from "@/lib/upload-folders";
@@ -38,6 +38,14 @@ const inputClass =
   "w-full max-w-[65ch] rounded-md border border-border bg-white px-3 py-2 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60 md:py-1.5 md:text-sm";
 
 type FieldChange = (field: string, value: string | number | boolean) => void;
+
+/** Perataan konten Markdown per field — disimpan di `custom_settings.textAlign`. */
+type TextAlignChange = (key: RichTextFieldKey, align: TextAlign | undefined) => void;
+
+/** Jarak antar blok Markdown — `document` untuk jarak seluruh dokumen
+ *  (`custom_settings.textGap`), selain itu untuk override per field
+ *  (`custom_settings.textGapFields`). Nilai `undefined` menghapus setelannya. */
+type TextGapChange = (key: RichTextFieldKey | "document", gap: number | undefined) => void;
 
 /** Aturan slug sama dengan `invitationCreateSchema` di lib/schemas.ts. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -88,7 +96,6 @@ const [activeStep, setActiveStep] = useState(0);
 
   const [dirty, setDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [previewNonce, setPreviewNonce] = useState(0);
   const revRef = useRef(0);
   /** Slug terakhir yang benar-benar tersimpan — dipakai saat slug di UI sedang
    *  tidak valid (masih diketik) supaya perubahan lain tetap bisa disimpan. */
@@ -115,7 +122,7 @@ const [activeStep, setActiveStep] = useState(0);
       revRef.current += 1;
       setDirty(true);
       setSaveStatus("idle");
-      queryClient.setQueryData<Invitation>(["invitation", slug], (prev) => {
+      queryClient.setQueryData<Invitation>(queryKeys.invitation.detail(slug), (prev) => {
         const base = prev ?? invitation;
         return { ...base, ...(typeof partial === "function" ? partial(base) : partial) };
       });
@@ -138,9 +145,46 @@ const [activeStep, setActiveStep] = useState(0);
     [patch],
   );
 
+  /** Perataan per field: nilai dihapus saat tombol yang sama diklik lagi,
+   *  sehingga teks kembali mengikuti perataan bawaan wadahnya. */
+  const onTextAlignChange = useCallback<TextAlignChange>(
+    (key, align) => {
+      patch((prev) => {
+        const current: TextAlignMap = { ...(prev.custom_settings.textAlign ?? {}) };
+        if (align) current[key] = align;
+        else delete current[key];
+        return { custom_settings: { ...prev.custom_settings, textAlign: current } };
+      });
+    },
+    [patch],
+  );
+
+  /** Jarak antar blok: `"document"` mengatur jarak seluruh dokumen, nama field
+   *  mengatur override per field. `undefined` menghapus setelan (kembali ke
+   *  jarak bawaan wadah / jarak dokumen). */
+  const onTextGapChange = useCallback<TextGapChange>(
+    (key, gap) => {
+      patch((prev) => {
+        const settings: CustomSettings = { ...prev.custom_settings };
+        if (key === "document") {
+          if (typeof gap === "number") settings.textGap = gap;
+          else delete settings.textGap;
+          return { custom_settings: settings };
+        }
+        const fields = { ...(settings.textGapFields ?? {}) };
+        if (typeof gap === "number") fields[key] = gap;
+        else delete fields[key];
+        if (Object.keys(fields).length > 0) settings.textGapFields = fields;
+        else delete settings.textGapFields;
+        return { custom_settings: settings };
+      });
+    },
+    [patch],
+  );
+
   /** Snapshot terkini dari cache — bukan closure basi saat callback dieksekusi. */
   const currentInvitation = useCallback(
-    () => queryClient.getQueryData<Invitation>(["invitation", slug]) ?? invitation ?? null,
+    () => queryClient.getQueryData<Invitation>(queryKeys.invitation.detail(slug)) ?? invitation ?? null,
     [queryClient, slug, invitation],
   );
 
@@ -166,7 +210,7 @@ const [activeStep, setActiveStep] = useState(0);
         // yang masuk selama request berjalan membuat autosave berikutnya mengirim
         // `is_published` lama dan membatalkan publish diam-diam.
         if (Object.keys(extra).length > 0) {
-          queryClient.setQueryData<Invitation>(["invitation", slug], (prev) => ({
+          queryClient.setQueryData<Invitation>(queryKeys.invitation.detail(slug), (prev) => ({
             ...(prev ?? current),
             ...extra,
           }));
@@ -182,7 +226,7 @@ const [activeStep, setActiveStep] = useState(0);
           // Jawapan server adalah kebenaran, KECUALI field yang memang berubah
           // di client selama request berlangsung — kalau dibuang, publish/renami
           // bisa tertimpa oleh autosave yang mengirim snapshot basi.
-          const local = queryClient.getQueryData<Invitation>(["invitation", slug]) ?? next;
+          const local = queryClient.getQueryData<Invitation>(queryKeys.invitation.detail(slug)) ?? next;
           const merged = { ...next } as Invitation;
           for (const key of Object.keys(sent) as (keyof Invitation)[]) {
             try {
@@ -194,7 +238,7 @@ const [activeStep, setActiveStep] = useState(0);
             }
           }
 
-          queryClient.setQueryData<Invitation>(["invitation", slug], merged);
+          queryClient.setQueryData<Invitation>(queryKeys.invitation.detail(slug), merged);
           lastSavedSlugRef.current = (next.slug || current.slug || slug).trim();
           setDirty(changedWhileSaving);
           setSaveStatus(changedWhileSaving ? "idle" : "saved");
@@ -202,7 +246,7 @@ const [activeStep, setActiveStep] = useState(0);
           if (next.slug && next.slug !== slug) {
             // Pindahkan cache ke key baru memakai `merged`, bukan `next`, supaya
             // edit yang masuk saat rename tidak hilang setelah redirect.
-            queryClient.setQueryData<Invitation>(["invitation", next.slug], merged);
+            queryClient.setQueryData<Invitation>(queryKeys.invitation.detail(next.slug), merged);
             router.replace(`/dashboard/invitations/${next.slug}`);
           }
         } catch (e) {
@@ -240,12 +284,6 @@ const [activeStep, setActiveStep] = useState(0);
     return () => clearTimeout(timer);
   }, [invitation, dirty, doSave]);
 
-  useEffect(() => {
-    if (saveStatus !== "saved") return;
-    const timer = setTimeout(() => setPreviewNonce((n) => n + 1), 2000);
-    return () => clearTimeout(timer);
-  }, [saveStatus]);
-
   /**
    * Auto-save berdebounce 1,5 detik — kalau tab ditutup sebelum itu, perubahan
    * hilang diam-diam. `flushInvitation` memakai `fetch keepalive` supaya tetap
@@ -258,7 +296,7 @@ const [activeStep, setActiveStep] = useState(0);
     const flush = () => {
       if (!dirtyRef.current) return;
       const current =
-        queryClient.getQueryData<Invitation>(["invitation", slug]) ?? invitation;
+        queryClient.getQueryData<Invitation>(queryKeys.invitation.detail(slug)) ?? invitation;
       const payload = slugError((current.slug ?? "").trim())
         ? { ...current, slug: lastSavedSlugRef.current }
         : current;
@@ -392,13 +430,13 @@ const [activeStep, setActiveStep] = useState(0);
     if (!s) return null;
     switch (STEPS[activeStep].key) {
       case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} />;
-      case "font": return <TypographyStep templateId={resolvedTemplateId} font={invitation.custom_settings.font ?? { heading: null, body: null, accent: null }} onChange={onChangeFont} />;
+      case "font": return <TypographyStep templateId={resolvedTemplateId} font={invitation.custom_settings.font ?? { heading: null, body: null, accent: null }} onChange={onChangeFont} gap={invitation.custom_settings.textGap} onGapChange={(g) => onTextGapChange("document", g)} />;
       case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
-      case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} />;
-      case "greeting": return <StepGreeting invitation={invitation!} settings={s.preamble} greetingSettings={s.greeting} onChangeSettings={patchSettings} onChange={onChangeField} />;
-      case "story": return <StepStory invitation={invitation!} settings={s.story} onChangeSettings={patchSettings} onChange={onChangeField} onChangeMilestones={onChangeMilestones} />;
-      case "schedule": return <StepSchedule invitation={invitation!} settings={s.schedule} onChangeSettings={patchSettings} onChange={onChangeField} onChangeEvents={onChangeEvents} />;
-      case "venue": return <StepVenue invitation={invitation!} settings={s.venue} onChangeSettings={patchSettings} onChange={onChangeField} />;
+      case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
+      case "greeting": return <StepGreeting invitation={invitation!} settings={s.preamble} greetingSettings={s.greeting} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
+      case "story": return <StepStory invitation={invitation!} settings={s.story} onChangeSettings={patchSettings} onChange={onChangeField} onChangeMilestones={onChangeMilestones} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
+      case "schedule": return <StepSchedule invitation={invitation!} settings={s.schedule} onChangeSettings={patchSettings} onChange={onChangeField} onChangeEvents={onChangeEvents} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
+      case "venue": return <StepVenue invitation={invitation!} settings={s.venue} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
       case "gallery": return <StepGallery invitation={invitation!} settings={s.gallery} onChangeSettings={patchSettings} onChangeGallery={onChangeGallery} />;
       case "video": return <StepVideo invitation={invitation!} onChange={onChangeField} />;
       case "gift": return <StepGift invitation={invitation!} settings={s.gift} onChangeSettings={patchSettings} onChangeGifts={onChangeGifts} />;
@@ -407,14 +445,15 @@ const [activeStep, setActiveStep] = useState(0);
       case "rsvp": return <StepRsvp invitation={invitation!} settings={s.rsvp} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "wishes": return <StepWishes slug={invitation!.slug} settings={s.wishes} onChangeSettings={patchSettings} />;
       case "funfacts": return <StepFunFacts invitation={invitation!} onChangeFacts={onChangeFunFacts} />;
-      case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} />;
+      case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
       default: return null;
     }
-  }, [activeStep, invitation, resolvedTemplateId, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents]);
+  }, [activeStep, invitation, resolvedTemplateId, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents, onTextAlignChange, onTextGapChange]);
 
   const selectStep = useCallback((i: number) => {
     setActiveStep(i);
-    stepTabRefs.current[i]?.scrollIntoView({ inline: "center", block: "nearest" });
+    // Sidebar bisa punya scrollbar sendiri — pastikan langkah terpilih terlihat.
+    stepTabRefs.current[i]?.scrollIntoView({ block: "nearest" });
   }, []);
 
   if (isLoading) {
@@ -438,8 +477,7 @@ const [activeStep, setActiveStep] = useState(0);
   }
 
   return (
-    <div className="flex flex-col gap-6 py-1 xl:flex-row xl:items-start">
-      <div className="min-w-0 flex-1 space-y-3">
+    <div className="space-y-3 py-1">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="outline" size="sm" className="grid h-11 w-11 shrink-0 place-items-center p-0" onClick={() => router.push("/dashboard/invitations")} aria-label="Kembali ke daftar undangan">
@@ -502,7 +540,7 @@ const [activeStep, setActiveStep] = useState(0);
       </div>
 
       {saveMutation.isError && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-medium">Gagal menyimpan perubahan.</p>
           <p className="mt-1 break-words">{(saveMutation.error as Error).message}</p>
           {/column|does not exist|schema/i.test((saveMutation.error as Error).message) && (
@@ -515,46 +553,106 @@ const [activeStep, setActiveStep] = useState(0);
       )}
 
       {deleteMutation.isError && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-medium">Gagal menghapus undangan.</p>
           <p className="mt-1 break-words">{(deleteMutation.error as Error).message}</p>
         </div>
       )}
 
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 pb-2 pt-2 backdrop-blur">
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1">
-          <button type="button" aria-label="Bagian sebelumnya" onClick={() => selectStep(Math.max(0, activeStep - 1))} className="grid h-10 w-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="flex min-w-0 flex-1 gap-0.5 overflow-x-auto">
-            {STEPS.map((step, i) => (
-              <button
-                key={step.key}
-                ref={(el) => { stepTabRefs.current[i] = el; }}
-                type="button"
-                onClick={() => selectStep(i)}
-                aria-current={activeStep === i ? "step" : undefined}
-                className={`flex min-h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  activeStep === i ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-background hover:text-foreground"
-                }`}
+      <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-5">
+        <nav aria-label="Bagian undangan" className="min-w-0">
+          {/* Layar kecil: pemilih bagian — menggantikan tab geser */}
+          <div className="flex items-center gap-1.5 lg:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              className="grid h-11 w-11 shrink-0 place-items-center p-0"
+              onClick={() => selectStep(Math.max(0, activeStep - 1))}
+              disabled={activeStep === 0}
+              aria-label="Bagian sebelumnya"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="relative min-w-0 flex-1">
+              <select
+                aria-label="Pilih bagian"
+                value={activeStep}
+                onChange={(e) => selectStep(Number(e.target.value))}
+                className="min-h-11 w-full appearance-none rounded-lg border border-border bg-background px-3 pr-9 text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
               >
-                <step.icon className="h-3.5 w-3.5" />
-                {step.label}
-              </button>
-            ))}
+                {STEPS.map((step, i) => (
+                  <option key={step.key} value={i}>
+                    {i + 1}. {step.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="grid h-11 w-11 shrink-0 place-items-center p-0"
+              onClick={() => selectStep(Math.min(STEPS.length - 1, activeStep + 1))}
+              disabled={activeStep === STEPS.length - 1}
+              aria-label="Bagian berikutnya"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
-          <button type="button" aria-label="Bagian berikutnya" onClick={() => selectStep(Math.min(STEPS.length - 1, activeStep + 1))} className="grid h-10 w-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground">
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
 
-      <div className="rounded-xl border border-border bg-white p-3 sm:p-4">
-        <div className="mb-4 flex items-center gap-2">
-          <ActiveIcon className="h-4 w-4 text-primary" aria-hidden="true" />
-          <h2 className="font-heading text-[clamp(0.9375rem,0.875rem+0.3vw,1.125rem)] text-foreground">{STEPS[activeStep].label}</h2>
+          {/* Layar lebar: sidebar daftar bagian */}
+          <div className="hidden lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1">
+            <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Bagian</p>
+            <div data-step-list className="flex flex-col gap-px rounded-lg border border-border bg-muted/40 p-1">
+              {STEPS.map((step, i) => (
+                <button
+                  key={step.key}
+                  ref={(el) => { stepTabRefs.current[i] = el; }}
+                  type="button"
+                  onClick={() => selectStep(i)}
+                  aria-current={activeStep === i ? "step" : undefined}
+                  className={cn(
+                    "flex min-h-8 w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
+                    activeStep === i
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background hover:text-foreground",
+                  )}
+                >
+                  <step.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{step.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-1.5 flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-8 flex-1 justify-start px-2 text-xs"
+                onClick={() => selectStep(Math.max(0, activeStep - 1))}
+                disabled={activeStep === 0}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-8 flex-1 justify-end px-2 text-xs"
+                onClick={() => selectStep(Math.min(STEPS.length - 1, activeStep + 1))}
+                disabled={activeStep === STEPS.length - 1}
+              >
+                Berikutnya <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </nav>
+
+        <div className="min-w-0 rounded-lg border border-border bg-white p-3 sm:p-4">
+          <div className="mb-4 flex items-center gap-2">
+            <ActiveIcon className="h-4 w-4 text-primary" aria-hidden="true" />
+            <h2 className="font-heading text-[clamp(0.9375rem,0.875rem+0.3vw,1.125rem)] text-foreground">{STEPS[activeStep].label}</h2>
+          </div>
+          {stepContent}
         </div>
-        {stepContent}
       </div>
 
       <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
@@ -589,28 +687,6 @@ const [activeStep, setActiveStep] = useState(0);
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
-
-      <aside className="hidden w-[400px] shrink-0 xl:block">
-        <div className="sticky top-4 space-y-2">
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="text-xs font-semibold text-foreground">Preview undangan</p>
-            <p className="text-[11px] text-muted-foreground">sinkron ±2 detik setelah simpan</p>
-          </div>
-          <div
-            className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm"
-            style={{ height: "min(75vh, 760px)" }}
-          >
-            <LazyFrame
-              key={previewNonce}
-              src={`/preview/invitation/${slug}?v=${previewNonce}&gate=0`}
-              title="Preview undangan"
-              className="h-full"
-              fallbackClassName="bg-background"
-            />
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }
@@ -664,13 +740,15 @@ function StepCouple({ invitation, settings, onChangeSettings, onChange }: { invi
   );
 }
 
-function StepHero({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"] | ((prev: CustomSettings["hero"]) => CustomSettings["hero"])) => void; onChange: FieldChange }) {
+function StepHero({ invitation, settings, onChangeSettings, onChange, onTextAlignChange, onTextGapChange }: { invitation: Invitation; settings: CustomSettings["hero"]; onChangeSettings: (key: SectionKey, next: CustomSettings["hero"] | ((prev: CustomSettings["hero"]) => CustomSettings["hero"])) => void; onChange: FieldChange; onTextAlignChange: TextAlignChange; onTextGapChange: TextGapChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("hero", next)} />
       <div className="mt-3 grid gap-3">
         <Field label="Hero title"><input className={inputClass} value={invitation.hero_title || ""} onChange={(e) => onChange("hero_title", e.target.value)} /></Field>
-        <Field label="Hero subtitle"><Textarea className={inputClass} rows={2} value={invitation.hero_subtitle || ""} onChange={(e) => onChange("hero_subtitle", e.target.value)} /></Field>
+        <Field label="Hero subtitle" labelTag="div">
+          <RichTextEditor ariaLabel="Hero subtitle" minHeight={80} value={invitation.hero_subtitle || ""} onChange={(v) => onChange("hero_subtitle", v)} align={invitation.custom_settings.textAlign?.hero_subtitle} onAlignChange={(a) => onTextAlignChange("hero_subtitle", a)} gap={textGapFor(invitation.custom_settings, "hero_subtitle")} onGapChange={(g) => onTextGapChange("hero_subtitle", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.hero_subtitle === "number"} />
+        </Field>
         <Field label="Cover image">
           <ImageField label="Cover image" folder={uploadFolders.hero} value={invitation.cover_image} onChange={(url) => onChange("cover_image", url ?? "")} positionX={settings.imagePositionX} positionY={settings.imagePositionY} zoom={settings.zoom} rotate={settings.rotate} onPositionChange={(x, y) => onChangeSettings("hero", (prev) => ({ ...prev, imagePositionX: x, imagePositionY: y }))} onZoomChange={(z) => onChangeSettings("hero", (prev) => ({ ...prev, zoom: z }))} onRotateChange={(r) => onChangeSettings("hero", (prev) => ({ ...prev, rotate: r }))} />
         </Field>
@@ -685,26 +763,34 @@ function StepGreeting({
   greetingSettings,
   onChangeSettings,
   onChange,
+  onTextAlignChange,
+  onTextGapChange,
 }: {
   invitation: Invitation;
   settings: CustomSettings["preamble"];
   greetingSettings: CustomSettings["greeting"];
   onChangeSettings: (key: SectionKey, next: CustomSettings[SectionKey]) => void;
   onChange: FieldChange;
+  onTextAlignChange: TextAlignChange;
+  onTextGapChange: TextGapChange;
 }) {
   return (
     <div className="grid gap-3">
-      <Field label="Teks sapaan"><Textarea className={inputClass} rows={3} value={invitation.greeting_text || ""} onChange={(e) => onChange("greeting_text", e.target.value)} /></Field>
-      <Field label="Kata pembuka (sebelum detail mempelai)">
-        <Textarea
-          className={inputClass}
-          rows={4}
+      <Field label="Teks sapaan" labelTag="div">
+        <RichTextEditor ariaLabel="Teks sapaan" minHeight={96} value={invitation.greeting_text || ""} onChange={(v) => onChange("greeting_text", v)} align={invitation.custom_settings.textAlign?.greeting_text} onAlignChange={(a) => onTextAlignChange("greeting_text", a)} gap={textGapFor(invitation.custom_settings, "greeting_text")} onGapChange={(g) => onTextGapChange("greeting_text", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.greeting_text === "number"} />
+      </Field>
+      <Field label="Kata pembuka (sebelum detail mempelai)" labelTag="div">
+        <RichTextEditor
+          ariaLabel="Kata pembuka"
+          minHeight={128}
           placeholder="Dengan penuh rasa syukur ke hadirat Tuhan Yang Maha Esa, kami bermaksud menyelenggarakan pernikahan anak-anak kami…"
           value={settings.text || ""}
-          onChange={(e) =>
+          align={invitation.custom_settings.textAlign?.preamble_text}
+          onAlignChange={(a) => onTextAlignChange("preamble_text", a)} gap={textGapFor(invitation.custom_settings, "preamble_text")} onGapChange={(g) => onTextGapChange("preamble_text", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.preamble_text === "number"}
+          onChange={(v) =>
             onChangeSettings("preamble", {
               ...settings,
-              text: e.target.value.trim() ? e.target.value : null,
+              text: v.trim() ? v : null,
             })
           }
         />
@@ -735,7 +821,7 @@ function StepGreeting({
   );
 }
 
-function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeMilestones }: { invitation: Invitation; settings: CustomSettings["story"]; onChangeSettings: (key: SectionKey, next: CustomSettings["story"]) => void; onChange: FieldChange; onChangeMilestones: (milestones: NonNullable<Invitation["story_milestones"]>) => void }) {
+function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeMilestones, onTextAlignChange, onTextGapChange }: { invitation: Invitation; settings: CustomSettings["story"]; onChangeSettings: (key: SectionKey, next: CustomSettings["story"]) => void; onChange: FieldChange; onChangeMilestones: (milestones: NonNullable<Invitation["story_milestones"]>) => void; onTextAlignChange: TextAlignChange; onTextGapChange: TextGapChange }) {
   const milestones = invitation.story_milestones ?? [];
 
   const updateMilestone = (index: number, partial: Partial<(typeof milestones)[number]>) => {
@@ -747,7 +833,9 @@ function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeM
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("story", next)} />
       <div className="mt-3 grid gap-3">
         <Field label="Judul cerita"><input className={inputClass} value={invitation.story_title || ""} onChange={(e) => onChange("story_title", e.target.value)} /></Field>
-        <Field label="Isi cerita"><Textarea className={inputClass} rows={5} value={invitation.story_content || ""} onChange={(e) => onChange("story_content", e.target.value)} /></Field>
+        <Field label="Isi cerita" labelTag="div">
+          <RichTextEditor ariaLabel="Isi cerita" minHeight={160} value={invitation.story_content || ""} onChange={(v) => onChange("story_content", v)} align={invitation.custom_settings.textAlign?.story_content} onAlignChange={(a) => onTextAlignChange("story_content", a)} gap={textGapFor(invitation.custom_settings, "story_content")} onGapChange={(g) => onTextGapChange("story_content", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.story_content === "number"} />
+        </Field>
       </div>
 
       <div className="mt-5 space-y-3">
@@ -767,7 +855,15 @@ function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeM
               <input className={inputClass} placeholder="Judul babak (mis. Pertemuan yang Tak Terduga)" value={item.title} onChange={(e) => updateMilestone(index, { title: e.target.value })} />
               <input type="date" className={inputClass} value={item.date || ""} onChange={(e) => updateMilestone(index, { date: e.target.value })} />
             </div>
-            <Textarea className={inputClass} rows={4} placeholder="Ceritakan babak ini..." value={item.description} onChange={(e) => updateMilestone(index, { description: e.target.value })} />
+            <RichTextEditor
+              ariaLabel="Deskripsi babak"
+              minHeight={128}
+              placeholder="Ceritakan babak ini..."
+              value={item.description}
+              align={invitation.custom_settings.textAlign?.story_milestones}
+              onAlignChange={(a) => onTextAlignChange("story_milestones", a)} gap={textGapFor(invitation.custom_settings, "story_milestones")} onGapChange={(g) => onTextGapChange("story_milestones", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.story_milestones === "number"}
+              onChange={(v) => updateMilestone(index, { description: v })}
+            />
             <ImageField label="Foto babak (opsional)" aspect={4 / 5} value={item.image ?? null} onChange={(url) => updateMilestone(index, { image: url || null })} />
             <div>
               <button type="button" className="min-h-10 rounded-lg px-2 text-xs text-red-500" onClick={() => onChangeMilestones(milestones.filter((_, i) => i !== index))}>
@@ -781,7 +877,7 @@ function StepStory({ invitation, settings, onChangeSettings, onChange, onChangeM
   );
 }
 
-function StepSchedule({ invitation, settings, onChangeSettings, onChange, onChangeEvents }: { invitation: Invitation; settings: CustomSettings["schedule"]; onChangeSettings: (key: SectionKey, next: CustomSettings["schedule"]) => void; onChange: FieldChange; onChangeEvents: (events: NonNullable<Invitation["events"]>) => void }) {
+function StepSchedule({ invitation, settings, onChangeSettings, onChange, onChangeEvents, onTextAlignChange, onTextGapChange }: { invitation: Invitation; settings: CustomSettings["schedule"]; onChangeSettings: (key: SectionKey, next: CustomSettings["schedule"]) => void; onChange: FieldChange; onChangeEvents: (events: NonNullable<Invitation["events"]>) => void; onTextAlignChange: TextAlignChange; onTextGapChange: TextGapChange }) {
   const events = invitation.events ?? [];
 
   const updateEvent = (index: number, partial: Partial<(typeof events)[number]>) => {
@@ -815,7 +911,15 @@ function StepSchedule({ invitation, settings, onChangeSettings, onChange, onChan
               <input className={inputClass} placeholder="Waktu (mis. 15.00 WITA – Selesai)" value={event.time || ""} onChange={(e) => updateEvent(index, { time: e.target.value })} />
               <input className={inputClass} placeholder="Nama lokasi" value={event.location || ""} onChange={(e) => updateEvent(index, { location: e.target.value })} />
             </div>
-            <Textarea className={inputClass} rows={2} placeholder="Alamat lengkap" value={event.address || ""} onChange={(e) => updateEvent(index, { address: e.target.value })} />
+            <RichTextEditor
+              ariaLabel="Alamat agenda"
+              minHeight={80}
+              placeholder="Alamat lengkap"
+              value={event.address || ""}
+              align={invitation.custom_settings.textAlign?.schedule_events}
+              onAlignChange={(a) => onTextAlignChange("schedule_events", a)} gap={textGapFor(invitation.custom_settings, "schedule_events")} onGapChange={(g) => onTextGapChange("schedule_events", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.schedule_events === "number"}
+              onChange={(v) => updateEvent(index, { address: v })}
+            />
             <input className={inputClass} placeholder="Google Maps URL" value={event.mapsUrl || ""} onChange={(e) => updateEvent(index, { mapsUrl: e.target.value })} />
             <div>
               <button type="button" className="min-h-10 rounded-lg px-2 text-xs text-red-500" onClick={() => onChangeEvents(events.filter((_, i) => i !== index))}>
@@ -829,13 +933,15 @@ function StepSchedule({ invitation, settings, onChangeSettings, onChange, onChan
   );
 }
 
-function StepVenue({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["venue"]; onChangeSettings: (key: SectionKey, next: CustomSettings["venue"]) => void; onChange: FieldChange }) {
+function StepVenue({ invitation, settings, onChangeSettings, onChange, onTextAlignChange, onTextGapChange }: { invitation: Invitation; settings: CustomSettings["venue"]; onChangeSettings: (key: SectionKey, next: CustomSettings["venue"]) => void; onChange: FieldChange; onTextAlignChange: TextAlignChange; onTextGapChange: TextGapChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("venue", next)} />
       <div className="mt-3 grid gap-3">
         <Field label="Nama venue"><input className={inputClass} value={invitation.venue_name || ""} onChange={(e) => onChange("venue_name", e.target.value)} /></Field>
-        <Field label="Alamat"><Textarea className={inputClass} rows={2} value={invitation.venue_address || ""} onChange={(e) => onChange("venue_address", e.target.value)} /></Field>
+        <Field label="Alamat" labelTag="div">
+          <RichTextEditor ariaLabel="Alamat venue" minHeight={80} value={invitation.venue_address || ""} onChange={(v) => onChange("venue_address", v)} align={invitation.custom_settings.textAlign?.venue_address} onAlignChange={(a) => onTextAlignChange("venue_address", a)} gap={textGapFor(invitation.custom_settings, "venue_address")} onGapChange={(g) => onTextGapChange("venue_address", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.venue_address === "number"} />
+        </Field>
         <Field label="Google Maps URL"><input className={inputClass} value={invitation.google_maps_url || ""} onChange={(e) => onChange("google_maps_url", e.target.value)} /></Field>
       </div>
     </>
@@ -971,13 +1077,12 @@ function StepGallery({ invitation, settings, onChangeSettings, onChangeGallery }
     onChangeSettings("gallery", { ...settings, [key]: value });
   const columns: { key: "columnsMobile" | "columnsTablet" | "columnsDesktop"; label: string; fallback: number }[] = [
     { key: "columnsMobile", label: "Ponsel", fallback: 2 },
-    { key: "columnsTablet", label: "Tablet ≥768px", fallback: 3 },
-    { key: "columnsDesktop", label: "Desktop ≥1200px", fallback: 4 },
+    { key: "columnsDesktop", label: "Tablet & Desktop ≥768px", fallback: 4 },
   ];
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("gallery", { ...settings, ...next })} />
-      <div className="mt-3 grid gap-3 rounded-xl bg-background p-3">
+      <div className="mt-3 grid gap-3 rounded-lg bg-background p-3">
         <p className="text-xs font-medium text-foreground">Tata letak galeri</p>
         <div className="grid gap-2 sm:grid-cols-3">
           {GALLERY_LAYOUTS.map((opt) => {
@@ -1131,7 +1236,7 @@ function StepMusic({ invitation, settings, onChangeSettings, onChange }: { invit
             <button
               type="button"
               onClick={() => void refetch()}
-              className="mt-2 rounded-full border border-red-300 px-3 py-1 transition hover:bg-red-100"
+              className="mt-2 rounded-md border border-red-300 px-3 py-1 transition hover:bg-red-100"
             >
               Coba lagi
             </button>
@@ -1212,7 +1317,7 @@ function StepWishes({
   onChangeSettings: (key: SectionKey, next: CustomSettings["wishes"]) => void;
 }) {
   const { data: wishes, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["wishes", slug],
+    queryKey: queryKeys.wishes(slug),
     queryFn: () => fetchWishes(slug),
   });
 
@@ -1231,7 +1336,7 @@ function StepWishes({
             <button
               type="button"
               onClick={() => void refetch()}
-              className="mt-2 rounded-full border border-red-300 px-3 py-1 text-red-700 transition hover:bg-red-100"
+              className="mt-2 rounded-md border border-red-300 px-3 py-1 text-red-700 transition hover:bg-red-100"
             >
               Coba lagi
             </button>
@@ -1306,12 +1411,14 @@ function StepFunFacts({ invitation, onChangeFacts }: { invitation: Invitation; o
   );
 }
 
-function StepClosing({ invitation, settings, onChangeSettings, onChange }: { invitation: Invitation; settings: CustomSettings["closing"]; onChangeSettings: (key: SectionKey, next: CustomSettings["closing"]) => void; onChange: FieldChange }) {
+function StepClosing({ invitation, settings, onChangeSettings, onChange, onTextAlignChange, onTextGapChange }: { invitation: Invitation; settings: CustomSettings["closing"]; onChangeSettings: (key: SectionKey, next: CustomSettings["closing"]) => void; onChange: FieldChange; onTextAlignChange: TextAlignChange; onTextGapChange: TextGapChange }) {
   return (
     <>
       <SectionSettingsPanel value={settings} onChange={(next) => onChangeSettings("closing", next)} />
       <div className="mt-3 grid gap-3">
-        <Field label="Pesan penutup"><Textarea className={inputClass} rows={4} value={invitation.closing_message || ""} onChange={(e) => onChange("closing_message", e.target.value)} /></Field>
+        <Field label="Pesan penutup" labelTag="div">
+          <RichTextEditor ariaLabel="Pesan penutup" minHeight={128} value={invitation.closing_message || ""} onChange={(v) => onChange("closing_message", v)} align={invitation.custom_settings.textAlign?.closing_message} onAlignChange={(a) => onTextAlignChange("closing_message", a)} gap={textGapFor(invitation.custom_settings, "closing_message")} onGapChange={(g) => onTextGapChange("closing_message", g)} gapOverride={typeof invitation.custom_settings.textGapFields?.closing_message === "number"} />
+        </Field>
         <Field label="Gambar penutup"><ImageField label="Closing image" folder={uploadFolders.closing} value={invitation.closing_image || null} onChange={(url) => onChange("closing_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
         <Field label="QRIS image"><ImageField label="QRIS" aspect={1} folder={uploadFolders.closing} value={invitation.qris_image || null} onChange={(url) => onChange("qris_image", url ?? "")} positionX={50} positionY={50} zoom={100} rotate={0} onPositionChange={() => {}} /></Field>
       </div>
@@ -1319,12 +1426,29 @@ function StepClosing({ invitation, settings, onChangeSettings, onChange }: { inv
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Field({
+  label,
+  children,
+  className,
+  labelTag = "label",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+  /**
+   * `label` (default) memberi asosiasi implisit untuk input sederhana.
+   * Kontainer kompleks (mis. RichTextEditor) memakai `div` — jika memakai
+   * `<label>`, klik di dalam teks editor memindahkan fokus ke kontrol
+   * labelable pertama (select toolbar) alih-alih ke editor.
+   */
+  labelTag?: "label" | "div";
+}) {
+  const Tag = labelTag;
   return (
-    <label className={cn("block space-y-1", className)}>
+    <Tag className={cn("block space-y-1", className)}>
       <span className="mb-0.5 block text-xs font-medium text-muted-foreground">{label}</span>
       {children}
-    </label>
+    </Tag>
   );
 }
 

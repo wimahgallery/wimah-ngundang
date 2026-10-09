@@ -1,3 +1,8 @@
+// Penanda batas server-client: berkas ini tidak boleh pernah masuk bundle
+// klien (lihat docs/server-client-boundaries.md). Tanpa baris ini, impor yang
+// salah tempat baru gagal saat runtime, bukan saat build.
+import "server-only";
+
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Eye, LogOut, Search, ChevronLeft, ChevronRight, Share2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, LogOut, Search, ChevronLeft, ChevronRight, Share2, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,8 +30,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { invitationCreateSchema, type InvitationCreateInput } from "@/lib/schemas";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { fieldErrorMessages } from "@/lib/form-errors";
+import { useForm, useSelector } from "@tanstack/react-form";
+import {
+  createColumnHelper,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+  type ColumnDef,
+  type OnChangeFn,
+  type SortingState,
+} from "@tanstack/react-table";
 import { EVENT_TYPES } from "@/lib/invitation";
 import { cn, previewImageSrc } from "@/lib/utils";
 import { isTemplateId, templateMetaById } from "@/components/invitation/template-registry";
@@ -39,6 +48,25 @@ import { TemplatePicker } from "./TemplatePicker";
 import ShareInvitationDialog from "./ShareInvitationDialog";
 import { useInvitations, useCreateInvitation, useDeleteInvitation, useInvitationStats } from "@/features/invitations/hooks";
 import type { InvitationRow, GuestStats } from "@/features/invitations/services/invitationApi";
+
+/**
+ * TanStack Table v9: urutkan dipegang server (`manualSorting: true`), jadi
+ * cukup `rowSortingFeature` — model baris terurut datang dari API lewat
+ * `sortedRowModel` klien yang sengaja tidak didaftarkan.
+ */
+const listFeatures = tableFeatures({ rowSortingFeature });
+const columnHelper = createColumnHelper<typeof listFeatures, InvitationRow>();
+
+/** Referensi data kosong yang stabil — `?? []` baru tiap render membatalkan
+ *  model baris TanStack Table setiap render. */
+const EMPTY_ROWS: InvitationRow[] = [];
+
+function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
+  if (sorted === "asc") return <ArrowUp className="h-3.5 w-3.5" aria-hidden />;
+  if (sorted === "desc") return <ArrowDown className="h-3.5 w-3.5" aria-hidden />;
+  return <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" aria-hidden />;
+}
+
 
 function TemplateBadge({ id }: { id: string }) {
   if (!isTemplateId(id)) {
@@ -120,15 +148,9 @@ export default function InvitationDashboard() {
   const createMutation = useCreateInvitation();
   const deleteMutation = useDeleteInvitation();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<InvitationCreateInput>({
-    resolver: zodResolver(invitationCreateSchema),
+  // Tipe disimpulkan dari `defaultValues`; `satisfies` menjaga bentuknya
+  // tetap sama dengan `invitationCreateSchema` (validasi ada di field).
+  const form = useForm({
     defaultValues: {
       slug: "",
       event_title: "",
@@ -136,10 +158,21 @@ export default function InvitationDashboard() {
       template_id: "lume",
       bride_name: "",
       groom_name: "",
+    } satisfies InvitationCreateInput,
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        const row = await createMutation.mutateAsync(value);
+        setOpen(false);
+        formApi.reset();
+        router.push(`/dashboard/invitations/${row.slug}`);
+      } catch {
+        // error displayed via mutation state
+      }
     },
   });
 
-  const templateId = watch("template_id");
+  const templateId = useSelector(form.store, (state) => state.values.template_id);
+  const eventType = useSelector(form.store, (state) => state.values.event_type);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -158,29 +191,30 @@ export default function InvitationDashboard() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading, error } = useInvitations({ page, search: debouncedSearch });
-  const items: InvitationRow[] = data?.items ?? [];
+  // Urutkan dipegang server: state ini hanya judul (id kolom + arah) dan ikut
+  // masuk ke query key, sehingga tidak pernah menyortir satu halaman saja.
+  const [sorting, setSorting] = useState<SortingState>([{ id: "updated_at", desc: true }]);
+  const activeSort = sorting[0];
+
+  const { data, isLoading, error } = useInvitations({
+    page,
+    search: debouncedSearch,
+    sort: activeSort?.id ?? "updated_at",
+    dir: activeSort?.desc ? "desc" : "asc",
+  });
+  const items: InvitationRow[] = data?.items ?? EMPTY_ROWS;
   const totalPages = data?.totalPages ?? 1;
+
+  /** Ganti urutkan → mundur ke halaman 1. Dilakukan di handler (bukan effect)
+   *  supaya halaman lama tidak sempat memuat baris dengan urutan baru. */
+  const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+    setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+    setPage(1);
+  };
 
   // Statistik tamu diambil terpisah supaya daftar tetap tampil cepat walau
   // endpoint statistik lambat atau gagal.
   const { stats } = useInvitationStats(items.map((item) => item.slug));
-
-  // Hapus item terakhir di halaman terakhir → jangan sampai berhenti di halaman kosong.
-  useEffect(() => {
-    if (!isLoading && items.length === 0 && page > 1) setPage((p) => Math.max(1, p - 1));
-  }, [isLoading, items.length, page]);
-
-  const onSubmit = async (values: InvitationCreateInput) => {
-    try {
-      const row = await createMutation.mutateAsync(values);
-      setOpen(false);
-      reset();
-      router.push(`/dashboard/invitations/${row.slug}`);
-    } catch {
-      // error displayed via mutation state
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -193,9 +227,15 @@ export default function InvitationDashboard() {
   const handleDelete = async () => {
     if (!confirmDelete) return;
     const slug = confirmDelete;
+    // Baris terakhir di halaman ini? Kalau ya, halaman perlu mundur setelahnya.
+    const isLastOnPage = items.length === 1;
     setDeleting(slug);
     try {
       await deleteMutation.mutateAsync(slug);
+      // Item terakhir di halaman terakhir terhapus → mundur satu halaman supaya
+      // daftar tidak berhenti di halaman kosong. Dikoreksi di sini (bukan di
+      // effect) karena hanya penghapusan yang bisa membuat halaman jadi kosong.
+      if (isLastOnPage && page > 1) setPage((p) => Math.max(1, p - 1));
     } catch {
       // error displayed via mutation state
     } finally {
@@ -203,6 +243,205 @@ export default function InvitationDashboard() {
       setConfirmDelete(null);
     }
   };
+
+  /**
+   * Kolom urutkan (`event_title`, `event_date`, `template_id`, `is_published`)
+   * harus sama dengan kunci `SORTABLE` di route API. Kolom sisanya display dan
+   * `enableSorting: false` supaya kepalanya tidak jadi tombol urutkan.
+   *
+   * Memo bergantung pada `stats` dan status hapus karena isi selnya ikut
+   * berubah; selain itu referensi kolom tetap stabil antar render.
+   */
+  // `any` pada TValue: antarmuka kolom memakai accessor (string, boolean) dan
+  // display (unknown) sekaligus, sedangkan `TValue` bersifat invarian.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const columns = useMemo<ColumnDef<typeof listFeatures, InvitationRow, any>[]>(
+    () => [
+      columnHelper.accessor("event_title", {
+        header: "Undangan",
+        cell: ({ row }) => {
+          const item = row.original;
+          const cover = item.cover_image || item.bride_photo || item.groom_photo || null;
+          return (
+            <div className="flex items-start gap-2.5">
+              {cover && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewImageSrc(cover, 128)}
+                  alt=""
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  className="h-11 w-11 shrink-0 rounded-lg border border-border bg-background object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
+              <div className="min-w-0">
+                <p className="break-words font-medium text-foreground">{item.event_title || item.slug}</p>
+                <p className="break-words text-[11px] text-muted-foreground">/{item.slug}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Diperbarui {updatedLabel(item.updated_at)}
+                </p>
+              </div>
+            </div>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: "couple",
+        header: "Mempelai",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const item = row.original;
+          const couple = coupleOf(item);
+          return (
+            <>
+              <p className="max-w-[13rem] text-foreground">{couple || "—"}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {item.event_type || "Tipe acara belum diisi"}
+              </p>
+            </>
+          );
+        },
+      }),
+      columnHelper.accessor("event_date", {
+        header: "Jadwal & Lokasi",
+        cell: ({ row }) => {
+          const item = row.original;
+          const eventDate = shortDate(item.event_date);
+          const eventTime = item.event_time?.trim() || "";
+          const venue = item.venue_name?.trim() || item.venue_address?.trim() || "";
+          return (
+            <>
+              <p className="text-foreground">
+                {eventDate
+                  ? `${eventDate}${eventTime ? ` · ${eventTime}` : ""}`
+                  : "Tanggal belum diatur"}
+              </p>
+              <p className="line-clamp-2 max-w-[13rem] text-[11px] text-muted-foreground">
+                {venue || "Lokasi belum diatur"}
+              </p>
+            </>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: "completeness",
+        header: "Kelengkapan",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const chips = contentChips(row.original);
+          if (chips.length === 0) {
+            return <span className="text-xs text-muted-foreground">Belum ada isi</span>;
+          }
+          return (
+            <div className="flex max-w-[14rem] flex-wrap gap-1">
+              {chips.map((chip) => (
+                <Badge key={chip} variant="outline" className="bg-background font-normal text-muted-foreground">
+                  {chip}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+      }),
+      columnHelper.display({
+        id: "guests",
+        header: "Tamu",
+        enableSorting: false,
+        cell: ({ row }) => <GuestStatsCell stats={stats?.[row.original.slug]} />,
+      }),
+      columnHelper.accessor("template_id", {
+        header: "Template",
+        cell: ({ row }) => <TemplateBadge id={row.original.template_id} />,
+      }),
+      columnHelper.accessor("is_published", {
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              "border-transparent font-normal",
+              row.original.is_published
+                ? "bg-primary/15 text-accent-dark"
+                : "bg-background text-muted-foreground",
+            )}
+          >
+            {row.original.is_published ? "Published" : "Draft"}
+          </Badge>
+        ),
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: "Aksi",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11"
+                onClick={() => router.push(`/dashboard/invitations/${item.slug}`)}
+                aria-label={`Edit ${item.event_title || item.slug}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11"
+                onClick={() => router.push(`/preview/invitation/${item.slug}`)}
+                aria-label={`Preview ${item.event_title || item.slug}`}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11"
+                onClick={() => setSharing(item)}
+                aria-label={`Bagikan ${item.event_title || item.slug}`}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 text-red-500 hover:bg-red-50 hover:text-red-600"
+                onClick={() => setConfirmDelete(item.slug)}
+                disabled={deleting === item.slug || deleteMutation.isPending}
+                aria-label={`Hapus ${item.event_title || item.slug}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+      }),
+    ],
+    [stats, deleting, deleteMutation.isPending, router, setSharing, setConfirmDelete],
+  );
+
+  const table = useTable({
+    features: listFeatures,
+    columns,
+    data: items,
+    state: { sorting },
+    onSortingChange: handleSortingChange,
+    // Data masuk sudah terurut dari server; menyortir ulang di klien hanya akan
+    // mengacak satu halaman yang muat.
+    manualSorting: true,
+    // Klik pertama selalu naik (A→Z, tanggal terlama dulu). Tanpa ini arah awal
+    // ikut tebak-an dari isi halaman, yang bisa menghasilkan turun lebih dulu.
+    sortDescFirst: false,
+    // Siklus dua arah saja (naik ↔ turun) — pengurutan bawaan tetap terkirim
+    // walau state tidak pernah kosong.
+    enableSortingRemoval: false,
+  });
 
   if (isLoading) {
     return (
@@ -232,45 +471,82 @@ export default function InvitationDashboard() {
             <DialogHeader>
               <DialogTitle>Buat Undangan Baru</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-              <div>
-                <Label className="text-xs">Judul Acara</Label>
-                <Input
-                  className={cn(errors.event_title && "border-red-500")}
-                  placeholder="Pernikahan Rina & Pradipta"
-                  {...register("event_title")}
-                />
-                {errors.event_title && (
-                  <p className="mt-0.5 text-xs text-red-500">{errors.event_title.message}</p>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                void form.handleSubmit();
+              }}
+              className="space-y-3"
+            >
+              <form.Field name="event_title" validators={{ onSubmit: invitationCreateSchema.shape.event_title }}>
+                {(field) => (
+                  <div>
+                    <Label className="text-xs">Judul Acara</Label>
+                    <Input
+                      className={cn(field.state.meta.errors.length > 0 && "border-red-500")}
+                      placeholder="Pernikahan Rina & Pradipta"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                    />
+                    {field.state.meta.errors.length > 0 && (
+                      <p className="mt-0.5 text-xs text-red-500">{fieldErrorMessages(field.state.meta.errors)}</p>
+                    )}
+                  </div>
                 )}
-              </div>
-              <div>
-                <Label className="text-xs">Slug</Label>
-                <Input
-                  className={cn(errors.slug && "border-red-500")}
-                  placeholder="rina-pradipta"
-                  {...register("slug")}
-                />
-                {errors.slug && (
-                  <p className="mt-0.5 text-xs text-red-500">{errors.slug.message}</p>
+              </form.Field>
+              <form.Field name="slug" validators={{ onSubmit: invitationCreateSchema.shape.slug }}>
+                {(field) => (
+                  <div>
+                    <Label className="text-xs">Slug</Label>
+                    <Input
+                      className={cn(field.state.meta.errors.length > 0 && "border-red-500")}
+                      placeholder="rina-pradipta"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                    />
+                    {field.state.meta.errors.length > 0 && (
+                      <p className="mt-0.5 text-xs text-red-500">{fieldErrorMessages(field.state.meta.errors)}</p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </form.Field>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
-                <div className="min-w-0">
-                  <Label className="text-xs">Mempelai Pria</Label>
-                  <Input placeholder="I Wayan Pradipta Wibawa" {...register("groom_name")} />
-                </div>
-                <div className="min-w-0">
-                  <Label className="text-xs">Mempelai Wanita</Label>
-                  <Input placeholder="Rina Maharani" {...register("bride_name")} />
-                </div>
+                <form.Field name="groom_name">
+                  {(field) => (
+                    <div className="min-w-0">
+                      <Label className="text-xs">Mempelai Pria</Label>
+                      <Input
+                        placeholder="I Wayan Pradipta Wibawa"
+                        value={field.state.value ?? ""}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+                <form.Field name="bride_name">
+                  {(field) => (
+                    <div className="min-w-0">
+                      <Label className="text-xs">Mempelai Wanita</Label>
+                      <Input
+                        placeholder="Rina Maharani"
+                        value={field.state.value ?? ""}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                      />
+                    </div>
+                  )}
+                </form.Field>
               </div>
               <div className="grid max-w-[24rem] grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3">
                 <div className="min-w-0">
                   <Label className="text-xs">Jenis Acara</Label>
                   <Select
-                    value={watch("event_type") ?? "Wedding"}
-                    onValueChange={(v) => { if (v) setValue("event_type", v); }}
+                    value={eventType || "Wedding"}
+                    onValueChange={(v) => { if (v) form.setFieldValue("event_type", v); }}
                   >
                     <SelectTrigger className="w-full min-w-0">
                       <SelectValue />
@@ -283,17 +559,21 @@ export default function InvitationDashboard() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs">Template</Label>
-                <TemplatePicker
-                  className="mt-1.5"
-                  value={templateId}
-                  onChange={(id) => setValue("template_id", id)}
-                />
-                {errors.template_id && (
-                  <p className="mt-0.5 text-xs text-red-500">{errors.template_id.message}</p>
+              <form.Field name="template_id" validators={{ onSubmit: invitationCreateSchema.shape.template_id }}>
+                {(field) => (
+                  <div>
+                    <Label className="text-xs">Template</Label>
+                    <TemplatePicker
+                      className="mt-1.5"
+                      value={templateId}
+                      onChange={(id) => form.setFieldValue("template_id", id)}
+                    />
+                    {field.state.meta.errors.length > 0 && (
+                      <p className="mt-0.5 text-xs text-red-500">{fieldErrorMessages(field.state.meta.errors)}</p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </form.Field>
               {createMutation.error && (
                 <p className="text-xs text-red-500">{(createMutation.error as Error).message}</p>
               )}
@@ -304,14 +584,18 @@ export default function InvitationDashboard() {
                   size="sm"
                   onClick={() => {
                     setOpen(false);
-                    reset();
+                    form.reset();
                   }}
                 >
                   Batal
                 </Button>
-                <Button type="submit" disabled={isSubmitting || createMutation.isPending}>
-                  {createMutation.isPending ? "Membuat..." : "Buat Undangan"}
-                </Button>
+                <form.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
+                    <Button type="submit" disabled={isSubmitting || createMutation.isPending}>
+                      {createMutation.isPending ? "Membuat..." : "Buat Undangan"}
+                    </Button>
+                  )}
+                </form.Subscribe>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -332,152 +616,64 @@ export default function InvitationDashboard() {
 
       {error && <p className="text-sm text-red-500">{(error as Error).message}</p>}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-white">
+      <div className="overflow-x-auto rounded-lg border border-border bg-white">
         <Table className="min-w-[72rem]">
           <TableHeader className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
             <TableRow className="border-b border-border/60 hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Undangan</TableHead>
-              <TableHead className="text-muted-foreground">Mempelai</TableHead>
-              <TableHead className="text-muted-foreground">Jadwal &amp; Lokasi</TableHead>
-              <TableHead className="text-muted-foreground">Kelengkapan</TableHead>
-              <TableHead className="text-muted-foreground">Tamu</TableHead>
-              <TableHead className="text-muted-foreground">Template</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
-              <TableHead className="text-right text-muted-foreground">Aksi</TableHead>
+              {table.getHeaderGroups()[0].headers.map((header) => {
+                const sorted = header.column.getIsSorted();
+                const canSort = header.column.getCanSort();
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      "text-muted-foreground",
+                      header.id === "actions" && "text-right",
+                      canSort && "whitespace-nowrap",
+                    )}
+                  >
+                    {header.isPlaceholder ? null : canSort ? (
+                      <button
+                        type="button"
+                        onClick={() => header.column.toggleSorting()}
+                        className="group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-foreground"
+                        aria-label={
+                          sorted === false
+                            ? `Urutkan berdasarkan ${String(header.column.columnDef.header)}`
+                            : `Urutkan ${sorted === "asc" ? "menurun" : "naik"} — ${String(header.column.columnDef.header)}`
+                        }
+                      >
+                        <table.FlexRender header={header} />
+                        <SortIcon sorted={sorted} />
+                      </button>
+                    ) : (
+                      <table.FlexRender header={header} />
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item: InvitationRow) => {
-              const cover = item.cover_image || item.bride_photo || item.groom_photo || null;
-              const couple = coupleOf(item);
-              const eventDate = shortDate(item.event_date);
-              const eventTime = item.event_time?.trim() || "";
-              const venue = item.venue_name?.trim() || item.venue_address?.trim() || "";
-              const chips = contentChips(item);
-
-              return (
-                <TableRow key={item.id} className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40">
-                  <TableCell className="align-top whitespace-normal">
-                    <div className="flex items-start gap-2.5">
-                      {cover && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={previewImageSrc(cover, 128)}
-                          alt=""
-                          width={44}
-                          height={44}
-                          loading="lazy"
-                          className="h-11 w-11 shrink-0 rounded-lg border border-border bg-background object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="break-words font-medium text-foreground">{item.event_title || item.slug}</p>
-                        <p className="break-words text-[11px] text-muted-foreground">/{item.slug}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Diperbarui {updatedLabel(item.updated_at)}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top whitespace-normal">
-                    <p className="max-w-[13rem] text-foreground">{couple || "—"}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {item.event_type || "Tipe acara belum diisi"}
-                    </p>
-                  </TableCell>
-                  <TableCell className="align-top whitespace-normal">
-                    <p className="text-foreground">
-                      {eventDate
-                        ? `${eventDate}${eventTime ? ` · ${eventTime}` : ""}`
-                        : "Tanggal belum diatur"}
-                    </p>
-                    <p className="line-clamp-2 max-w-[13rem] text-[11px] text-muted-foreground">
-                      {venue || "Lokasi belum diatur"}
-                    </p>
-                  </TableCell>
-                  <TableCell className="align-top whitespace-normal">
-                    {chips.length > 0 ? (
-                      <div className="flex max-w-[14rem] flex-wrap gap-1">
-                        {chips.map((chip) => (
-                          <Badge
-                            key={chip}
-                            variant="outline"
-                            className="bg-background font-normal text-muted-foreground"
-                          >
-                            {chip}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Belum ada isi</span>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                className="border-b border-[rgba(84,82,77,0.06)] last:border-0 hover:bg-muted/40"
+              >
+                {row.getAllCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    className={cn(
+                      "align-top whitespace-normal",
+                      (cell.column.id === "guests" || cell.column.id === "template_id" || cell.column.id === "is_published") &&
+                        "whitespace-nowrap",
                     )}
+                  >
+                    <table.FlexRender cell={cell} />
                   </TableCell>
-                  <TableCell className="align-top whitespace-normal">
-                    <GuestStatsCell stats={stats?.[item.slug]} />
-                  </TableCell>
-                  <TableCell>
-                    <TemplateBadge id={item.template_id} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "border-transparent font-normal",
-                        item.is_published
-                          ? "bg-primary/15 text-accent-dark"
-                          : "bg-background text-muted-foreground",
-                      )}
-                    >
-                      {item.is_published ? "Published" : "Draft"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11"
-                        onClick={() => router.push(`/dashboard/invitations/${item.slug}`)}
-                        aria-label={`Edit ${item.event_title || item.slug}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11"
-                        onClick={() => router.push(`/preview/invitation/${item.slug}`)}
-                        aria-label={`Preview ${item.event_title || item.slug}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11"
-                        onClick={() => setSharing(item)}
-                        aria-label={`Bagikan ${item.event_title || item.slug}`}
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-11 w-11 text-red-500 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => setConfirmDelete(item.slug)}
-                        disabled={deleting === item.slug || deleteMutation.isPending}
-                        aria-label={`Hapus ${item.event_title || item.slug}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                ))}
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
 
@@ -527,7 +723,7 @@ export default function InvitationDashboard() {
       </div>
 
       {deleteMutation.isError && (
-        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-medium">Gagal menghapus undangan.</p>
           <p className="mt-1 break-words">{(deleteMutation.error as Error).message}</p>
         </div>

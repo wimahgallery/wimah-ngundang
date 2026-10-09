@@ -20,6 +20,7 @@ import {
   loadFontSpecimens,
 } from "@/lib/wedding-fonts";
 import type { FontSettings } from "@/lib/invitation";
+import { TEXT_GAP_DEFAULT, TEXT_GAP_MAX, TEXT_GAP_MIN } from "@/lib/invitation";
 import { cn } from "@/lib/utils";
 
 /* ── Util kecil ───────────────────────────────────────────────────────────── */
@@ -209,7 +210,7 @@ function FontPicker({
       {open && (
         <div
           ref={panelRef}
-          className="absolute z-30 mt-1.5 max-h-[26rem] w-full overflow-y-auto rounded-xl border border-border bg-white p-2 shadow-[0_24px_70px_rgba(0,0,0,0.18)]"
+          className="absolute z-30 mt-1.5 max-h-[26rem] w-full overflow-y-auto rounded-lg border border-border bg-white p-2 shadow-[0_24px_70px_rgba(0,0,0,0.18)]"
         >
           <div className="sticky top-0 z-10 bg-white pb-2">
             <div className="relative">
@@ -330,7 +331,7 @@ function PairingCard({
       onClick={onApply}
       aria-pressed={selected}
       className={cn(
-        "rounded-xl border p-3 text-left transition",
+        "rounded-lg border p-3 text-left transition",
         selected ? "border-primary bg-primary/5 ring-2 ring-ring/40" : "border-border hover:border-primary/40",
       )}
     >
@@ -351,10 +352,15 @@ export function TypographyStep({
   templateId,
   font,
   onChange,
+  gap,
+  onGapChange,
 }: {
   templateId: keyof typeof TEMPLATE_TYPOGRAPHY;
   font: FontSettings;
   onChange: (font: FontSettings) => void;
+  /** Jarak antar blok Markdown seluruh dokumen (px). */
+  gap?: number;
+  onGapChange?: (gap: number | undefined) => void;
 }) {
   const dna = TEMPLATE_TYPOGRAPHY[templateId];
   const [advanced, setAdvanced] = useState(false);
@@ -373,7 +379,7 @@ export function TypographyStep({
       </p>
 
       {/* Pratinjau kombinasi aktif */}
-      <div className="rounded-xl border border-border bg-background p-5 text-center">
+      <div className="rounded-lg border border-border bg-background p-5 text-center">
         <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Contoh tampilan</p>
         {accent && accent.family && (
           <p className="mt-1 text-2xl text-accent-dark" style={{ fontFamily: `"${accent.family}", cursive` }}>
@@ -421,8 +427,49 @@ export function TypographyStep({
         </div>
       </div>
 
-      {/* Mode lanjutan */}
-      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-dashed border-border bg-muted/30 p-3">
+      {/* Jarak antar blok teks */}
+      {onGapChange && (
+        <div className="rounded-lg border border-border bg-background p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-xs font-semibold text-foreground">Jarak antar blok teks</p>
+            <p className="text-xs text-muted-foreground">
+              {typeof gap === "number" ? `${gap}px` : "Ikut bawaan tiap bagian"}
+            </p>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Ruang vertikal antar paragraf, daftar, dan judul di seluruh teks undangan.
+            Tiap field masih bisa ditimpa lewat tombol jarak di editornya.
+          </p>
+          <input
+            type="range"
+            min={TEXT_GAP_MIN}
+            max={TEXT_GAP_MAX}
+            step={1}
+            value={typeof gap === "number" ? gap : TEXT_GAP_DEFAULT}
+            onChange={(e) => onGapChange(Number(e.target.value))}
+            className="mt-3 w-full"
+            aria-label="Jarak antar blok teks dalam piksel"
+          />
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              {TEXT_GAP_MIN}px — rapat
+            </span>
+            <button
+              type="button"
+              onClick={() => onGapChange(undefined)}
+              disabled={typeof gap !== "number"}
+              className="min-h-9 rounded-lg border border-border px-3 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+            >
+              Kembalikan ke bawaan
+            </button>
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              {TEXT_GAP_MAX}px — longgar
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Mode lanjutan */}      <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-dashed border-border bg-muted/30 p-3">
         <input
           type="checkbox"
           checked={advanced}

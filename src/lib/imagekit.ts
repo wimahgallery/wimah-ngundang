@@ -1,3 +1,6 @@
+// Berisi `IMAGEKIT_PRIVATE_KEY` — tidak boleh masuk bundle klien.
+import "server-only";
+
 import ImageKit from "@imagekit/nodejs";
 
 let _client: ImageKit | null = null;

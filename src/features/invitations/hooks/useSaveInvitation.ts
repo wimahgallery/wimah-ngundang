@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { saveInvitation } from "../services/invitationApi";
 
 export function useSaveInvitation(slug: string) {
@@ -6,7 +7,7 @@ export function useSaveInvitation(slug: string) {
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => saveInvitation(slug, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invitations"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
     },
   });
 }

@@ -117,6 +117,7 @@
   --font-body: var(--body-font);
   --font-elegant: var(--elegant-font);
   --font-accent: var(--accent-font, var(--elegant-font));
+  --font-script: var(--font-pinyon);
   --font-sans: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -130,28 +131,21 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Breakpoint editorial: mobile <768 (default) · tablet ≥768 (md) · desktop ≥1200 */
+/* Breakpoint editorial: mobile <768 (default) · tablet & desktop ≥768 (`md` = `desk`) */
 @theme {
-  --breakpoint-desk: 75rem;
+  --breakpoint-desk: 48rem;
 }
 
 @layer components {
   /* Container responsif — mobile-first, tanpa lebar hard-coded.
-     mobile : 100% - 2.5rem (padding 1.25rem per sisi), maks 1200px
-     tablet : 100% - 4rem, maks 1280px
-     desktop: 100% - 8rem, maks 1440px */
+     mobile          : 100% - 2.5rem (padding 1.25rem per sisi), maks 1200px
+     tablet & desktop: 100% - 8rem, maks 1440px */
   .invite-wrap {
     width: min(100% - 2.5rem, 1200px);
     margin-inline: auto;
   }
 
   @media (min-width: 768px) {
-    .invite-wrap {
-      width: min(100% - 4rem, 1280px);
-    }
-  }
-
-  @media (min-width: 1200px) {
     .invite-wrap {
       width: min(100% - 8rem, 1440px);
     }
@@ -170,7 +164,8 @@
   }
 
   /* ── Lume desktop stage: galeri full-screen (kiri) + kolom mobile (kanan).
-        Aktif hanya ≥1200px; di bawah itu tampilan undangan tetap seperti biasa. ── */
+        Aktif hanya ≥768px (tablet & desktop); di bawah itu tampilan undangan
+        tetap seperti biasa. ── */
   /* Panel galeri stage: relative sejak dasar supaya <Image fill> tidak
      kena warning "invalid position" saat display:none (mobile). */
   .lume-stage__panel {
@@ -238,45 +233,6 @@
     color: #f5f3ee;
   }
 
-  .lume-stage__controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 1.25rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid rgba(245, 243, 238, 0.2);
-  }
-
-  .lume-stage__count {
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    color: rgba(245, 243, 238, 0.75);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .lume-stage__dots {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .lume-stage__dot {
-    width: 1.75rem;
-    height: 2px;
-    padding: 0;
-    background: rgba(245, 243, 238, 0.35);
-    transition: background-color 0.3s ease;
-  }
-
-  .lume-stage__dot:hover {
-    background: rgba(245, 243, 238, 0.7);
-  }
-
-  .lume-stage__dot.is-active {
-    background: var(--color-gold);
-  }
-
   .lume-stage__frame {
     display: block;
     width: 100%;
@@ -289,7 +245,7 @@
     background: var(--stage-panel);
   }
 
-  @media (min-width: 1200px) {
+  @media (min-width: 768px) {
     .lume-stage {
       display: grid;
       grid-template-columns: minmax(0, 1fr) clamp(400px, 32vw, 480px);
@@ -329,7 +285,7 @@
     }
   }
 
-  @media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
+  @media (min-width: 768px) and (prefers-reduced-motion: reduce) {
     .lume-stage__shot {
       transition: none;
       transform: none;
@@ -352,12 +308,12 @@
 }
 
 /* ── Dock musik + padding bawah hanya untuk halaman yang benar-benar
-      menggulir. Saat stage desktop aktif (≥1200px, isi undangan ada di
+      menggulir. Saat stage desktop aktif (≥768px, isi undangan ada di
       iframe) dock ini menutupi dot galeri, menumpuk dengan dock di dalam
       iframe, dan padding bawah membuat halaman yang seharusnya pas
       100svh bisa digulir. Di luar @layer + !important supaya
       mengalahkan inline style. ── */
-@media (min-width: 1200px) {
+@media (min-width: 768px) {
   .invitation-shell:has(.lume-stage),
   .invitation-shell--music:has(.lume-stage) [data-template] {
     padding-bottom: 0 !important;
@@ -367,25 +323,25 @@
   }
 }
 
-/* ── Cover stage mobile: tampil <1200px, digantikan galeri+frame HP ≥1200px.
+/* ── Cover stage mobile: tampil <768px, digantikan galeri+frame HP ≥768px.
       Di luar @layer supaya mengalahkan utility Tailwind (display:flex). ── */
 .lume-stage__cover {
   display: flex;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 768px) {
   .lume-stage__cover {
     display: none;
   }
 }
 
-/* ── Tombol "Buka Undangan" di layar pertama desktop (≥1200px):
+/* ── Tombol "Buka Undangan" di layar pertama desktop (≥768px):
       overlay bottom-center di atas galeri + frame HP, di luar @layer. ── */
 .lume-stage__cta {
   display: none;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 768px) {
   .lume-stage__cta {
     display: flex;
     position: absolute;
@@ -837,4 +793,76 @@ body {
 }
 *::-webkit-scrollbar {
   display: none;
+}
+
+/* ── Editor rich text (TipTap) ────────────────────────────────────────────
+   Preflight Tailwind menyetel daftar jadi `list-style: none` dan semua margin
+   jadi 0, sehingga gaya daftar/kutipan/spasi antar paragraf dikembalikan
+   khusus di dalam editor supaya tampilan penyunting sama dengan hasil render
+   di halaman undangan. */
+.rt-editor {
+  outline: none;
+}
+.rt-editor ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.rt-editor ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.rt-editor blockquote {
+  border-left: 2px solid currentColor;
+  padding-left: 1rem;
+}
+.rt-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ── Jarak antar blok Markdown ─────────────────────────────────────────────
+   Nilainya datang dari `--md-gap` (diatur lewat slider di dashboard).
+   Di luar @layer supaya menang atas utility `space-y-*` milik Tailwind —
+   `space-y-0` ikut dipasang di wadah hanya untuk mematikan jarak bawaannya. */
+.rt-editor > * + * {
+  margin-top: var(--md-gap, 0.75rem);
+}
+.md-gap > * + * {
+  margin-top: var(--md-gap, 1rem);
+}
+/* Judul butuh ruang lebih di atasnya — ritme tipografi ala dokumentasi. */
+.md-gap > :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
+  margin-top: calc(var(--md-gap, 1rem) * 1.75);
+}
+
+/* ── Blok Markdown di editor & halaman undangan ────────────────────────────
+   Preflight Tailwind mereset ukuran/judul heading jadi inherit, jadi H1–H3
+   dan garis pemisah perlu gaya sendiri. Font judul mengikuti `--heading-font`
+   milik template supaya sejalan dengan tipografi undangan. */
+:is(.md-content, .rt-editor) :is(h1, h2, h3) {
+  font-family: var(--heading-font);
+  font-weight: 400;
+  line-height: 1.2;
+}
+:is(.md-content, .rt-editor) h1 {
+  font-size: 1.6em;
+}
+:is(.md-content, .rt-editor) h2 {
+  font-size: 1.3em;
+}
+:is(.md-content, .rt-editor) h3 {
+  font-size: 1.1em;
+}
+:is(.md-content, .rt-editor) hr {
+  border: 0;
+  border-top: 1px solid currentColor;
+  margin: 0;
+  opacity: 0.35;
+}
+:is(.md-content, .rt-editor) a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

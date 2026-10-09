@@ -32,8 +32,10 @@ import {
   coupleLabel,
   googleCalendarLink,
   paragraphClass,
+  textGapFor,
   type GalleryImage,
   type Invitation,
+  type TextAlign,
 } from "@/lib/invitation";
 import {
   fetchWishes,
@@ -55,6 +57,7 @@ import {
   type LumeTheme,
 } from "./lume-theme";
 import { lumeVariant } from "./lume-themes";
+import { RichText } from "../rich-text";
 import {
   CopyButton,
   CoupleNames,
@@ -64,15 +67,13 @@ import {
   SectionCopy,
   SectionHeading,
   SectionKicker,
-  StoryParagraphs,
   VideoPlayer,
 } from "../shared";
 
 /**
- * Sistem responsif (satu identitas → tiga komposisi):
- *  mobile  320–767  : satu kolom, full-bleed, tipografi fluid, tap-friendly
- *  tablet  768–1199 : dua kolom, ruang napas lebih lega (breakpoint `md`)
- *  desktop 1200+    : komposisi asimetris, overlap, skala editorial (breakpoint `desk`)
+ * Sistem responsif (satu identitas → dua komposisi):
+ *  mobile 320–767 : satu kolom, full-bleed, tipografi fluid, tap-friendly
+ *  tablet & desktop 768+ : komposisi asimetris, overlap, skala editorial (breakpoint `desk` = `md`)
  */
 
 /* ─── band: section penuh-lebar + container responsif ─── */
@@ -197,11 +198,11 @@ function LoadingScreen({
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-hero px-6 text-center text-hero-ink">
-      <p className="relative text-[10px] uppercase tracking-[0.34em] text-gold md:text-xs desk:text-sm">
+      <p className="relative text-[10px] uppercase tracking-[0.34em] text-gold desk:text-sm">
         {invitation.hero_title || "The Wedding of"}
       </p>
 
-      <p className="relative mt-5 font-heading text-[clamp(1.75rem,1rem+5vw,3rem)] md:text-[clamp(2.25rem,1rem+4vw,3.75rem)] desk:text-[clamp(3rem,1rem+4vw,4.5rem)] leading-[1.15]">
+      <p className="relative mt-5 font-heading text-[clamp(1.75rem,1rem+5vw,3rem)] desk:text-[clamp(3rem,1rem+4vw,4.5rem)] leading-[1.15]">
         {groom}
         <span className="mx-2 font-elegant italic text-gold">&amp;</span>
         {bride}
@@ -212,7 +213,7 @@ function LoadingScreen({
           <span className="text-[10px] uppercase tracking-[0.24em] text-hero-ink/50">
             Memuat
           </span>
-          <span className="font-heading text-2xl tabular-nums text-gold md:text-3xl desk:text-4xl">
+          <span className="font-heading text-2xl tabular-nums text-gold desk:text-4xl">
             {progress}%
           </span>
         </div>
@@ -288,13 +289,7 @@ function CoverBackdrop({ invitation }: { invitation: Invitation }) {
 }
 
 /** Blok atas sampul: kicker, nama pasangan satu baris, dan tanggal. */
-function CoverTop({
-  invitation,
-  children,
-}: {
-  invitation: Invitation;
-  children?: React.ReactNode;
-}) {
+function CoverTop({ invitation }: { invitation: Invitation }) {
   const bride = invitation.bride_nickname || invitation.bride_name || "Bride";
   const groom = invitation.groom_nickname || invitation.groom_name || "Groom";
 
@@ -320,8 +315,6 @@ function CoverTop({
           {formatDate(invitation.event_date)}
         </p>
       )}
-
-      {children}
     </div>
   );
 }
@@ -341,9 +334,12 @@ function CoverBottom({
       className="lume-fade-up relative z-10 w-full px-6 text-center"
       style={{ animationDelay: "350ms" }}
     >
-      <p className="text-[13px] tracking-[0.06em] text-white/75 md:text-sm">
-        {invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
-      </p>
+      <RichText
+        text={invitation.greeting_text || "Kepada Yth. Bapak/Ibu/Saudara/i"}
+        align={invitation.custom_settings.textAlign?.greeting_text}
+        gap={textGapFor(invitation.custom_settings, "greeting_text")}
+        className="text-[13px] tracking-[0.06em] text-white/75 md:text-sm"
+      />
       <p className="mt-2 font-heading text-[clamp(1.6rem,1.2rem+1.8vw,2.5rem)] font-semibold leading-tight text-white">
         {guestName || "Tamu Undangan"}
       </p>
@@ -492,25 +488,27 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
           {text && (
             <>
               <SectionKicker>Kata Pembuka</SectionKicker>
-              <p
+              <RichText
+                text={text}
+                align={invitation.custom_settings.textAlign?.preamble_text}
+                gap={textGapFor(invitation.custom_settings, "preamble_text")}
                 className={cn(
-                  "mt-6 whitespace-pre-line text-text-secondary leading-[2]",
+                  "mt-6 space-y-4 text-text-secondary leading-[2]",
                   paragraphClass(settings.paragraphSize),
                 )}
-              >
-                {text}
-              </p>
+              />
             </>
           )}
           {description && (
-            <p
-              className={cn(
-                "text-sm leading-[1.9] text-text-secondary md:text-base",
-                text && "mt-6",
-              )}
-            >
-              {description}
-            </p>
+              <RichText
+                text={description}
+                align={invitation.custom_settings.textAlign?.hero_subtitle}
+                gap={textGapFor(invitation.custom_settings, "hero_subtitle")}
+                className={cn(
+                  "space-y-3 text-sm leading-[1.9] text-text-secondary md:text-base",
+                  text && "mt-6",
+                )}
+            />
           )}
         </div>
       )}
@@ -549,7 +547,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
 
   const people = [
     {
-      role: "Mempelai • Pria",
+      role: "The Groom",
       name: invitation.groom_name,
       parents: invitation.groom_parents,
       photo: invitation.groom_photo,
@@ -561,7 +559,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
       },
     },
     {
-      role: "Mempelai • Wanita",
+      role: "The Bride",
       name: invitation.bride_name,
       parents: invitation.bride_parents,
       photo: invitation.bride_photo,
@@ -585,31 +583,31 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
 
       {/* Mempelai pria di kiri, mempelai wanita di kanan — teks menempel ke
           sisi fotonya (kiri/kanan), tidak center, supaya komposisi asimetris. */}
-      <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-8 desk:mt-14 desk:gap-16">
+      <div className="mt-10 grid gap-10 md:grid-cols-2 desk:mt-14 desk:gap-16">
         {people.map((person, index) => (
           <article
             key={person.role}
             className={cn(
               "flex flex-col",
               index === 0 ? "items-start text-left" : "items-end text-right",
-              index === staggerIndex && "md:mt-14 desk:mt-24",
+              index === staggerIndex && "desk:mt-24",
             )}
           >
             <InvitationPhoto
               src={person.photo}
               alt={person.name || person.role}
-              className="aspect-[3/4] w-full max-w-[21.5rem] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none md:rounded-2xl desk:rounded-3xl"
+              className="aspect-[3/4] w-full max-w-[21.5rem] rounded-xl shadow-[0_20px_60px_rgba(84,82,77,0.14)] md:max-w-none desk:rounded-3xl"
               {...person.position}
-              sizes="(min-width: 1200px) 40vw, (min-width: 768px) 45vw, 80vw"
+              sizes="(min-width: 768px) 40vw, 80vw"
             />
-            <p className="mt-5 text-[10px] uppercase tracking-[0.24em] text-accent-dark md:text-[11px]">
+            <p className="mt-6 font-script text-[1.45rem] leading-[1.2] text-accent-dark md:text-[1.75rem]">
               {person.role}
             </p>
-            <h3 className="mt-2 font-heading text-2xl text-text-primary md:text-3xl desk:text-[2.5rem]">
+            <h3 className="mt-3 font-heading text-2xl text-text-primary desk:text-[2.5rem]">
               {person.name}
             </h3>
             {person.parents && (
-              <p className="mt-3 max-w-xs text-xs leading-relaxed text-text-secondary md:text-sm desk:max-w-sm desk:text-[0.95rem]">
+              <p className="mt-3 max-w-xs text-xs leading-relaxed text-text-secondary desk:max-w-sm desk:text-[0.95rem]">
                 {person.parents}
               </p>
             )}
@@ -641,7 +639,7 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
       </div>
 
       {milestones.length > 0 ? (
-        <div className="mt-11 space-y-14 md:mt-14 md:space-y-20 desk:space-y-28">
+        <div className="mt-11 space-y-14 md:mt-14 desk:space-y-28">
           {milestones.map((item, index) => {
             const textOnLeft = photoFirstLeft
               ? index % 2 === 1
@@ -649,7 +647,7 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
             return (
               <article
                 key={item.id || `${item.title}-${index}`}
-                className="grid items-center gap-6 md:grid-cols-2 md:gap-10 desk:gap-0"
+                className="grid items-center gap-6 md:grid-cols-2 desk:gap-0"
               >
                 {item.image && (
                   <figure
@@ -661,8 +659,8 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
                     <InvitationPhoto
                       src={item.image}
                       alt={item.title}
-                      className="aspect-[4/5] w-full rounded-xl shadow-[0_18px_50px_rgba(84,82,77,0.12)] md:aspect-[4/3] md:rounded-2xl desk:aspect-[5/4] desk:rounded-3xl"
-                      sizes="(min-width: 1200px) 55vw, (min-width: 768px) 50vw, 92vw"
+                      className="aspect-[4/5] w-full rounded-xl shadow-[0_18px_50px_rgba(84,82,77,0.12)] desk:aspect-[5/4] desk:rounded-3xl"
+                      sizes="(min-width: 768px) 55vw, 92vw"
                     />
                   </figure>
                 )}
@@ -680,7 +678,7 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
                   )}
                 >
                   <div className="flex items-center gap-3 md:inline-flex">
-                    <span className="font-heading text-3xl text-accent/35 md:text-4xl desk:text-6xl">
+                    <span className="font-heading text-3xl text-accent/35 desk:text-6xl">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     {item.date && (
@@ -689,20 +687,28 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-3 font-heading text-xl text-text-primary md:text-2xl desk:text-[1.75rem]">
+                  <h3 className="mt-3 font-heading text-xl text-text-primary desk:text-[1.75rem]">
                     {item.title}
                   </h3>
-                  <p className="mt-3 text-sm leading-[1.85] text-text-secondary md:text-base desk:text-[1.0625rem]">
-                    {item.description}
-                  </p>
+                  <RichText
+                    text={item.description}
+                    align={invitation.custom_settings.textAlign?.story_milestones}
+                    gap={textGapFor(invitation.custom_settings, "story_milestones")}
+                    className="mt-3 space-y-2 text-sm leading-[1.85] text-text-secondary desk:text-[1.0625rem]"
+                  />
                 </div>
               </article>
             );
           })}
         </div>
       ) : (
-        <div className="mx-auto mt-10 max-w-2xl space-y-4 text-center md:mt-12 desk:max-w-3xl">
-          <StoryParagraphs content={invitation.story_content} />
+        <div className="mx-auto mt-10 max-w-2xl text-center md:mt-12 desk:max-w-3xl">
+          <RichText
+            text={invitation.story_content}
+            align={invitation.custom_settings.textAlign?.story_content}
+            gap={textGapFor(invitation.custom_settings, "story_content")}
+            className="space-y-4 text-text-secondary leading-relaxed"
+          />
         </div>
       )}
     </Band>
@@ -771,10 +777,10 @@ function AgendaSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band visible>
-      <div className="grid gap-8 md:gap-10 desk:grid-cols-12 desk:items-start desk:gap-16">
+      <div className="grid gap-8 desk:grid-cols-12 desk:items-start desk:gap-16">
         <header
           className={cn(
-            "text-center md:mx-auto md:max-w-2xl md:text-center desk:col-span-4 desk:mx-0 desk:max-w-none desk:row-start-1 desk:text-left",
+            "text-center desk:col-span-4 desk:mx-0 desk:max-w-none desk:row-start-1 desk:text-left",
             headerRight ? "desk:col-start-9" : "desk:col-start-1",
           )}
         >
@@ -795,7 +801,12 @@ function AgendaSection({ invitation }: { invitation: Invitation }) {
           )}
         >
           {agenda.map((event) => (
-            <AgendaCard key={event.id} event={event} />
+            <AgendaCard
+              key={event.id}
+              event={event}
+              align={invitation.custom_settings.textAlign?.schedule_events}
+              gap={textGapFor(invitation.custom_settings, "schedule_events")}
+            />
           ))}
         </div>
       </div>
@@ -805,6 +816,8 @@ function AgendaSection({ invitation }: { invitation: Invitation }) {
 
 function AgendaCard({
   event,
+  align,
+  gap,
 }: {
   event: {
     name: string;
@@ -814,9 +827,11 @@ function AgendaCard({
     address?: string | null;
     mapsUrl?: string | null;
   };
+  align?: TextAlign;
+  gap?: number;
 }) {
   return (
-    <article className="dna-card flex min-w-0 flex-col gap-5 rounded-2xl border border-border bg-background/80 p-6 text-left shadow-[0_14px_44px_rgba(84,82,77,0.07)] backdrop-blur-sm md:p-7 desk:gap-6 desk:p-8">
+    <article className="dna-card flex min-w-0 flex-col gap-5 rounded-2xl border border-border bg-background/80 p-6 text-left shadow-[0_14px_44px_rgba(84,82,77,0.07)] backdrop-blur-sm desk:gap-6 desk:p-8">
       <div className="min-w-0">
         <p className="text-[10px] uppercase tracking-[0.24em] text-accent md:text-[11px]">
           Agenda
@@ -839,21 +854,27 @@ function AgendaCard({
 
         {(event.location || event.address) && (
           <div className="mt-4 border-t border-border pt-4">
-            <p className="flex items-start gap-1.5 text-sm text-text-primary">
+            <div className="flex items-start gap-1.5 text-sm text-text-primary">
               <MapPin
                 className="mt-0.5 h-4 w-4 shrink-0 text-accent"
                 aria-hidden="true"
               />
               {/* `location` dan `address` adalah field terpisah — hanya salah satu
                   yang terisi tidak boleh menghasilkan ikon mengambang tanpa teks. */}
-              <span className="min-w-0 break-words">
-                {event.location || event.address}
-              </span>
-            </p>
+              <RichText
+                text={event.location || event.address}
+                align={align}
+                gap={gap}
+                className="min-w-0 flex-1 break-words"
+              />
+            </div>
             {event.location && event.address && (
-              <p className="mt-1.5 pl-6 text-xs leading-relaxed text-text-secondary md:text-[13px]">
-                {event.address}
-              </p>
+              <RichText
+                text={event.address}
+                align={align}
+                gap={gap}
+                className="mt-1.5 space-y-1 pl-6 text-xs leading-relaxed text-text-secondary md:text-[13px]"
+              />
             )}
           </div>
         )}
@@ -969,16 +990,6 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
     7: "grid-cols-7",
     8: "grid-cols-8",
   };
-  const GRID_COLS_MD: Record<number, string> = {
-    1: "md:grid-cols-1",
-    2: "md:grid-cols-2",
-    3: "md:grid-cols-3",
-    4: "md:grid-cols-4",
-    5: "md:grid-cols-5",
-    6: "md:grid-cols-6",
-    7: "md:grid-cols-7",
-    8: "md:grid-cols-8",
-  };
   const GRID_COLS_DESK: Record<number, string> = {
     1: "desk:grid-cols-1",
     2: "desk:grid-cols-2",
@@ -999,16 +1010,6 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
     7: "columns-7",
     8: "columns-8",
   };
-  const COLUMNS_MD: Record<number, string> = {
-    1: "md:columns-1",
-    2: "md:columns-2",
-    3: "md:columns-3",
-    4: "md:columns-4",
-    5: "md:columns-5",
-    6: "md:columns-6",
-    7: "md:columns-7",
-    8: "md:columns-8",
-  };
   const COLUMNS_DESK: Record<number, string> = {
     1: "desk:columns-1",
     2: "desk:columns-2",
@@ -1024,19 +1025,16 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
   };
   const mCols = clampInt(settings.columnsMobile, 1, 8, 2);
-  const tCols = clampInt(settings.columnsTablet, 1, 8, 3);
   const dCols = clampInt(settings.columnsDesktop, 1, 8, 4);
   const gridClass = cn(
     GRID_COLS[mCols],
-    GRID_COLS_MD[tCols],
     GRID_COLS_DESK[dCols],
-    "gap-2.5 md:gap-4 desk:gap-5",
+    "gap-2.5 desk:gap-5",
   );
   const columnsClass = cn(
     COLUMNS_N[mCols],
-    COLUMNS_MD[tCols],
     COLUMNS_DESK[dCols],
-    "gap-2.5 md:gap-4 desk:gap-5",
+    "gap-2.5 desk:gap-5",
   );
 
   // --- Bentuk foto bebas: rasio CSS apa pun ("1/1", "16/9", angka kustom). ---
@@ -1055,7 +1053,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
   });
   const cellRatio = parseRatio(settings.aspect, 1);
   const heroRatio = parseRatio(settings.heroAspect, 16 / 9);
-  const cellSizes = `(min-width: 1200px) ${(100 / dCols).toFixed(1)}vw, (min-width: 768px) ${(100 / tCols).toFixed(1)}vw, ${(100 / mCols).toFixed(1)}vw`;
+  const cellSizes = `(min-width: 768px) ${(100 / dCols).toFixed(1)}vw, ${(100 / mCols).toFixed(1)}vw`;
 
   const thumb = (
     img: GalleryImage,
@@ -1278,8 +1276,8 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band tone={tone} visible>
-      <div className="grid gap-9 md:gap-11 desk:grid-cols-12 desk:items-start desk:gap-16">
-        <div className="text-center md:max-w-2xl md:mx-auto desk:col-span-5 desk:mx-0 desk:max-w-none desk:text-left">
+      <div className="grid gap-9 desk:grid-cols-12 desk:items-start desk:gap-16">
+        <div className="text-center desk:col-span-5 desk:mx-0 desk:max-w-none desk:text-left">
           <SectionKicker>Tanda Kasih</SectionKicker>
           <SectionHeading settings={settings} className="mt-3">
             Wedding Gift
@@ -1290,7 +1288,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
           </p>
 
           {invitation.qris_image && (
-            <div className="mx-auto mt-8 w-[min(16rem,80vw)] md:w-[min(17rem,60vw)] desk:mx-0 desk:w-56">
+            <div className="mx-auto mt-8 w-[min(16rem,80vw)] desk:mx-0 desk:w-56">
               <Image
                 src={invitation.qris_image}
                 alt="QRIS"
@@ -1307,7 +1305,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
         </div>
 
         {accounts.length > 0 && (
-          <div className="grid gap-3 md:grid-cols-2 md:gap-4 desk:col-span-7 desk:gap-5">
+          <div className="grid gap-3 md:grid-cols-2 desk:col-span-7 desk:gap-5">
             {accounts.map((gift) => (
               <article
                 key={gift.id}
@@ -1316,7 +1314,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
                 <p className="text-[10px] uppercase tracking-[0.24em] text-accent md:text-[11px]">
                   {gift.bank}
                 </p>
-                <p className="mt-3 break-all font-heading text-xl text-text-primary md:text-2xl desk:text-[1.75rem]">
+                <p className="mt-3 break-all font-heading text-xl text-text-primary desk:text-[1.75rem]">
                   {gift.accountNumber}
                 </p>
                 <p className="mt-1.5 text-sm text-text-secondary md:text-[0.95rem]">
@@ -1356,10 +1354,10 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band visible>
-      <div className="grid gap-8 md:gap-10 desk:grid-cols-12 desk:items-center desk:gap-16">
+      <div className="grid gap-8 desk:grid-cols-12 desk:items-center desk:gap-16">
         <header
           className={cn(
-            "text-center md:mx-auto md:max-w-2xl desk:col-span-4 desk:mx-0 desk:max-w-none desk:text-left",
+            "text-center desk:col-span-4 desk:mx-0 desk:max-w-none desk:text-left",
             !embedUrl &&
               "desk:col-span-12 desk:mx-auto desk:max-w-2xl desk:text-center",
           )}
@@ -1375,9 +1373,12 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
             </p>
           )}
           {venueAddress && (
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-text-secondary md:text-[0.95rem]">
-              {venueAddress}
-            </p>
+            <RichText
+              text={venueAddress}
+              align={invitation.custom_settings.textAlign?.venue_address}
+              gap={textGapFor(invitation.custom_settings, "venue_address")}
+              className="mx-auto mt-2 max-w-xl space-y-1 text-sm leading-relaxed text-text-secondary md:text-[0.95rem]"
+            />
           )}
 
           {openUrl && (
@@ -1400,7 +1401,7 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
               title="Peta lokasi acara"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              className="h-64 w-full border-0 md:h-80 desk:h-[26rem]"
+              className="h-64 w-full border-0 desk:h-[26rem]"
             />
           </div>
         )}
@@ -1446,7 +1447,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
 
       <div
         className={cn(
-          "mt-10 grid grid-cols-2 gap-3 md:mt-12 md:grid-cols-3 md:gap-4",
+          "mt-10 grid grid-cols-2 gap-3 md:mt-12 md:gap-4",
           facts.length > 4 ? "desk:grid-cols-6" : "desk:grid-cols-3",
         )}
       >
@@ -1896,7 +1897,7 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
 
   return (
     <Band visible={settings.visible}>
-      <div className="grid gap-9 md:gap-11 desk:grid-cols-12 desk:items-center desk:gap-16">
+      <div className="grid gap-9 desk:grid-cols-12 desk:items-center desk:gap-16">
         {invitation.closing_image && (
           <figure
             className={cn(
@@ -1907,15 +1908,15 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
             <InvitationPhoto
               src={invitation.closing_image}
               alt="Terima kasih"
-              className="mx-auto aspect-[3/4] w-[min(20rem,80vw)] rounded-xl shadow-[0_22px_60px_rgba(84,82,77,0.14)] md:w-[min(24rem,70vw)] md:rounded-2xl desk:mx-0 desk:w-full desk:rounded-3xl"
-              sizes="(min-width: 1200px) 35vw, (min-width: 768px) 40vw, 80vw"
+              className="mx-auto aspect-[3/4] w-[min(20rem,80vw)] rounded-xl shadow-[0_22px_60px_rgba(84,82,77,0.14)] desk:mx-0 desk:w-full desk:rounded-3xl"
+              sizes="(min-width: 768px) 35vw, 80vw"
             />
           </figure>
         )}
 
         <div
           className={cn(
-            "text-center md:max-w-xl md:mx-auto desk:col-span-7 desk:mx-0 desk:max-w-none desk:text-left",
+            "text-center desk:col-span-7 desk:mx-0 desk:max-w-none desk:text-left",
             photoRight ? "desk:col-start-1" : "desk:col-start-6",
           )}
         >
@@ -1925,15 +1926,20 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
           <h2 className="mt-3 font-heading text-[clamp(1.75rem,1.2rem+2.4vw,2.5rem)] md:text-[clamp(2rem,1.2rem+2vw,3rem)] leading-[1.15] text-text-primary">
             Terima Kasih
           </h2>
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-[1.9] text-text-secondary md:mx-0 md:text-base">
-            {invitation.closing_message ||
-              "Setiap ucapan dan doa yang kamu berikan jadi bagian indah dalam cerita kami. Kami tak sabar menyambutmu di hari spesial nanti."}
-          </p>
+            <RichText
+              text={
+                invitation.closing_message ||
+                "Setiap ucapan dan doa kamu berikan jadi bagian indah dalam cerita kami. Kami tak sabar menyambutmu di hari spesial nanti."
+              }
+              className="mx-auto mt-5 max-w-xl space-y-3 text-sm leading-[1.9] text-text-secondary md:mx-0 md:text-base"
+              align={invitation.custom_settings.textAlign?.closing_message}
+              gap={textGapFor(invitation.custom_settings, "closing_message")}
+            />
 
           <div className="mt-8 md:mt-9">
             <CoupleNames
               invitation={invitation}
-              className="font-heading text-2xl text-text-primary md:text-3xl desk:text-4xl"
+              className="font-heading text-2xl text-text-primary desk:text-4xl"
             />
           </div>
 
@@ -1946,7 +1952,7 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
   );
 }
 
-/* ─── Desktop stage (≥1200px): galeri full-screen di kiri · kolom mobile di kanan ─── */
+/* ─── Desktop stage (≥768px): galeri full-screen di kiri · kolom mobile di kanan ─── */
 function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
   const images = invitation.gallery_images;
   const [active, setActive] = useState(0);
@@ -1969,7 +1975,7 @@ function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
           src={img.url}
           alt={img.alt || `Galeri ${i + 1}`}
           fill
-          sizes="(min-width: 1200px) 65vw"
+          sizes="(min-width: 768px) calc(100vw - clamp(400px, 32vw, 480px)), 100vw"
           className={cn("lume-stage__shot", i === active && "is-active")}
         />
       ))}
@@ -1981,26 +1987,6 @@ function DesktopGalleryPanel({ invitation }: { invitation: Invitation }) {
         <p className="lume-stage__title">
           <CoupleNames invitation={invitation} />
         </p>
-        <div className="lume-stage__controls">
-          <span className="lume-stage__count" aria-live="off">
-            {String(active + 1).padStart(2, "0")}
-            <span aria-hidden="true"> / </span>
-            <span className="sr-only">dari</span>
-            {String(images.length).padStart(2, "0")}
-          </span>
-          <div className="lume-stage__dots">
-            {images.map((img, i) => (
-              <button
-                key={img.id}
-                type="button"
-                className={cn("lume-stage__dot", i === active && "is-active")}
-                onClick={() => setActive(i)}
-                aria-label={`Tampilkan foto ${i + 1}`}
-                aria-current={i === active}
-              />
-            ))}
-          </div>
-        </div>
       </div>
     </aside>
   );
@@ -2022,7 +2008,7 @@ function DesktopPhoneFrame({ src }: { src?: string }) {
   );
 }
 
-/* ─── Tombol "Buka Undangan" untuk layar pertama desktop (≥1200px):
+/* ─── Tombol "Buka Undangan" untuk layar pertama desktop (≥768px):
        overlay bottom-center di atas galeri + frame HP. Layout desktop tidak
        menggulir (isi undangan ada di dalam iframe) — klik meneruskan klik ke
        tombol di dalam frame HP, lalu tombol ini hilang. ─── */
@@ -2053,10 +2039,10 @@ function DesktopStageCta({
   );
 }
 
-/* ─── Mobile stage (<1200px): cover full-bleed seperti sampul — latar galeri
+/* ─── Mobile stage (<768px): cover full-bleed seperti sampul — latar galeri
        yang otomatis berganti (sama seperti panel desktop), nama+tanggal di atas,
        "Kepada Yth" + tombol di bawah, muat satu layar.
-       Di ≥1200px disembunyikan oleh CSS (desktop pakai galeri + frame HP). ─── */
+       Di ≥768px disembunyikan oleh CSS (desktop pakai galeri + frame HP). ─── */
 function MobileStageCover({
   invitation,
   onOpen,
@@ -2115,36 +2101,8 @@ function MobileStageCover({
       />
 
       <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
-        {/* atas: kicker + nama pasangan + tanggal + indikator galeri */}
-        <CoverTop invitation={invitation}>
-        {images.length > 1 && (
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <span className="lume-stage__count" aria-live="off">
-              {String(activeIndex + 1).padStart(2, "0")}
-              <span aria-hidden="true"> / </span>
-              <span className="sr-only">dari</span>
-              {String(images.length).padStart(2, "0")}
-            </span>
-            <div className="lume-stage__dots">
-              {images.map((img, i) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => setActive(i)}
-                  aria-label={`Tampilkan foto ${i + 1}`}
-                  aria-current={i === activeIndex}
-                  className="-m-2 flex items-center p-2"
-                >
-                  <span
-                    className={cn("lume-stage__dot block", i === activeIndex && "is-active")}
-                    aria-hidden="true"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        </CoverTop>
+        {/* atas: kicker + nama pasangan + tanggal */}
+        <CoverTop invitation={invitation} />
 
         {/* bawah: sapaan tamu + catatan + tombol */}
         <CoverBottom invitation={invitation} onOpen={onOpen} />
@@ -2223,7 +2181,7 @@ function LumeTemplate({
     coverTimerRef.current = window.setTimeout(() => setCoverGone(true), 750);
   }, [coverGone]);
 
-  // Desktop (≥1200px): halaman luar tidak menggulir (galeri + frame HP, isi
+  // Desktop (≥768px): halaman luar tidak menggulir (galeri + frame HP, isi
   // undangan ada di dalam iframe) — jadi klik tombol diteruskan ke tombol
   // "Buka Undangan" di dalam frame HP supaya undangan terbuka di sana.
   const forwardTimerRef = useRef<number | null>(null);

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 function CreationCard({ item, muted }: { item: BestCreation; muted: boolean }) {
   return (
     <figure
-      className="group me-3 w-[56vw] max-w-[220px] shrink-0 md:me-4 md:w-[268px] md:max-w-none desk:me-5 desk:w-[330px]"
+      className="group me-3 w-[56vw] max-w-[220px] shrink-0 md:max-w-none desk:me-5 desk:w-[330px]"
       aria-hidden={muted || undefined}
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-border bg-surface md:rounded-xl">
@@ -14,7 +14,7 @@ function CreationCard({ item, muted }: { item: BestCreation; muted: boolean }) {
           src={item.image}
           alt={item.title}
           fill
-          sizes="(min-width: 1200px) 330px, (min-width: 768px) 268px, 56vw"
+          sizes="(min-width: 768px) 330px, 56vw"
           loading="lazy"
           decoding="async"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"

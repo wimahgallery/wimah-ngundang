@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { PropsWithChildren } from "react";
-import { Cormorant_Garamond, Inter, Playfair_Display, Geist, Sora } from "next/font/google";
+import { Cormorant_Garamond, Inter, Playfair_Display, Geist, Sora, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,13 @@ const sora = Sora({
   weight: ["400", "500", "600", "700"],
 });
 
+/** Aksen tulisan tangan untuk label kecil di undangan (mis. "The Groom"). */
+const pinyonScript = Pinyon_Script({
+  variable: "--font-pinyon",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
@@ -46,7 +53,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
     <html
       lang="id"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, sora.variable, "font-sans", geist.variable)}
+      className={cn("h-full", "antialiased", cormorant.variable, inter.variable, playfair.variable, sora.variable, pinyonScript.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full bg-background text-text-primary font-body">
         {/* Fallback tanpa JS: komponen client di-SSR dengan `opacity` awal dari

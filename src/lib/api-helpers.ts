@@ -16,6 +16,33 @@ export function parsePagination(searchParams: URLSearchParams): PaginationParams
   return { page, limit, from, to };
 }
 
+export interface SortParams {
+  /** Kolom urutkan sesuai permintaan klien; jatuh ke default bila tak dikenal. */
+  key: string;
+  /** Nama kolom database (hanya bisa datang dari `sortable`, jadi aman). */
+  column: string;
+  ascending: boolean;
+}
+
+/**
+ * Terima `sort` + `dir` dari klien dengan allow-list.
+ *
+ * `sortable` memetakan id kolom (yang dipakai TanStack Table) ke nama kolom
+ * database. Kunci di luar daftar diabaikan dan jatuh ke default — permintaan
+ * pengguna tidak pernah sampai ke `.order()` sebagai string bebas.
+ */
+export function parseSort(
+  searchParams: URLSearchParams,
+  sortable: Record<string, string>,
+  fallback: { key: string; ascending: boolean },
+): SortParams {
+  const requested = searchParams.get("sort")?.trim() ?? "";
+  const column = sortable[requested];
+  if (!column) return { key: fallback.key, column: sortable[fallback.key]!, ascending: fallback.ascending };
+  const dir = (searchParams.get("dir")?.trim() ?? "").toLowerCase();
+  return { key: requested, column, ascending: dir !== "desc" };
+}
+
 export function paginatedResponse<T>(
   data: T[] | null,
   count: number | null,

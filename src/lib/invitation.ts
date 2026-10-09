@@ -21,6 +21,95 @@ export const EVENT_TYPES = [
 export type Align = "left" | "center" | "right";
 export type SizeToken = "sm" | "md" | "lg" | "xl";
 
+/** Semua nilai perataan yang tersedia di editor, urutannya = urutan tombol. */
+export const TEXT_ALIGNMENTS = ["left", "center", "right", "justify"] as const;
+
+/** Perataan konten Markdown per field — selain tiga posisi standar tersedia
+ *  `justify` (rata kiri-kanan) karena konten sering berupa paragraf panjang. */
+export type TextAlign = (typeof TEXT_ALIGNMENTS)[number];
+
+/** Field konten Markdown yang perataannya bisa diatur terpisah dari editor.
+ *  Semua nilainya disimpan di jsonb `custom_settings.textAlign` sehingga tidak
+ *  butuh kolom baru atau migrasi database. */
+export const RICH_TEXT_FIELDS = [
+  "hero_subtitle",
+  "greeting_text",
+  "preamble_text",
+  "story_content",
+  "story_milestones",
+  "schedule_events",
+  "venue_address",
+  "closing_message",
+] as const;
+
+export type RichTextFieldKey = (typeof RICH_TEXT_FIELDS)[number];
+
+export type TextAlignMap = Partial<Record<RichTextFieldKey, TextAlign>>;
+
+/** Batas jarak antar blok Markdown (px) yang bisa diatur dari editor. */
+export const TEXT_GAP_MIN = 0;
+export const TEXT_GAP_MAX = 32;
+/** Nilai awal slider saat jarak dokumen belum pernah diatur. */
+export const TEXT_GAP_DEFAULT = 16;
+
+/** Jarak antar blok Markdown per field — menimpa `textGap` milik dokumen. */
+export type TextGapMap = Partial<Record<RichTextFieldKey, number>>;
+
+/** Jarak di luar rentang tetap dibatasi — nilai disimpan apa adanya dari
+ *  slider, tetapi tidak pernah menghasilkan CSS di luar 0–32px. */
+export function clampTextGap(value: number): number {
+  return Math.min(TEXT_GAP_MAX, Math.max(TEXT_GAP_MIN, Math.round(value)));
+}
+
+/** Keluarga font yang bisa dipilih per teks di editor.
+ *  Nilai `css` memakai variabel CSS yang tersedia di seluruh halaman
+ *  (dashboard & undangan), sehingga font selalu mengikuti desain template. */
+export const TEXT_FONT_FAMILIES = [
+  { key: "", label: "Ikut dokumen", css: null },
+  { key: "heading", label: "Judul", css: "var(--heading-font)" },
+  { key: "playfair", label: "Elegan", css: "var(--font-playfair)" },
+  { key: "cormorant", label: "Klasik", css: "var(--font-cormorant)" },
+  { key: "inter", label: "Sans", css: "var(--font-inter)" },
+  { key: "pinyon", label: "Script", css: "var(--font-pinyon)" },
+] as const;
+
+/** Ukuran font relatif (em) yang bisa dipilih per teks di editor. */
+export const TEXT_FONT_SIZES = [
+  { key: "", label: "Normal", css: null },
+  { key: "sm", label: "Kecil", css: "0.8em" },
+  { key: "lg", label: "Besar", css: "1.25em" },
+  { key: "xl", label: "Sangat besar", css: "1.5em" },
+] as const;
+
+/** Deklarasi style inline untuk mark `fontStyle` (family dan/atau size).
+ *  Keduanya kosong → string kosong (mark seharusnya tidak ada). */
+export function textStyleDeclaration(family: string, size: string): string {
+  const decls: string[] = [];
+  const familyCss = TEXT_FONT_FAMILIES.find((f) => f.key === family)?.css;
+  const sizeCss = TEXT_FONT_SIZES.find((s) => s.key === size)?.css;
+  if (familyCss) decls.push(`font-family:${familyCss}`);
+  if (sizeCss) decls.push(`font-size:${sizeCss}`);
+  return decls.join(";");
+}
+
+/** Baca style inline → kunci family/size. Mengembalikan `null` bila style
+ *  kosong atau memakai nilai yang tidak dikenal (mis. sisa tempelan Word)
+ *  sehingga data asing tidak pernah menjadi format di halaman undangan. */
+export function parseTextStyleDeclaration(
+  style: string,
+): { family: string; size: string } | null {
+  const familyMatch = /font-family:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  const sizeMatch = /font-size:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  if (!familyMatch && !sizeMatch) return null;
+  const family =
+    TEXT_FONT_FAMILIES.find((f) => f.css !== null && f.css === familyMatch)?.key ?? "";
+  const size =
+    TEXT_FONT_SIZES.find((s) => s.css !== null && s.css === sizeMatch)?.key ?? "";
+  if (familyMatch && !family) return null;
+  if (sizeMatch && !size) return null;
+  return { family, size };
+}
+
 /** Tata letak grid galeri di halaman undangan:
  *  `grid`   — semua foto bentuk sama (kolom & rasio bebas diatur)
  *  `hero`   — foto pertama bentuk bebas melintang penuh, sisanya kolom biasa
@@ -69,6 +158,12 @@ export type CustomSettings = Record<SectionKey, SectionSettings> & {
   preamble: PreambleSettings;
   gallery: GallerySettings;
   font?: FontSettings;
+  /** Perataan konten Markdown per field — lihat `RichTextFieldKey`. */
+  textAlign?: TextAlignMap;
+  /** Jarak antar blok Markdown (px) untuk semua field — default dokumen. */
+  textGap?: number;
+  /** Jarak per field yang menimpa `textGap`. */
+  textGapFields?: TextGapMap;
 };
 
 /** Setelan section kata pembuka — teksnya ikut disimpan di jsonb
@@ -86,7 +181,7 @@ export interface GallerySettings extends SectionSettings {
   columnsMobile: number;
   /** Jumlah kolom di layar tablet ≥768px (1–8). */
   columnsTablet: number;
-  /** Jumlah kolom di layar desktop ≥1200px (1–8). */
+  /** Jumlah kolom di layar desktop/tablet ≥768px (1–8). */
   columnsDesktop: number;
   /** Rasio bentuk foto pada sel (mode seragam & mozaik; sisanya di mode hero). */
   aspect: string;
@@ -507,6 +602,38 @@ export function alignClass(align: Align) {
     default:
       return "text-center items-center";
   }
+}
+
+/** Kelas perataan untuk konten Markdown per field. Tanpa nilai → `undefined`
+ *  supaya teks ikut perataan bawaan wadahnya (perilaku lama tidak berubah). */
+export function textAlignClass(align?: TextAlign | null) {
+  switch (align) {
+    case "left":
+      return "text-left";
+    case "right":
+      return "text-right";
+    case "center":
+      return "text-center";
+    case "justify":
+      return "text-justify";
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Jarak antar blok Markdown untuk satu field: override per field lebih dulu,
+ * lalu jarak dokumen. Tanpa keduanya → `undefined`, sehingga wadah memakai
+ * `space-y` bawaannya dan tampilan lama tidak berubah.
+ */
+export function textGapFor(
+  settings?: CustomSettings | null,
+  field?: RichTextFieldKey,
+): number | undefined {
+  if (!settings || !field) return undefined;
+  const override = settings.textGapFields?.[field];
+  if (typeof override === "number") return clampTextGap(override);
+  return typeof settings.textGap === "number" ? clampTextGap(settings.textGap) : undefined;
 }
 
 export function objectPosition(x: number, y: number) {

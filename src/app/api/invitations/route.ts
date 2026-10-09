@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
-import { parsePagination, paginatedResponse, requireAuth } from "@/lib/api-helpers";
+import { parsePagination, paginatedResponse, parseSort, requireAuth } from "@/lib/api-helpers";
 import { defaultCustomSettings, RESERVED_SLUGS } from "@/lib/invitation";
 import { invitationCreateSchema } from "@/lib/schemas";
 import { isTemplateId } from "@/components/invitation/template-registry";
 import { defaultPreset } from "@/lib/font-library";
+
+/**
+ * Kolom yang boleh diurutkan dari dashboard (TanStack Table) → nama kolom
+ * database. Id kolom di header tabel harus sama dengan kunci di sini.
+ */
+const SORTABLE: Record<string, string> = {
+  event_title: "event_title",
+  slug: "slug",
+  event_date: "event_date",
+  event_type: "event_type",
+  template_id: "template_id",
+  is_published: "is_published",
+  created_at: "created_at",
+  updated_at: "updated_at",
+};
 
 /**
  * Escape nilai untuk filter `.or(...)` PostgREST.
@@ -24,13 +39,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const { page, limit, from, to } = parsePagination(searchParams);
   const rawSearch = searchParams.get("search")?.trim() || "";
+  const sort = parseSort(searchParams, SORTABLE, { key: "updated_at", ascending: false });
 
   const run = async (search: string) => {
     let query = auth.supabase
       .from("invitations")
       .select("*", { count: "exact" })
       .eq("user_id", auth.user!.id)
-      .order("updated_at", { ascending: false });
+      .order(sort.column, { ascending: sort.ascending })
+      // Pemecah seri supaya baris dengan nilai sama tidak berpindah halaman
+      // antar request (urutan database tanpa tiebreaker bisa berubah).
+      .order("id", { ascending: true });
 
     if (search) {
       query = query.or(

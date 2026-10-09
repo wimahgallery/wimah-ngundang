@@ -62,9 +62,21 @@ export type InvitationListPage = {
 };
 
 export async function fetchInvitations(
-  { page = 1, limit = 20, search = "" }: { page?: number; limit?: number; search?: string } = {},
+  {
+    page = 1,
+    limit = 20,
+    search = "",
+    sort = "updated_at",
+    dir = "desc",
+  }: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sort?: string;
+    dir?: "asc" | "desc";
+  } = {},
 ): Promise<InvitationListPage> {
-  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  const params = new URLSearchParams({ page: String(page), limit: String(limit), sort, dir });
   const term = search.trim();
   if (term) params.set("search", term);
   const res = await fetch(`${BASE}?${params.toString()}`);

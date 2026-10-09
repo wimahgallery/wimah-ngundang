@@ -96,7 +96,7 @@ export default function ImageField({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-foreground">{label}</p>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <span className="rounded-md border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
           Rasio {ratioText(aspect)}
         </span>
       </div>
@@ -111,7 +111,7 @@ export default function ImageField({
           setDragOver(false);
           void handleFiles(e.dataTransfer.files);
         }}
-        className={`relative overflow-hidden rounded-2xl border border-dashed ${dragOver ? "border-primary bg-primary/5" : "border-border"} bg-white`}
+        className={`relative overflow-hidden rounded-lg border border-dashed ${dragOver ? "border-primary bg-primary/5" : "border-border"} bg-white`}
       >
         {value ? (
           <button
@@ -247,7 +247,7 @@ export default function ImageField({
           onClick={(e) => { if (e.target === e.currentTarget) setCropOpen(false); }}
           onKeyDown={(e) => { if (e.key === "Escape") setCropOpen(false); }}
         >
-          <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white">
+          <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-lg bg-white">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-4 py-3">
               <p className="text-sm font-medium">
                 Crop gambar <span className="text-muted-foreground">· Rasio {ratioText(aspect)}</span>

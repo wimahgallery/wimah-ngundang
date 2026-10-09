@@ -33,7 +33,7 @@ function SortableItem({
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   return (
-    <div ref={setNodeRef} style={style} className="overflow-hidden rounded-2xl border border-border bg-white">
+    <div ref={setNodeRef} style={style} className="overflow-hidden rounded-lg border border-border bg-white">
       <div className="relative h-36">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -194,7 +194,7 @@ export default function GalleryField({
           e.preventDefault();
           void handleFiles(e.dataTransfer.files);
         }}
-        className="rounded-2xl border border-dashed border-border bg-white p-6 text-center text-sm text-muted-foreground"
+        className="rounded-lg border border-dashed border-border bg-white p-6 text-center text-sm text-muted-foreground"
       >
         {uploading ? (
           <p className="text-primary">Mengunggah foto…</p>
@@ -245,7 +245,7 @@ export default function GalleryField({
           onClick={(e) => { if (e.target === e.currentTarget) setCropImage(null); }}
           onKeyDown={(e) => { if (e.key === "Escape") setCropImage(null); }}
         >
-          <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white">
+          <div className="max-h-[min(90dvh,40rem)] w-full max-w-lg overflow-y-auto rounded-lg bg-white">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-4 py-3">
               <p className="text-sm font-medium">
                 Crop foto <span className="text-muted-foreground">· Rasio 1:1</span>

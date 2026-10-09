@@ -67,7 +67,7 @@ export default function ShareInvitationDialog({
         </DialogHeader>
 
         <div className="flex justify-center">
-          <div className="rounded-xl border border-border bg-white p-3 shadow-sm">
+          <div className="rounded-lg border border-border bg-white p-3 shadow-sm">
             <QRCodeSVG value={url} size={208} level="M" marginSize={2} />
           </div>
         </div>

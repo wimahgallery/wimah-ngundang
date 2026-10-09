@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { fetchInvitationStats, type GuestStats } from "../services/invitationApi";
 
 /**
@@ -12,7 +13,7 @@ export function useInvitationStats(slugs: string[]): {
   const key = [...slugs].sort();
 
   const query = useQuery<Record<string, GuestStats>>({
-    queryKey: ["invitation-stats", key],
+    queryKey: queryKeys.invitationStats(key),
     queryFn: () => fetchInvitationStats(key),
     enabled: key.length > 0,
     placeholderData: keepPreviousData,

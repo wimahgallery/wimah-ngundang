@@ -38,9 +38,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[#F5F3EE]">
-      <header className="border-b border-border/60 bg-white/60">
-        <div className={`mx-auto flex w-full max-w-[min(100%,80rem)] items-center gap-2 py-3 ${horizontal}`}>
-          <nav aria-label="Menu dashboard" className="flex flex-wrap gap-1.5">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
+        <div className={`mx-auto flex w-full max-w-[min(100%,80rem)] items-center gap-3 py-2.5 ${horizontal}`}>
+          <Link
+            href="/dashboard"
+            className="font-heading text-base tracking-wide text-foreground"
+          >
+            Wimah<span className="text-primary">.</span>
+          </Link>
+          <span className="hidden h-4 w-px bg-border sm:block" aria-hidden="true" />
+          <nav aria-label="Menu dashboard" className="flex flex-wrap gap-1">
             {NAV_ITEMS.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -50,10 +57,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-9 items-center rounded-full border px-4 text-sm transition",
+                    "inline-flex min-h-8 items-center rounded-md px-3 text-sm transition",
                     active
-                      ? "border-transparent bg-primary text-primary-foreground"
-                      : "border-border bg-white text-muted-foreground hover:text-foreground",
+                      ? "bg-primary font-medium text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   {item.label}
