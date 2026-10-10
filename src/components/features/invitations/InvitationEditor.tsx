@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "./rich-text-editor";
-import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, textGapFor, type Invitation, type CustomSettings, type SectionKey, type FontSettings, type GalleryLayout, type RichTextFieldKey, type TextAlign, type TextAlignMap } from "@/lib/invitation";
+import { EVENT_TYPES, RESERVED_SLUGS, normalizeInvitation, textGapFor, type Invitation, type CustomSettings, type SectionKey, type FontSettings, type GalleryLayout, type RichTextFieldKey, type TextAlign, type TextAlignMap, type SocialLinks } from "@/lib/invitation";
 import { queryKeys } from "@/lib/query-keys";
 import { TypographyStep } from "./TypographyStep";
 import { defaultPreset } from "@/lib/font-library";
@@ -393,6 +393,18 @@ const [activeStep, setActiveStep] = useState(0);
     patch({ gallery_images });
   }, [patch]);
 
+  /** Sosial media per mempelai (`groom_social` / `bride_social`, kolom JSON).
+   *  Instagram dikosongkan = object jadi `null`, bukan `{ instagram: "" }`. */
+  const onChangeSocial = useCallback((key: "groom_social" | "bride_social", value: string) => {
+    patch((prev) => {
+      const current: SocialLinks = { ...(prev[key] ?? {}) };
+      const trimmed = value.trim();
+      if (trimmed) current.instagram = trimmed;
+      else delete current.instagram;
+      return { [key]: Object.keys(current).length > 0 ? current : null } as Partial<Invitation>;
+    });
+  }, [patch]);
+
   const onChangeMilestones = useCallback((story_milestones: NonNullable<Invitation["story_milestones"]>) => {
     patch({ story_milestones });
   }, [patch]);
@@ -429,7 +441,7 @@ const [activeStep, setActiveStep] = useState(0);
     const s = invitation?.custom_settings;
     if (!s) return null;
     switch (STEPS[activeStep].key) {
-      case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} />;
+      case "info": return <StepInfo invitation={invitation!} onChange={onChangeField} onChangeSocial={onChangeSocial} />;
       case "font": return <TypographyStep templateId={resolvedTemplateId} font={invitation.custom_settings.font ?? { heading: null, body: null, accent: null }} onChange={onChangeFont} gap={invitation.custom_settings.textGap} onGapChange={(g) => onTextGapChange("document", g)} />;
       case "couple": return <StepCouple invitation={invitation!} settings={s.couple} onChangeSettings={patchSettings} onChange={onChangeField} />;
       case "hero": return <StepHero invitation={invitation!} settings={s.hero} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
@@ -448,7 +460,7 @@ const [activeStep, setActiveStep] = useState(0);
       case "closing": return <StepClosing invitation={invitation!} settings={s.closing} onChangeSettings={patchSettings} onChange={onChangeField} onTextAlignChange={onTextAlignChange} onTextGapChange={onTextGapChange} />;
       default: return null;
     }
-  }, [activeStep, invitation, resolvedTemplateId, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeMilestones, onChangeEvents, onTextAlignChange, onTextGapChange]);
+  }, [activeStep, invitation, resolvedTemplateId, patchSettings, onChangeField, onChangeFont, onChangeGifts, onChangeFunFacts, onChangeGallery, onChangeSocial, onChangeMilestones, onChangeEvents, onTextAlignChange, onTextGapChange]);
 
   const selectStep = useCallback((i: number) => {
     setActiveStep(i);
@@ -691,7 +703,7 @@ const [activeStep, setActiveStep] = useState(0);
   );
 }
 
-function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: FieldChange }) {
+function StepInfo({ invitation, onChange, onChangeSocial }: { invitation: Invitation; onChange: FieldChange; onChangeSocial: (key: "groom_social" | "bride_social", value: string) => void }) {
   const slugIssue = slugError(invitation.slug);
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -718,6 +730,8 @@ function StepInfo({ invitation, onChange }: { invitation: Invitation; onChange: 
       <Field label="Panggilan wanita"><input className={inputClass} value={invitation.bride_nickname || ""} onChange={(e) => onChange("bride_nickname", e.target.value)} /></Field>
       <Field label="Nama orang tua pria"><input className={inputClass} value={invitation.groom_parents || ""} onChange={(e) => onChange("groom_parents", e.target.value)} /></Field>
       <Field label="Nama orang tua wanita"><input className={inputClass} value={invitation.bride_parents || ""} onChange={(e) => onChange("bride_parents", e.target.value)} /></Field>
+      <Field label="Instagram mempelai pria"><input className={inputClass} value={invitation.groom_social?.instagram || ""} onChange={(e) => onChangeSocial("groom_social", e.target.value)} placeholder="https://instagram.com/username" /></Field>
+      <Field label="Instagram mempelai wanita"><input className={inputClass} value={invitation.bride_social?.instagram || ""} onChange={(e) => onChangeSocial("bride_social", e.target.value)} placeholder="https://instagram.com/username" /></Field>
     </div>
   );
 }

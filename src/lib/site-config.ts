@@ -36,9 +36,12 @@ export const waMessages = {
     "Halo WIMAH Photobooth, saya tertarik untuk booking Photobooth / Mingle Booth untuk acara saya.\n\nTanggal Acara: \nVenue / Lokasi: \nJenis Acara: (Wedding/ Birthday/ Corporate/ dll)\n\nApakah tanggal tersebut masih tersedia?",
 } as const;
 
+/** Instagram resmi Wimah Ngundang — dipakai footer situs & penutup undangan. */
+export const wimahInstagram = "https://www.instagram.com/wimahngundang";
+
 /** Sosial media resmi Wimah — dipakai di footer dan tombol mengambang. */
 export const socials = [
-  { id: "instagram", label: "Instagram", href: "https://www.instagram.com/wimah.photobooth" },
+  { id: "instagram", label: "Instagram", href: wimahInstagram },
   { id: "tiktok", label: "TikTok", href: "https://www.tiktok.com/@wimah.photobooth" },
   { id: "facebook", label: "Facebook", href: "https://www.facebook.com/share/1ErSHgv2nu/" },
   { id: "threads", label: "Threads", href: "https://www.threads.com/@wimah.photobooth" },

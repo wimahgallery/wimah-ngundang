@@ -34,6 +34,8 @@ import {
   Users,
 } from "lucide-react";
 import { cn, formatDate, previewImageSrc } from "@/lib/utils";
+import { wimahInstagram } from "@/lib/site-config";
+import { InstagramIcon } from "@/components/home/social-icons";
 import { dispatchInvitationOpen } from "../shared";
 import { useInViewOnce } from "@/components/lazy";
 import {
@@ -238,10 +240,6 @@ function LoadingScreen({
           />
         </div>
       </div>
-
-      <p className="relative mt-8 max-w-xs text-xs leading-relaxed text-hero-ink/55 md:text-sm">
-        {formatDate(invitation.event_date)}
-      </p>
     </div>
   );
 }
@@ -518,7 +516,7 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
         <div className="mx-auto max-w-2xl text-center">
           {text && (
             <>
-              <SectionKicker icon={Quote}>Kata Pembuka</SectionKicker>
+              <SectionKicker icon={Quote}>OM SWASTIASTU.</SectionKicker>
               <RichText
                 text={text}
                 align={invitation.custom_settings.textAlign?.preamble_text}
@@ -570,6 +568,28 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
    tablet  : dua kolom sejajar
    desktop : dua kolom dengan card kanan menjorok ke bawah (asimetris)
 */
+/** Tautan Instagram yang sudah diberi awalan `https://` bila user hanya menulis
+ *  username (mis. `@dikapratama` → `https://www.instagram.com/dikapratama`). */
+function instagramHref(url: string): string {
+  const value = (url ?? "").trim();
+  if (!value) return "";
+  return /^https?:\/\//i.test(value)
+    ? value
+    : `https://www.instagram.com/${value.replace(/^@/, "")}`;
+}
+
+/** Handle untuk label link: `@dikapratama`; kalau bukan username tunggal
+ *  (URL rumit/berantakan), tulis saja "Instagram". */
+function instagramHandle(url: string): string {
+  const path = (url ?? "")
+    .trim()
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+    .split(/[?#]/)[0]
+    .replace(/^@/, "")
+    .replace(/\/+$/, "");
+  return path && !path.includes("/") ? `@${path}` : "Instagram";
+}
+
 function CoupleSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.couple;
   const { layout } = useLumeTheme();
@@ -582,6 +602,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
       name: invitation.groom_name,
       parents: invitation.groom_parents,
       photo: invitation.groom_photo,
+      instagram: invitation.groom_social?.instagram,
       position: {
         positionX: invitation.groom_image_position_x,
         positionY: invitation.groom_image_position_y,
@@ -594,6 +615,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
       name: invitation.bride_name,
       parents: invitation.bride_parents,
       photo: invitation.bride_photo,
+      instagram: invitation.bride_social?.instagram,
       position: {
         positionX: settings.imagePositionX,
         positionY: settings.imagePositionY,
@@ -607,9 +629,6 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
     <Band tone={layout.tones.couple}>
       <div className="max-w-2xl">
         <SectionKicker icon={Users}>Mempelai</SectionKicker>
-        <SectionHeading settings={settings} className="mt-3">
-          Insan yang Berbahagia
-        </SectionHeading>
       </div>
 
       {/* Mempelai pria di kiri, mempelai wanita di kanan — teks menempel ke
@@ -637,6 +656,17 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
             <h3 className="mt-3 font-heading text-2xl text-text-primary desk:text-[2.5rem]">
               {person.name}
             </h3>
+            {person.instagram && (
+              <a
+                href={instagramHref(person.instagram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary transition-colors duration-300 hover:text-accent-dark"
+              >
+                <InstagramIcon className="h-4 w-4" />
+                {instagramHandle(person.instagram)}
+              </a>
+            )}
             {person.parents && (
               <p className="mt-3 max-w-xs text-xs leading-relaxed text-text-secondary desk:max-w-sm desk:text-[0.95rem]">
                 {person.parents}
@@ -1991,6 +2021,16 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
           <p className="mt-3 text-[10px] uppercase tracking-[0.24em] text-text-secondary">
             Dengan cinta, {coupleLabel(invitation)}
           </p>
+
+          <a
+            href={wimahInstagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-text-secondary transition-colors duration-300 hover:text-accent-dark"
+          >
+            <InstagramIcon className="h-3.5 w-3.5" />
+            Wimah Ngundang
+          </a>
         </div>
       </div>
     </Band>
