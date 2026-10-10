@@ -518,14 +518,15 @@ html[data-invitation-locked] body {
   color: var(--band-bg-ink);
 }
 
-/* Input tamu berlatar putih — tinta dipaksa gelap supaya tetap terbaca. */
+/* Input tamu di band foto: tinta mengikuti var kolom form — kotak putih di
+   template terang (tinta gelap), kotak gelap di template gelap (tinta terang). */
 .lume-sections > section:nth-of-type(even) :is(input, textarea, select) {
-  color: #1f2328;
+  color: var(--field-ink);
 }
 .lume-sections
   > section:nth-of-type(even)
   :is(input, textarea, select)::placeholder {
-  color: rgba(31, 35, 40, 0.55);
+  color: var(--field-placeholder);
 }
 
 /* kolom mobile: sembunyikan scrollbar agar terasa seperti layar ponsel */

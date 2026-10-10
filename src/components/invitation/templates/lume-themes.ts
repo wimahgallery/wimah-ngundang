@@ -262,6 +262,9 @@ export const elegantBlack: LumeTheme = {
     "--stage-column":
       "radial-gradient(120% 80% at 75% 8%, #1A160D 0%, #0B0A08 55%, #050505 100%)",
     "--stage-ring": "rgba(212, 168, 83, 0.35)",
+    "--field-bg": "rgba(10, 10, 9, 0.78)",
+    "--field-ink": "#F2EFE8",
+    "--field-placeholder": "rgba(242, 239, 232, 0.42)",
   },
   pageGradient:
     "linear-gradient(160deg, #0C0C0B 0%, #161614 50%, #0A0A09 100%)",

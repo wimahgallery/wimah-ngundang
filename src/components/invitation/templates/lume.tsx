@@ -10,6 +10,7 @@ import {
 } from "react";
 import Image from "next/image";
 import {
+  BookHeart,
   Calendar,
   CalendarPlus,
   Camera,
@@ -18,11 +19,19 @@ import {
   Gem,
   Heart,
   Home,
+  Hourglass,
+  Lightbulb,
+  MailOpen,
   MapPin,
+  MessageCircleHeart,
   Music,
   Plane,
+  Play,
+  Quote,
+  Send,
   Sparkles,
   Star,
+  Users,
 } from "lucide-react";
 import { cn, formatDate, previewImageSrc } from "@/lib/utils";
 import { dispatchInvitationOpen } from "../shared";
@@ -269,7 +278,7 @@ const COVER_VEIL =
   "linear-gradient(180deg, rgba(12,13,11,0.6) 0%, rgba(12,13,11,0.45) 38%, rgba(12,13,11,0.5) 62%, rgba(12,13,11,0.78) 100%)";
 
 const COVER_BUTTON_CLASS =
-  "inline-flex min-h-11 items-center justify-center rounded-xl border border-white/25 bg-white/15 px-8 py-3 text-sm font-medium tracking-wide text-white backdrop-blur-md transition-all duration-300 hover:bg-white/25 active:scale-[0.97]";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/15 px-8 py-3 text-sm font-medium tracking-wide text-white backdrop-blur-md transition-all duration-300 hover:bg-white/25 active:scale-[0.97]";
 
 /** Latar sampul: foto undangan full-bleed; kalau belum ada foto, bidang gelap
  *  netral supaya teks putih tetap terbaca di semua tema (terang maupun gelap). */
@@ -348,18 +357,19 @@ function CoverBottom({
         gap={textGapFor(invitation.custom_settings, "greeting_text")}
         className="text-[13px] tracking-[0.06em] text-white/75 md:text-sm"
       />
-      <p className="mt-2 font-heading text-[clamp(1.6rem,1.2rem+1.8vw,2.5rem)] font-semibold leading-tight text-white">
+      <p className="mt-4 font-heading text-[clamp(1.6rem,1.2rem+1.8vw,2.5rem)] font-semibold leading-tight text-white">
         {guestName || "Tamu Undangan"}
       </p>
-      <p className="mx-auto mt-2 max-w-[24rem] text-[13px] italic leading-relaxed text-white/60">
+      <p className="mx-auto mt-3 max-w-[24rem] text-[13px] italic leading-relaxed text-white/60">
         Mohon maaf untuk kesalahan penulisan nama/gelar
       </p>
 
       <a
         href="#greeting"
         onClick={onOpen}
-        className={cn("mx-auto mt-5 w-full max-w-[17rem]", COVER_BUTTON_CLASS)}
+        className={cn("mt-7 w-fit", COVER_BUTTON_CLASS)}
       >
+        <MailOpen className="h-4 w-4" aria-hidden />
         Buka Undangan
       </a>
     </div>
@@ -394,7 +404,7 @@ function HeroCover({
         style={{ background: COVER_VEIL }}
       />
 
-      <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
+      <div className="relative z-10 flex w-full flex-col items-center gap-9 md:gap-11">
         <CoverTop invitation={invitation} />
         <CoverBottom invitation={invitation} onOpen={onOpen} />
       </div>
@@ -457,7 +467,7 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
       }
     >
       <div className="relative z-10 text-center text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.5),0_2px_32px_rgba(0,0,0,0.35)] [&_.dna-kicker]:text-white/85">
-        <SectionKicker>
+        <SectionKicker icon={Heart}>
           {invitation.hero_title || "The Wedding of"}
         </SectionKicker>
         <h2 className="mt-4 text-balance font-heading text-[clamp(2.2rem,1.3rem+4vw,4.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em]">
@@ -508,7 +518,7 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
         <div className="mx-auto max-w-2xl text-center">
           {text && (
             <>
-              <SectionKicker>Kata Pembuka</SectionKicker>
+              <SectionKicker icon={Quote}>Kata Pembuka</SectionKicker>
               <RichText
                 text={text}
                 align={invitation.custom_settings.textAlign?.preamble_text}
@@ -596,7 +606,7 @@ function CoupleSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band tone={layout.tones.couple}>
       <div className="max-w-2xl">
-        <SectionKicker>Mempelai</SectionKicker>
+        <SectionKicker icon={Users}>Mempelai</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Insan yang Berbahagia
         </SectionHeading>
@@ -653,7 +663,7 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
   return (
     <Band tone={layout.tones.story} visible={settings.visible}>
       <div className="text-center desk:max-w-3xl desk:text-left">
-        <SectionKicker>Our Love Story</SectionKicker>
+        <SectionKicker icon={BookHeart}>Our Love Story</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           {invitation.story_title || "Bagaimana Kami Bertemu & Jatuh Cinta"}
         </SectionHeading>
@@ -761,7 +771,7 @@ function CountdownSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band tone={tone} visible>
       <div className="mx-auto max-w-3xl text-center">
-        <SectionKicker>Hitung Mundur</SectionKicker>
+        <SectionKicker icon={Hourglass}>Hitung Mundur</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Menuju Hari Bahagia
         </SectionHeading>
@@ -810,7 +820,7 @@ function AgendaSection({ invitation }: { invitation: Invitation }) {
             headerRight ? "desk:col-start-9" : "desk:col-start-1",
           )}
         >
-          <SectionKicker>Agenda Acara</SectionKicker>
+          <SectionKicker icon={Calendar}>Agenda Acara</SectionKicker>
           <SectionHeading settings={settings} className="mt-3">
             Mari Menjadi Saksi Cinta Kami
           </SectionHeading>
@@ -1123,7 +1133,7 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
   return (
     <Band tone={layout.tones.gallery} wide={layout.galleryWide} visible>
       <div className="text-center">
-        <SectionKicker>Galeri</SectionKicker>
+        <SectionKicker icon={Camera}>Galeri</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           <span className="block text-[0.55em] uppercase tracking-[0.2em] text-accent-dark">
             A Journey Of
@@ -1271,7 +1281,7 @@ function VideoSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band visible>
       <div className="mx-auto max-w-3xl text-center desk:max-w-5xl">
-        <SectionKicker>Video</SectionKicker>
+        <SectionKicker icon={Play}>Video</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Cerita dalam Video
         </SectionHeading>
@@ -1313,7 +1323,7 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
     <Band tone={tone} visible>
       <div className="grid gap-9 desk:grid-cols-12 desk:items-start desk:gap-16">
         <div className="text-center desk:col-span-5 desk:mx-0 desk:max-w-none desk:text-left">
-          <SectionKicker>Tanda Kasih</SectionKicker>
+          <SectionKicker icon={Gift}>Tanda Kasih</SectionKicker>
           <SectionHeading settings={settings} className="mt-3">
             Wedding Gift
           </SectionHeading>
@@ -1397,7 +1407,7 @@ function VenueSection({ invitation }: { invitation: Invitation }) {
               "desk:col-span-12 desk:mx-auto desk:max-w-2xl desk:text-center",
           )}
         >
-          <SectionKicker>Lokasi</SectionKicker>
+          <SectionKicker icon={MapPin}>Lokasi</SectionKicker>
           <SectionHeading settings={settings} className="mt-3">
             Lokasi Acara
           </SectionHeading>
@@ -1474,7 +1484,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band visible>
       <div className="mx-auto max-w-3xl text-center">
-        <SectionKicker>Fun Facts</SectionKicker>
+        <SectionKicker icon={Lightbulb}>Fun Facts</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Sedikit Tentang Kami
         </SectionHeading>
@@ -1519,7 +1529,7 @@ function FunFactsSection({ invitation }: { invitation: Invitation }) {
 
 /* ─── bentuk bersama untuk RSVP & ucapan tamu ─── */
 const guestFieldClass =
-  "h-12 w-full rounded-full border border-border bg-white/80 px-5 text-sm text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent";
+  "lume-field h-12 w-full rounded-full border border-border px-5 text-sm outline-none transition focus:border-accent";
 const guestButtonClass =
   "min-h-12 w-full rounded-full bg-accent px-6 text-sm font-medium text-background transition hover:bg-accent-dark active:scale-[0.97] disabled:opacity-50";
 const guestLabelClass =
@@ -1623,7 +1633,7 @@ function RsvpSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band tone="soft" visible>
       <div ref={ref} className="mx-auto max-w-xl text-center">
-        <SectionKicker>RSVP</SectionKicker>
+        <SectionKicker icon={Send}>RSVP</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Konfirmasi Kehadiran
         </SectionHeading>
@@ -1841,7 +1851,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band visible>
       <div ref={ref} className="mx-auto max-w-2xl text-center">
-        <SectionKicker>Wishes</SectionKicker>
+        <SectionKicker icon={MessageCircleHeart}>Wishes</SectionKicker>
         <SectionHeading settings={settings} className="mt-3">
           Doa &amp; Harapan
         </SectionHeading>
@@ -1872,7 +1882,7 @@ function WishesSection({ invitation }: { invitation: Invitation }) {
           <div>
             <p className={guestLabelClass}>Ucapan &amp; doa</p>
             <textarea
-              className="mt-2 min-h-32 w-full rounded-2xl border border-border bg-white/80 px-5 py-4 text-sm leading-relaxed text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:border-accent"
+              className="lume-field mt-2 min-h-32 w-full rounded-2xl border border-border px-5 py-4 text-sm leading-relaxed outline-none transition focus:border-accent"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Tulis doa dan harapanmu di sini..."
@@ -2068,6 +2078,7 @@ function DesktopStageCta({
         onClick={onOpen}
         className={cn("w-full max-w-[17rem]", COVER_BUTTON_CLASS)}
       >
+        <MailOpen className="h-4 w-4" aria-hidden />
         Buka Undangan
       </a> */}
     </div>
@@ -2135,7 +2146,7 @@ function MobileStageCover({
         style={{ background: COVER_VEIL }}
       />
 
-      <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
+      <div className="relative z-10 flex w-full flex-col items-center gap-9 md:gap-11">
         {/* atas: kicker + nama pasangan + tanggal */}
         <CoverTop invitation={invitation} />
 

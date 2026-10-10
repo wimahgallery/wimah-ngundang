@@ -178,6 +178,38 @@
   letter-spacing: 0.22em;
 }
 
+/* Chip ikon solid di depan kicker tiap section: bulat, latar aksen pekat,
+   ikon putih. Memakai kelas sendiri supaya tidak kena aturan flip warna
+   teks/latar aksen di band foto (globals.css). */
+.dna-kicker__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(17, 17, 17, 0.2);
+}
+
+/* Kolom form tamu (RSVP & wishes): latar/tinta ikut tema lewat var — di
+   template gelap kotak ikut gelap dan teksnya terang, di template terang
+   tetap kotak putih bertinta gelap. */
+[data-template] {
+  --field-bg: rgba(255, 255, 255, 0.8);
+  --field-ink: #1f2328;
+  --field-placeholder: rgba(31, 35, 40, 0.55);
+}
+.lume-field {
+  background: var(--field-bg);
+  color: var(--field-ink);
+}
+.lume-field::placeholder {
+  color: var(--field-placeholder);
+}
+
 /* Lapisan ambience: di atas latar, di bawah konten (z-index: -1) */
 [data-template="lume"]::after,
 [data-template="chocolate-dream"]::after,

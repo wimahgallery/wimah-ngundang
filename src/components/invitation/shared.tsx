@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RichText } from "./rich-text";
 import {
@@ -92,10 +92,24 @@ export function SectionShell({
   );
 }
 
-export function SectionKicker({ children }: { children: React.ReactNode }) {
+export function SectionKicker({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  /** Ikon solid dalam chip bulat aksen di depan teks kicker. */
+  icon?: LucideIcon;
+}) {
   return (
     <p className="dna-kicker text-[11px] font-medium uppercase tracking-[clamp(0.1em,0.06rem+0.3vw,0.2em)] text-accent-dark">
-      {children}
+      <span className="inline-flex items-center gap-2.5 align-middle">
+        {Icon ? (
+          <span className="dna-kicker__icon" aria-hidden>
+            <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+          </span>
+        ) : null}
+        {children}
+      </span>
     </p>
   );
 }
