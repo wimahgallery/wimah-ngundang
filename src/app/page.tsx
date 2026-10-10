@@ -6,6 +6,7 @@ import { OurBestCreation } from "@/components/home/our-best-creation";
 import { TemplateShowcase } from "@/components/home/template-showcase";
 import { HomeFeatures } from "@/components/home/home-features";
 import { HomeFaq } from "@/components/home/home-faq";
+import { HomePhotobooth } from "@/components/home/home-photobooth";
 import { HomeFinalCta } from "@/components/home/home-final-cta";
 import { SiteFooter } from "@/components/home/site-footer";
 import { PageBackground } from "@/components/home/page-background";
@@ -94,6 +95,7 @@ export default function HomePage() {
         <TemplateShowcase />
         <HomeFeatures />
         <HomeFaq />
+        <HomePhotobooth />
         <HomeFinalCta />
       </main>
       <SiteFooter />

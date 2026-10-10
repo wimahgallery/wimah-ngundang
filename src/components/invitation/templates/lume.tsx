@@ -143,7 +143,10 @@ function Band({
         <div className="lume-band__photo" />
       </div>
       <div
-        className={cn(wide ? "invite-wrap-wide" : "invite-wrap", "relative z-10")}
+        className={cn(
+          wide ? "invite-wrap-wide" : "invite-wrap",
+          "relative z-10",
+        )}
       >
         {children}
       </div>
@@ -306,7 +309,10 @@ function CoverTop({ invitation }: { invitation: Invitation }) {
 
       <h1 className="mx-auto mt-3 max-w-[22rem] text-balance font-heading text-[clamp(1.9rem,1.1rem+4.5vw,3.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em] text-white md:mt-4 md:max-w-[34rem] md:text-[clamp(2.75rem,1.2rem+4vw,5rem)]">
         {groom}
-        <span aria-hidden className="mx-2 align-middle font-normal text-white/60">
+        <span
+          aria-hidden
+          className="mx-2 align-middle font-normal text-white/60"
+        >
           •
         </span>
         {bride}
@@ -349,7 +355,11 @@ function CoverBottom({
         Mohon maaf untuk kesalahan penulisan nama/gelar
       </p>
 
-      <a href="#greeting" onClick={onOpen} className={cn("mx-auto mt-5 w-full max-w-[17rem]", COVER_BUTTON_CLASS)}>
+      <a
+        href="#greeting"
+        onClick={onOpen}
+        className={cn("mx-auto mt-5 w-full max-w-[17rem]", COVER_BUTTON_CLASS)}
+      >
         Buka Undangan
       </a>
     </div>
@@ -378,7 +388,11 @@ function HeroCover({
       )}
     >
       <CoverBackdrop invitation={invitation} />
-      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: COVER_VEIL }} />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{ background: COVER_VEIL }}
+      />
 
       <div className="relative z-10 flex w-full flex-col items-center gap-7 md:gap-9">
         <CoverTop invitation={invitation} />
@@ -448,7 +462,10 @@ function OpeningSection({ invitation }: { invitation: Invitation }) {
         </SectionKicker>
         <h2 className="mt-4 text-balance font-heading text-[clamp(2.2rem,1.3rem+4vw,4.5rem)] font-semibold uppercase leading-[1.15] tracking-[0.02em]">
           {groom}
-          <span aria-hidden className="mx-2 align-middle font-normal text-accent-light">
+          <span
+            aria-hidden
+            className="mx-2 align-middle font-normal text-accent-light"
+          >
             •
           </span>
           {bride}
@@ -483,7 +500,9 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
   return (
     <Band
       id="pembuka"
-      backdrop={<div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/30 to-surface/70" />}
+      backdrop={
+        <div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/30 to-surface/70" />
+      }
     >
       {(text || description) && (
         <div className="mx-auto max-w-2xl text-center">
@@ -502,14 +521,14 @@ function PreambleSection({ invitation }: { invitation: Invitation }) {
             </>
           )}
           {description && (
-              <RichText
-                text={description}
-                align={invitation.custom_settings.textAlign?.hero_subtitle}
-                gap={textGapFor(invitation.custom_settings, "hero_subtitle")}
-                className={cn(
-                  "space-y-3 text-sm leading-[1.9] text-text-secondary md:text-base",
-                  text && "mt-6",
-                )}
+            <RichText
+              text={description}
+              align={invitation.custom_settings.textAlign?.hero_subtitle}
+              gap={textGapFor(invitation.custom_settings, "hero_subtitle")}
+              className={cn(
+                "space-y-3 text-sm leading-[1.9] text-text-secondary md:text-base",
+                text && "mt-6",
+              )}
             />
           )}
         </div>
@@ -694,8 +713,13 @@ function LoveStorySection({ invitation }: { invitation: Invitation }) {
                   </h3>
                   <RichText
                     text={item.description}
-                    align={invitation.custom_settings.textAlign?.story_milestones}
-                    gap={textGapFor(invitation.custom_settings, "story_milestones")}
+                    align={
+                      invitation.custom_settings.textAlign?.story_milestones
+                    }
+                    gap={textGapFor(
+                      invitation.custom_settings,
+                      "story_milestones",
+                    )}
                     className="mt-3 space-y-2 text-sm leading-[1.85] text-text-secondary desk:text-[1.0625rem]"
                   />
                 </div>
@@ -958,7 +982,9 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
       if (e.key !== "Tab") return;
 
       const root = dialogContentRef.current;
-      const nodes = Array.from(root?.querySelectorAll<HTMLElement>("button") ?? []);
+      const nodes = Array.from(
+        root?.querySelectorAll<HTMLElement>("button") ?? [],
+      );
       if (nodes.length === 0) return;
       const first = nodes[0];
       const last = nodes[nodes.length - 1];
@@ -1022,7 +1048,12 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
     7: "desk:columns-7",
     8: "desk:columns-8",
   };
-  const clampInt = (value: unknown, min: number, max: number, fallback: number) => {
+  const clampInt = (
+    value: unknown,
+    min: number,
+    max: number,
+    fallback: number,
+  ) => {
     const n = Math.round(Number(value));
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
   };
@@ -1108,9 +1139,11 @@ function GallerySection({ invitation }: { invitation: Invitation }) {
             sizes: "(min-width: 1200px) 1100px, 100vw",
             extra: "col-span-full",
           })}
-          {images.slice(1).map((img, idx) =>
-            thumb(img, idx + 1, { ratio: cellRatio, sizes: cellSizes }),
-          )}
+          {images
+            .slice(1)
+            .map((img, idx) =>
+              thumb(img, idx + 1, { ratio: cellRatio, sizes: cellSizes }),
+            )}
         </div>
       ) : gridMode === "mosaic" ? (
         <div className={cn("mt-10", columnsClass)}>
@@ -1268,8 +1301,8 @@ function GiftSection({ invitation }: { invitation: Invitation }) {
   const settings = invitation.custom_settings.gift;
   // Baris rekening kosong (editor mengizinkan "Tambah rekening" yang belum diisi)
   // tidak boleh dirender — kartu tanpa nomor + tombol salin yang menyalin "null".
-  const accounts = invitation.gift_accounts.filter((gift) =>
-    (gift.accountNumber ?? "").trim().length > 0,
+  const accounts = invitation.gift_accounts.filter(
+    (gift) => (gift.accountNumber ?? "").trim().length > 0,
   );
   const hasGift = accounts.length > 0 || Boolean(invitation.qris_image);
   const tone = useLumeTheme().layout.tones.gift;
@@ -1928,15 +1961,15 @@ function ThankYouSection({ invitation }: { invitation: Invitation }) {
           <h2 className="mt-3 font-heading text-[clamp(1.75rem,1.2rem+2.4vw,2.5rem)] md:text-[clamp(2rem,1.2rem+2vw,3rem)] leading-[1.15] text-text-primary">
             Terima Kasih
           </h2>
-            <RichText
-              text={
-                invitation.closing_message ||
-                "Setiap ucapan dan doa kamu berikan jadi bagian indah dalam cerita kami. Kami tak sabar menyambutmu di hari spesial nanti."
-              }
-              className="mx-auto mt-5 max-w-xl space-y-3 text-sm leading-[1.9] text-text-secondary md:mx-0 md:text-base"
-              align={invitation.custom_settings.textAlign?.closing_message}
-              gap={textGapFor(invitation.custom_settings, "closing_message")}
-            />
+          <RichText
+            text={
+              invitation.closing_message ||
+              "Setiap ucapan dan doa kamu berikan jadi bagian indah dalam cerita kami. Kami tak sabar menyambutmu di hari spesial nanti."
+            }
+            className="mx-auto mt-5 max-w-xl space-y-3 text-sm leading-[1.9] text-text-secondary md:mx-0 md:text-base"
+            align={invitation.custom_settings.textAlign?.closing_message}
+            gap={textGapFor(invitation.custom_settings, "closing_message")}
+          />
 
           <div className="mt-8 md:mt-9">
             <CoupleNames
@@ -2030,13 +2063,13 @@ function DesktopStageCta({
           : undefined
       }
     >
-      <a
+      {/* <a
         href="#greeting"
         onClick={onOpen}
         className={cn("w-full max-w-[17rem]", COVER_BUTTON_CLASS)}
       >
         Buka Undangan
-      </a>
+      </a> */}
     </div>
   );
 }
@@ -2155,7 +2188,8 @@ function LumeTemplate({
 
   useEffect(
     () => () => {
-      if (coverTimerRef.current !== null) window.clearTimeout(coverTimerRef.current);
+      if (coverTimerRef.current !== null)
+        window.clearTimeout(coverTimerRef.current);
     },
     [],
   );
@@ -2166,22 +2200,25 @@ function LumeTemplate({
   // terlihat patah), lalu cover meluruh dan section itu tersingkap.
   // Masih synchronous dengan klik tamu → `MusicDock` boleh memutar lagu
   // (izin autoplay browser melekat pada gesture ini).
-  const handleOpen = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-    document.documentElement.removeAttribute("data-invitation-locked");
-    setOpened(true);
-    dispatchInvitationOpen();
-    // Cukup cegah lompatan anchor — URL sengaja tidak pernah diberi hash
-    // `#greeting`, supaya setiap kunjungan (termasuk muat ulang) selalu
-    // menampilkan sampul dan tamu wajib menekan "Buka Undangan".
-    if (e.currentTarget.hash) e.preventDefault();
-    if (coverGone) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setCoverGone(true);
-      return;
-    }
-    setCoverExiting(true);
-    coverTimerRef.current = window.setTimeout(() => setCoverGone(true), 750);
-  }, [coverGone]);
+  const handleOpen = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      document.documentElement.removeAttribute("data-invitation-locked");
+      setOpened(true);
+      dispatchInvitationOpen();
+      // Cukup cegah lompatan anchor — URL sengaja tidak pernah diberi hash
+      // `#greeting`, supaya setiap kunjungan (termasuk muat ulang) selalu
+      // menampilkan sampul dan tamu wajib menekan "Buka Undangan".
+      if (e.currentTarget.hash) e.preventDefault();
+      if (coverGone) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setCoverGone(true);
+        return;
+      }
+      setCoverExiting(true);
+      coverTimerRef.current = window.setTimeout(() => setCoverGone(true), 750);
+    },
+    [coverGone],
+  );
 
   // Desktop (≥768px): halaman luar tidak menggulir (galeri + frame HP, isi
   // undangan ada di dalam iframe) — jadi klik tombol diteruskan ke tombol
@@ -2230,7 +2267,8 @@ function LumeTemplate({
       };
 
       tryForward();
-      if (!forwarded) forwardTimerRef.current = window.setInterval(tryForward, 250);
+      if (!forwarded)
+        forwardTimerRef.current = window.setInterval(tryForward, 250);
     },
     [stopForwarding],
   );
@@ -2271,7 +2309,11 @@ function LumeTemplate({
     // `#greeting` dari tautan lama dan kunci guliran ke atas — mencegah
     // lompatan anchor serta pemulihan posisi guliran saat muat ulang.
     if (window.location.hash === "#greeting") {
-      history.replaceState(null, "", window.location.pathname + window.location.search);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
     }
     const pinTop = () => {
       if (window.scrollY > 0) window.scrollTo(0, 0);
@@ -2347,7 +2389,11 @@ function LumeTemplate({
 
       <div className={cn(stage && "lume-stage__body")}>
         {!stage && !coverGone && (
-          <HeroCover invitation={invitation} onOpen={handleOpen} exiting={coverExiting} />
+          <HeroCover
+            invitation={invitation}
+            onOpen={handleOpen}
+            exiting={coverExiting}
+          />
         )}
         {/* Section pembuka di LUAR .lume-sections: ia sudah punya latar foto
             crossfade sendiri, dan penempatannya di luar membuat ritme band

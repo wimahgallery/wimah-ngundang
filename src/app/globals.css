@@ -465,7 +465,7 @@ html[data-invitation-locked] body {
     var(--band-photo, none);
   background-size: cover;
   background-position: center;
-  filter: blur(4px) brightness(0.9) saturate(1.05);
+  filter: blur(2px) brightness(0.9) saturate(1.05);
 }
 
 .lume-sections > section:nth-of-type(even) .lume-band__photo {

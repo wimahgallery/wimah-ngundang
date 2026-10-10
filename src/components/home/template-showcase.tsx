@@ -87,9 +87,13 @@ export function TemplateShowcase() {
                     />
 
                     <div className="relative h-full w-full rounded-[1.3rem] bg-gradient-to-b from-[#2b2b31] via-[#16161a] to-[#0e0e12] p-[5px] shadow-[0_35px_70px_rgba(10,10,14,0.4),0_10px_24px_rgba(10,10,14,0.28)] ring-1 ring-white/10 sm:p-[7px]">
+                      {/* Layar replika bersifat dekoratif: pointer-events-none
+                          supaya klik & gulir tamu jatuh ke halaman (bukan ke
+                          iframe preview) — interaksi ada di tombol "Preview
+                          Live" di bawah kartu. */}
                       <div
                         ref={attachScreen}
-                        className="relative h-full w-full overflow-hidden rounded-[1rem] bg-black"
+                        className="pointer-events-none relative h-full w-full overflow-hidden rounded-[1rem] bg-black"
                       >
                         <LazyFrame
                           src={`/preview/${item.id}`}

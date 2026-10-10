@@ -1,6 +1,9 @@
 "use client";
 
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { showcaseFeatures } from "@/lib/homepage-content";
+import { waMessages, whatsappLink } from "@/lib/site-config";
+import { scrollToHash } from "@/lib/scroll";
 import { Reveal } from "@/components/motion/reveal";
 import { SectionIntro } from "./section-intro";
 
@@ -45,11 +48,36 @@ export function HomeFeatures() {
           })}
         </ul>
 
-        <Reveal delay={160} className="mt-10">
-          <p className="text-center text-sm text-[#F5F3EE]/70">
-            Butuh fitur khusus seperti RSVP atau buku tamu digital? Sampaikan
-            saat konsultasi — kami bantu carikan solusinya.
-          </p>
+        <Reveal delay={160}>
+          <div className="mt-10 flex flex-col items-center gap-5">
+            <p className="max-w-xl text-center text-sm leading-relaxed text-[#F5F3EE]/70">
+              Butuh fitur khusus seperti RSVP atau buku tamu digital? Sampaikan
+              saat konsultasi — kami bantu carikan solusinya.
+            </p>
+
+            <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
+              <a
+                href={whatsappLink(waMessages.features)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-7 py-3.5 text-sm font-semibold text-[#0B1F12] shadow-[0_16px_40px_rgba(37,211,102,0.22)] transition-transform duration-300 hover:scale-[1.02]"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Konsultasi Fitur via WhatsApp
+              </a>
+              <a
+                href="#template"
+                onClick={(event) => {
+                  event.preventDefault();
+                  scrollToHash("#template");
+                }}
+                className="group inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3.5 text-sm text-[#F5F3EE] transition-colors duration-300 hover:border-white/50"
+              >
+                Lihat template dulu
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+              </a>
+            </div>
+          </div>
         </Reveal>
       </div>
     </section>

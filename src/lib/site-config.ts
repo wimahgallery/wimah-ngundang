@@ -30,6 +30,10 @@ export const waMessages = {
   template: (name: string) =>
     `Halo Wimah Ngundang, saya tertarik dengan template "${name}". Mohon info paket dan contoh undangannya ya.`,
   footer: "Halo Wimah Ngundang, saya ingin bertanya tentang layanan undangan digital.",
+  features:
+    "Halo Wimah Ngundang, saya ingin konsultasi fitur undangan (misal RSVP, buku tamu digital, atau fitur khusus lainnya).",
+  photobooth:
+    "Halo WIMAH Photobooth, saya tertarik untuk booking Photobooth / Mingle Booth untuk acara saya.\n\nTanggal Acara: \nVenue / Lokasi: \nJenis Acara: (Wedding/ Birthday/ Corporate/ dll)\n\nApakah tanggal tersebut masih tersedia?",
 } as const;
 
 /** Sosial media resmi Wimah — dipakai di footer dan tombol mengambang. */
